@@ -20,10 +20,10 @@ Check out the package's [README](./src/Aspire.Hosting.AWS/README.md) for a deepe
 
 ## Getting Help
 
-For feature requests or issues using this tool please open an [issue in this repository](https://github.com/aws/aws-dotnet-deploy/issues).
+For feature requests or issues using this tool please open an [issue in this repository](https://github.com/aws/integrations-on-dotnet-aspire-for-aws/issues).
 
 ## Contributing
-We welcome community contributions and pull requests. See [CONTRIBUTING](https://github.com/aws/aws-dotnet-deploy/blob/main/CONTRIBUTING.md) for information on how to set up a development environment and submit code.
+We welcome community contributions and pull requests. See [CONTRIBUTING](https://github.com/aws/integrations-on-dotnet-aspire-for-aws/blob/main/CONTRIBUTING.md) for information on how to set up a development environment and submit code.
 
 ## License
 
