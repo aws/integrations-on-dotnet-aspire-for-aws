@@ -1,5 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
+using Amazon.DynamoDBv2;
 using Amazon.SimpleNotificationService;
 using Amazon.SQS;
 using Frontend.Components;
@@ -8,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
+builder.Services.AddAWSService<IAmazonDynamoDB>(); 
 builder.Services.AddAWSService<IAmazonSQS>();
 builder.Services.AddAWSService<IAmazonSimpleNotificationService>();
 
