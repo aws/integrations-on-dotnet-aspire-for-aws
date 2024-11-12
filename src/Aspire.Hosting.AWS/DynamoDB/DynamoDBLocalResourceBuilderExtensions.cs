@@ -1,6 +1,7 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting;
 
 namespace Aspire.Hosting.AWS.DynamoDB;
 
@@ -8,7 +9,7 @@ public static class DynamoDBLocalResourceBuilderExtensions
 {
     /// <summary>
     /// Add an instance of DynamoDB local. This is a container pulled from Amazon ECR public gallery.
-    /// Projects that use DynamoDB local can get a reference to the instance using the WithAWSDynamoDBLocalReference method.
+    /// Projects that use DynamoDB local can get a reference to the instance using the WithReference method.
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="name">The name of the resource.</param>
@@ -21,27 +22,15 @@ public static class DynamoDBLocalResourceBuilderExtensions
         var container = new DynamoDBLocalResource(name, options ?? new DynamoDBLocalOptions());
         var containerBuilder = builder.AddResource(container)
                   .ExcludeFromManifest()
-                  .WithEndpoint(targetPort: 8000, scheme: "http")
+                  .WithEndpoint(targetPort: DynamoDBLocalResource.DynamoDBInternalPort, scheme: "http")
+                  .WithArgs( container.CreateContainerImageArguments())
                   .WithImage(container.Options.Image, container.Options.Tag)
                   .WithImageRegistry(container.Options.Registry);
 
-        // Repurpose the WithEnvironment to invoke the users callback to seed DynamoDB local.
-        // This needs a better mechanism to have a callback once a container has been started
-        // so a hosting component can do initial configuration or seeding in the container.
-        containerBuilder.WithEnvironment(context =>
+        if (!string.IsNullOrWhiteSpace(container.Options.LocalStorageDirectory))
         {
-            if (context.ExecutionContext.IsPublishMode)
-            {
-                return;
-            }
-
-            if (container.Options.DisableDynamoDBLocalTelemetry)
-            {
-                // Info on DynamoDB Local telemetry
-                // https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocalTelemetry.html
-                context.EnvironmentVariables.Add("DDB_LOCAL_TELEMETRY", "0");
-            }
-        });
+            containerBuilder.WithBindMount(container.Options.LocalStorageDirectory, DynamoDBLocalResource.InternalStorageMountPoint);
+        }
 
         return containerBuilder;
     }
@@ -58,7 +47,12 @@ public static class DynamoDBLocalResourceBuilderExtensions
     /// <exception cref="DistributedApplicationException"></exception>
     public static IResourceBuilder<TDestination> WithReference<TDestination>(this IResourceBuilder<TDestination> builder, IResourceBuilder<IDynamoDBLocalResource> dynamoDBLocalResourceBuilder)
         where TDestination : IResourceWithEnvironment
-    {
+    {      
+        if (builder is IResourceBuilder<IResourceWithWaitSupport> waitSupport)
+        {
+            waitSupport.WaitFor(dynamoDBLocalResourceBuilder);
+        }
+
         builder.WithEnvironment(context =>
         {
             if (context.ExecutionContext.IsPublishMode)
