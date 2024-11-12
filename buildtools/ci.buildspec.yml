@@ -1,0 +1,15 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      dotnet: 8.x
+  build:
+    commands:
+      - dotnet test --verbosity normal integrations-on-dotnet-aspire-for-aws.sln --configuration Release --logger trx --results-directory ./testresults
+reports:
+    integrations-on-dotnet-aspire-for-aws-tests:
+        file-format: VisualStudioTrx
+        files:
+            - '**/*'
+        base-directory: './testresults'
