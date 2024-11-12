@@ -12,19 +12,18 @@ public static class DynamoDBLocalResourceBuilderExtensions
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="name">The name of the resource.</param>
-    /// <param name="image">Optional: default value is "public.ecr.aws/aws-dynamodb-local/aws-dynamodb-local"</param>
-    /// <param name="tag">Optional: default value is "latest"</param>
     /// <param name="options">Optional: Options that can be set for configuring the instance of DynamoDB Local.</param>
     /// <returns></returns>
     /// <exception cref="DistributedApplicationException"></exception>
     public static IResourceBuilder<IDynamoDBLocalResource> AddAWSDynamoDBLocal(this IDistributedApplicationBuilder builder,
-        string name, string image = "public.ecr.aws/aws-dynamodb-local/aws-dynamodb-local", string tag = "latest", DynamoDBLocalOptions? options = null)
+        string name, DynamoDBLocalOptions? options = null)
     {
         var container = new DynamoDBLocalResource(name, options ?? new DynamoDBLocalOptions());
         var containerBuilder = builder.AddResource(container)
                   .ExcludeFromManifest()
                   .WithEndpoint(targetPort: 8000, scheme: "http")
-                  .WithAnnotation(new ContainerImageAnnotation { Image = image, Tag = tag });
+                  .WithImage(container.Options.Image, container.Options.Tag)
+                  .WithImageRegistry(container.Options.Registry);
 
         // Repurpose the WithEnvironment to invoke the users callback to seed DynamoDB local.
         // This needs a better mechanism to have a callback once a container has been started
