@@ -37,8 +37,11 @@ public static class DynamoDBLocalResourceBuilderExtensions
 
     /// <summary>
     /// Add a reference to the DynamoDB local to the project. This is done by setting the AWS_ENDPOINT_URL_DYNAMODB environment
-    /// variable for the project to the http endpoint of the DynamoDB local container. Any DynamoDB service clients
-    /// created in the project relying on endpoint resolution will pick up this environment variable and use it.
+    /// variable for the project to the http endpoint of the DynamoDB local container. 
+    /// 
+    /// When applications create the AmazonDynamoDBClient type, the service client for DynamoDB, and rely on the SDK to resolve the
+    /// endpoint from the environment instead of explicitly setting an AWS region the SDK will use the value from 
+    /// the AWS_ENDPOINT_URL_DYNAMODB environment variable.
     /// </summary>
     /// <typeparam name="TDestination"></typeparam>
     /// <param name="builder"></param>
