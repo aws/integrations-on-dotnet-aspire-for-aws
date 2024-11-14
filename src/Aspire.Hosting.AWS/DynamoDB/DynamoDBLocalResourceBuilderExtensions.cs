@@ -63,8 +63,8 @@ public static class DynamoDBLocalResourceBuilderExtensions
                 return;
             }
 
-            var endpoint = dynamoDBLocalResourceBuilder.Resource.GetEndpoints().First();
-            context.EnvironmentVariables.Add("AWS_ENDPOINT_URL_DYNAMODB", endpoint.Url);
+            var endpoint = dynamoDBLocalResourceBuilder.GetEndpoint("http");
+            context.EnvironmentVariables.Add("AWS_ENDPOINT_URL_DYNAMODB", endpoint);
         });
         return builder;
     }
