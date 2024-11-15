@@ -6,7 +6,6 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 // Setup a configuration for the AWS .NET SDK.
 var awsConfig = builder.AddAWSSDKConfig()
-                        .WithProfile("default")
                         .WithRegion(RegionEndpoint.USWest2);
 
 // Provision application level resources like SQS queues and SNS topics defined in the CloudFormation template file app-resources.template.
