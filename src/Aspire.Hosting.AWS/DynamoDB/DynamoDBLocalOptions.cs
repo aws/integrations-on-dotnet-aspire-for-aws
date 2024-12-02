@@ -31,6 +31,13 @@ public class DynamoDBLocalOptions
     public bool SharedDb { get; set; }
 
     /// <summary>
+    /// If set to true DynamoDB runs in memory instead of using a database file. DynamoDB local will run faster
+    /// using InMemory mode but all data will be lost when the container ends and the data stored in DynamoDB
+    /// local can ont exceed the available memory for the container.
+    /// </summary>
+    public bool InMemory { get; set; }
+
+    /// <summary>
     /// Directory on host machine to create the DynamoDB local database files. If this property is set the data
     /// written to DynamoDB local will persist between AppHost invocations.
     /// </summary>

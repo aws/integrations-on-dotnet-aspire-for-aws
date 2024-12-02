@@ -16,10 +16,13 @@ public class DynamoDBLocalCommandLineArgumentTests
     {
         CompareArguments(new DynamoDBLocalOptions { }, new string[0]);
         CompareArguments(new DynamoDBLocalOptions {SharedDb = true }, "-sharedDb");
+        CompareArguments(new DynamoDBLocalOptions { SharedDb = false }, new string[0]);
         CompareArguments(new DynamoDBLocalOptions { DisableDynamoDBLocalTelemetry = true }, "-disableTelemetry");
         // The value "/storage" is the path in the container that would be mapped to "C:/temp"
         CompareArguments(new DynamoDBLocalOptions { LocalStorageDirectory = "C:/temp" }, "-dbPath", "/storage");
         CompareArguments(new DynamoDBLocalOptions { DelayTransientStatuses = true }, "-delayTransientStatuses");
+        CompareArguments(new DynamoDBLocalOptions { InMemory = true }, "-inMemory");
+        CompareArguments(new DynamoDBLocalOptions { InMemory = false }, new string[0]);
     }
 
     private void CompareArguments(DynamoDBLocalOptions options, params string[] expectedArguments)
