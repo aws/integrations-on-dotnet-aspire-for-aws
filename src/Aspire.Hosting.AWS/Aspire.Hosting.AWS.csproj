@@ -8,6 +8,7 @@
     <NoWarn>$(NoWarn);CS8002</NoWarn> <!-- AWS CDK packages are not signed -->
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\..\public.snk</AssemblyOriginatorKeyFile>
+    <Version>9.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
