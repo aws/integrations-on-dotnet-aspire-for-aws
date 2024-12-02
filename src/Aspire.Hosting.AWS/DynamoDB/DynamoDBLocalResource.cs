@@ -30,6 +30,9 @@ internal sealed class DynamoDBLocalResource(string name, DynamoDBLocalOptions op
         if (Options.SharedDb)
             arguments.Add("-sharedDb");
 
+        if (Options.InMemory)
+            arguments.Add("-inMemory");
+
         if (Options.DisableDynamoDBLocalTelemetry)
             arguments.Add("-disableTelemetry");
 
