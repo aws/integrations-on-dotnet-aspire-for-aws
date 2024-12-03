@@ -1,11 +1,11 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 using Amazon;
+using Aspire.Hosting.AWS.DynamoDB;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
 // Setup a configuration for the AWS .NET SDK.
 var awsConfig = builder.AddAWSSDKConfig()
-                        .WithProfile("default")
                         .WithRegion(RegionEndpoint.USWest2);
 
 // Provision application level resources like SQS queues and SNS topics defined in the CloudFormation template file app-resources.template.
@@ -13,6 +13,9 @@ var awsResources = builder.AddAWSCloudFormationTemplate("AspireSampleDevResource
                         .WithParameter("DefaultVisibilityTimeout", "30")
                         // Add the SDK configuration so the AppHost knows what account/region to provision the resources.
                         .WithReference(awsConfig);
+
+// Add a DynamoDB Local instance
+var localDynamoDB = builder.AddAWSDynamoDBLocal("DynamoDBLocal");
 
 // To add outputs of a CloudFormation stack that was created outside of AppHost use the AddAWSCloudFormationStack method.
 // then attach the CloudFormation resource to a project using the WithReference method.
@@ -28,6 +31,7 @@ builder.AddProject<Projects.Frontend>("Frontend")
         // The prefix is configurable by the optional configSection parameter.
         .WithReference(awsResources)
         // Demonstrating binding a single output variable to environment variable in the project.
-        .WithEnvironment("ChatTopicArnEnv", awsResources.GetOutput("ChatTopicArn"));
+        .WithEnvironment("ChatTopicArnEnv", awsResources.GetOutput("ChatTopicArn"))
+        .WithReference(localDynamoDB);
 
 builder.Build().Run();

@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AWS.ServiceDefaults\AWS.ServiceDefaults.csproj" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" />
     <PackageReference Include="AWSSDK.SQS" />
     <PackageReference Include="AWSSDK.SimpleNotificationService" />
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" />
