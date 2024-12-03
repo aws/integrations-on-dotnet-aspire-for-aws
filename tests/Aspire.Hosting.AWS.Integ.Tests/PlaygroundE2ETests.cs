@@ -1,13 +1,10 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-//using Aspire.Hosting.Testing;
-
 using Amazon;
 using Amazon.CloudFormation;
 using Amazon.CloudFormation.Model;
 
 using Aspire.Hosting.AWS.CloudFormation;
-using System.Reflection.Metadata;
 
 namespace Aspire.Hosting.AWS.Integ.Tests;
 
