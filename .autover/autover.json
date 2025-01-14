@@ -1,0 +1,12 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Path": "src/Aspire.Hosting.AWS/Aspire.Hosting.AWS.csproj"
+    }
+  ],
+  "UseCommitsForChangelog": false,
+  "UseSameVersionForAllProjects": false,
+  "DefaultIncrementType": "Patch",
+  "ChangeFilesDetermineIncrementType": true
+}
