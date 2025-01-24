@@ -4,7 +4,7 @@
       "Name": "Aspire.Hosting.AWS",
       "Type": "Patch",
       "ChangelogMessages": [
-        "Use Aspire 9\u0027s WaitFor mechanism for waiting CloudFormation resource to be running"
+        "Use Aspire 9's WaitFor mechanism for waiting CloudFormation resource to be running"
       ]
     }
   ]
