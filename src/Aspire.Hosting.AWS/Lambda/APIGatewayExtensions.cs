@@ -44,6 +44,7 @@ public static class APIGatewayExtensions
 
         apiGatewayEmulator.WithAnnotation(new EnvironmentCallbackAnnotation(context =>
         {
+            context.EnvironmentVariables[Constants.IsAspireHostedEnvVariable] = "true";
             context.EnvironmentVariables["API_GATEWAY_EMULATOR_PORT"] = endpointReference.Property(EndpointProperty.TargetPort);
         }));
 

@@ -118,6 +118,7 @@ public static class LambdaExtensions
 
             serviceEmulatorBuilder.WithAnnotation(new EnvironmentCallbackAnnotation(context =>
             {
+                context.EnvironmentVariables[Constants.IsAspireHostedEnvVariable] = "true";
                 context.EnvironmentVariables["LAMBDA_RUNTIME_API_PORT"] = endpointReference.Property(EndpointProperty.TargetPort);
             }));
 
