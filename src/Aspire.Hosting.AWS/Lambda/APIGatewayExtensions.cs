@@ -54,8 +54,8 @@ public static class APIGatewayExtensions
     }
 
     /// <summary>
-    /// Add a reference for a Lambda function to be called by the API Gatewa emulator for a particular HTTP method and resource path. The resource path can use 
-    /// variables like like "/customer/{id}" or wild card paths like "/admin/{proxy+}".
+    /// Add a reference for a Lambda function to be called by the API Gateway emulator for a particular HTTP method and resource path. The resource path can use 
+    /// variables like "/customer/{id}" or wild card paths like "/admin/{proxy+}".
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="lambda">The Lambda resource to add to the API Gateway emulator</param>
