@@ -15,4 +15,10 @@
     <ProjectReference Include="..\Frontend\Frontend.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="app-resources.template">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

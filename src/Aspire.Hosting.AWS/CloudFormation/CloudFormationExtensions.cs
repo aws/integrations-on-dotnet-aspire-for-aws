@@ -149,14 +149,16 @@ public static class CloudFormationExtensions
     /// <param name="configSection">The config section in IConfiguration to add the output parameters.</param>
     /// <returns></returns>
     public static IResourceBuilder<TDestination> WithReference<TDestination>(this IResourceBuilder<TDestination> builder, IResourceBuilder<ICloudFormationResource> cloudFormationResourceBuilder, string configSection = Constants.DefaultConfigSection)
-        where TDestination : IResourceWithEnvironment
+        where TDestination : IResourceWithEnvironment, IResourceWithWaitSupport
     {
         if (!cloudFormationResourceBuilder.Resource.Annotations.Any(x => x is CloudFormationReferenceAnnotation cf && string.Equals(cf.TargetResource, builder.Resource.Name, StringComparison.Ordinal)))
         {
             cloudFormationResourceBuilder.WithAnnotation(new CloudFormationReferenceAnnotation(builder.Resource.Name));
         }
 
-        builder.WithEnvironment(async ctx =>
+        builder.WaitFor(cloudFormationResourceBuilder);
+
+        builder.WithEnvironment(ctx =>
         {
             if (ctx.ExecutionContext.IsPublishMode)
             {
@@ -166,12 +168,6 @@ public static class CloudFormationExtensions
             if (cloudFormationResourceBuilder.Resource.AWSSDKConfig != null)
             {
                 SdkUtilities.ApplySDKConfig(ctx, cloudFormationResourceBuilder.Resource.AWSSDKConfig, false);
-            }
-
-            if (cloudFormationResourceBuilder.Resource.ProvisioningTaskCompletionSource is not null)
-            {
-                ctx.Logger?.LogInformation("Waiting on CloudFormation resource {Name} ...", cloudFormationResourceBuilder.Resource.Name);
-                await cloudFormationResourceBuilder.Resource.ProvisioningTaskCompletionSource.Task.WaitAsync(ctx.CancellationToken).ConfigureAwait(false);
             }
 
             if (cloudFormationResourceBuilder.Resource.Outputs == null)
