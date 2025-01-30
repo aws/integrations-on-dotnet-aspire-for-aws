@@ -13,7 +13,7 @@ var addRouteLambda = builder.AddAWSLambdaFunction<Projects.WebAddLambdaFunction>
 var minusRouteLambda = builder.AddAWSLambdaFunction<Projects.WebMinusLambdaFunction>("MinusDefaultRoute", lambdaHandler: "WebMinusLambdaFunction");
 
 
-builder.AddAPIGatewayEmulator("APIGatewayEmulator", Aspire.Hosting.AWS.Lambda.APIGatewayType.HttpV2)
+builder.AddAWSAPIGatewayEmulator("APIGatewayEmulator", Aspire.Hosting.AWS.Lambda.APIGatewayType.HttpV2)
         .WithReference(defaultRouteLambda, Method.Get, "/")
         .WithReference(addRouteLambda, Method.Get, "/add/{x}/{y}")
         .WithReference(minusRouteLambda, Method.Get, "/minus/{x}/{y}");
