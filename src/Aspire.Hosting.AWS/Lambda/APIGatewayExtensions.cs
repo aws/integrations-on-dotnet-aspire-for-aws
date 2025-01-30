@@ -24,7 +24,7 @@ public static class APIGatewayExtensions
     /// <param name="name">Aspire resource name</param>
     /// <param name="apiGatewayType">The type of API Gateway API. For example Rest, HttpV1 or HttpV2</param>
     /// <returns></returns>
-    public static IResourceBuilder<APIGatewayApiResource> AddAPIGatewayEmulator(this IDistributedApplicationBuilder builder, string name, APIGatewayType apiGatewayType)
+    public static IResourceBuilder<APIGatewayApiResource> AddAWSAPIGatewayEmulator(this IDistributedApplicationBuilder builder, string name, APIGatewayType apiGatewayType)
     {
         var apiGatewayEmulator = builder.AddResource(new APIGatewayApiResource(name)).ExcludeFromManifest();
 
