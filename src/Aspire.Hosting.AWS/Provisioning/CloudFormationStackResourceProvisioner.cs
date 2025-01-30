@@ -20,7 +20,7 @@ internal sealed class CloudFormationStackResourceProvisioner(
         {
             using var cfClient = GetCloudFormationClient(resource);
 
-            var request = new DescribeStacksRequest { StackName = resource.Name };
+            var request = new DescribeStacksRequest { StackName = resource.StackName };
             var response = await cfClient.DescribeStacksAsync(request, cancellationToken).ConfigureAwait(false);
 
             // If the stack didn't exist then a StackNotFoundException would have been thrown.
@@ -29,7 +29,15 @@ internal sealed class CloudFormationStackResourceProvisioner(
             // Capture the CloudFormation stack output parameters on to the Aspire CloudFormation resource. This
             // allows projects that have a reference to the stack have the output parameters applied to the
             // projects IConfiguration.
-            resource.Outputs = stack!.Outputs;
+            resource.Outputs = stack!.Outputs ?? new List<Output>();
+            logger.LogInformation("CloudFormation stack has {Count} output parameters", resource.Outputs.Count);
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                foreach (var output in resource.Outputs)
+                {
+                    logger.LogInformation("Output Name: {Name}, Value {Value}", output.OutputKey, output.OutputValue);
+                }
+            }
 
             await PublishCloudFormationUpdatePropertiesAsync(resource, ConvertOutputToProperties(stack)).ConfigureAwait(false);
         }
