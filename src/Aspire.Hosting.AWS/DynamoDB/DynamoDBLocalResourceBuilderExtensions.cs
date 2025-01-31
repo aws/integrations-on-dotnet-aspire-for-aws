@@ -1,9 +1,9 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Aspire.Hosting.ApplicationModel;
-using Aspire.Hosting;
+using Aspire.Hosting.AWS.DynamoDB;
 
-namespace Aspire.Hosting.AWS.DynamoDB;
+namespace Aspire.Hosting;
 
 public static class DynamoDBLocalResourceBuilderExtensions
 {
