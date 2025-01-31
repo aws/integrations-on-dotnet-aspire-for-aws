@@ -1,3 +1,8 @@
+## Release 2025-01-31 #2
+
+### Aspire.Hosting.AWS (9.1.1)
+* Fix namespace for AddAWSDynamoDBLocal extension method
+
 ## Release 2025-01-31
 
 ### Aspire.Hosting.AWS (9.1.0)
