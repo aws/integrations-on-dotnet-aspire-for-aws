@@ -2,6 +2,10 @@
 
 This repositry contains the integrations with [.NET Aspire](https://github.com/dotnet/aspire) for AWS. The AWS integrations focus on provisioning and working with AWS application resources in development environment. Making the dev inner loop of iterating over application code with AWS resource seamless without having to leave the development environment.
 
+For introduction on using AWS and Aspire checkout the [Building .NET Applications Across Clouds with .NET Aspire](https://www.youtube.com/watch?v=yVgr6cRYOPk) talk as part of .NET Conf 2024.
+
+[![image](./resources/dotnetconf-2024-session.jpg)](https://www.youtube.com/watch?v=yVgr6cRYOPk)
+
 ## Integrations
 
 The following are the list of AWS integrations currently supported for .NET Aspire.

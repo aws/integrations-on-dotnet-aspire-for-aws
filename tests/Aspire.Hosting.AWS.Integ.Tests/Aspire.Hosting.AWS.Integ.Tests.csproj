@@ -9,7 +9,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\playground\AWS\AWS.AppHost\AWS.AppHost.csproj" />
+		<ProjectReference Include="..\..\playground\CloudFormationProvisioning\AWS.AppHost\AWS.AppHost.csproj" />
 		<ProjectReference Include="..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" />
 	</ItemGroup>
 
