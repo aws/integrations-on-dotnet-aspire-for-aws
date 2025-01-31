@@ -11,6 +11,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)public.snk</AssemblyOriginatorKeyFile>
+    <PackageProjectUrl>https://github.com/aws/integrations-on-dotnet-aspire-for-aws</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/aws/integrations-on-dotnet-aspire-for-aws</RepositoryUrl>
   </PropertyGroup>
   
 </Project>

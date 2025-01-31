@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+		<IsTestProject>true</IsTestProject>
+		<NoWarn>$(NoWarn);CS8002</NoWarn>
+		<OutputType>Exe</OutputType>		
+		<!-- AWS CDK packages are not signed -->
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\playground\CloudFormationProvisioning\AWS.AppHost\AWS.AppHost.csproj" />
+		<ProjectReference Include="..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Using Include="System.Net" />
+		<Using Include="Microsoft.Extensions.DependencyInjection" />
+		<Using Include="Aspire.Hosting.ApplicationModel" />
+		<Using Include="Aspire.Hosting.Testing" />
+		<Using Include="Xunit" />
+	</ItemGroup>
+
+</Project>
