@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Fix namespace for AddAWSDynamoDBLocal extension method"
+      ]
+    }
+  ]
+}
