@@ -11,11 +11,13 @@ builder.AddAWSLambdaFunction<Projects.ToUpperLambdaFunctionExecutable>("ToUpperF
 var defaultRouteLambda = builder.AddAWSLambdaFunction<Projects.WebDefaultLambdaFunction>("LambdaDefaultRoute", lambdaHandler: "WebDefaultLambdaFunction");
 var addRouteLambda = builder.AddAWSLambdaFunction<Projects.WebAddLambdaFunction>("AddDefaultRoute", lambdaHandler: "WebAddLambdaFunction");
 var minusRouteLambda = builder.AddAWSLambdaFunction<Projects.WebMinusLambdaFunction>("MinusDefaultRoute", lambdaHandler: "WebMinusLambdaFunction");
-
+var listAwsResourcesRouteLambda = builder.AddAWSLambdaFunction<Projects.WebAWSCallsLambdaFunction>("ListAwsResourcesRoute", lambdaHandler: "WebAWSCallsLambdaFunction");
 
 builder.AddAWSAPIGatewayEmulator("APIGatewayEmulator", Aspire.Hosting.AWS.Lambda.APIGatewayType.HttpV2)
         .WithReference(defaultRouteLambda, Method.Get, "/")
         .WithReference(addRouteLambda, Method.Get, "/add/{x}/{y}")
-        .WithReference(minusRouteLambda, Method.Get, "/minus/{x}/{y}");
+        .WithReference(minusRouteLambda, Method.Get, "/minus/{x}/{y}")
+        .WithReference(listAwsResourcesRouteLambda, Method.Get, "/aws/{service}");
 
 builder.Build().Run();
+ 
