@@ -17,4 +17,7 @@
     <PackageReference Include="Amazon.Lambda.Core" />
     <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Lambda.ServiceDefaults\Lambda.ServiceDefaults.csproj" />
+  </ItemGroup>
 </Project>
