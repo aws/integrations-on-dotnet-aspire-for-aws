@@ -17,6 +17,7 @@ public class LambdaEmulatorResource(string name) : ExecutableResource(name,
     internal void AddCommandLineArguments(IList<object> arguments)
     {
         arguments.Add("lambda-test-tool");
+        arguments.Add("start");
         arguments.Add("--no-launch-window");
     }
 }

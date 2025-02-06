@@ -26,7 +26,7 @@ public class InstallLambdaTestToolTests
         await lambdaHook.ApplyLambdaEmulatorAnnotationAsync(new LambdaEmulatorAnnotation(CreateFakeEndpointReference()));
 
         processCommandService.AssertCommands(
-            "lambda-test-tool --tool-info",
+            "lambda-test-tool info --format json",
             $"tool install -g Amazon.Lambda.TestTool --version {LambdaLifecycleHook.DefaultLambdaTestToolVersion}"
             );
     }
@@ -44,7 +44,7 @@ public class InstallLambdaTestToolTests
         await lambdaHook.ApplyLambdaEmulatorAnnotationAsync(new LambdaEmulatorAnnotation(CreateFakeEndpointReference()));
 
         processCommandService.AssertCommands(
-            "lambda-test-tool --tool-info"
+            "lambda-test-tool info --format json"
             );
     }
 
@@ -62,7 +62,7 @@ public class InstallLambdaTestToolTests
         await lambdaHook.ApplyLambdaEmulatorAnnotationAsync(new LambdaEmulatorAnnotation(CreateFakeEndpointReference()));
 
         processCommandService.AssertCommands(
-            "lambda-test-tool --tool-info",
+            "lambda-test-tool info --format json",
             $"tool install -g Amazon.Lambda.TestTool --version {LambdaLifecycleHook.DefaultLambdaTestToolVersion}"
             );
     }
@@ -82,7 +82,7 @@ public class InstallLambdaTestToolTests
         await lambdaHook.ApplyLambdaEmulatorAnnotationAsync(new LambdaEmulatorAnnotation(CreateFakeEndpointReference()));
 
         processCommandService.AssertCommands(
-            "lambda-test-tool --tool-info"
+            "lambda-test-tool info --format json"
             );
     }
 
@@ -101,7 +101,7 @@ public class InstallLambdaTestToolTests
         await lambdaHook.ApplyLambdaEmulatorAnnotationAsync(new LambdaEmulatorAnnotation(CreateFakeEndpointReference()) { OverrideMinimumInstallVersion = overrideVersion});
 
         processCommandService.AssertCommands(
-            "lambda-test-tool --tool-info",
+            "lambda-test-tool info --format json",
             $"tool install -g Amazon.Lambda.TestTool --version {overrideVersion}"
             );
     }
@@ -133,14 +133,14 @@ public class InstallLambdaTestToolTests
         await lambdaHook.ApplyLambdaEmulatorAnnotationAsync(new LambdaEmulatorAnnotation(CreateFakeEndpointReference()) { AllowDowngrade = true });
 
         processCommandService.AssertCommands(
-            "lambda-test-tool --tool-info",
+            "lambda-test-tool info --format json",
             $"tool install -g Amazon.Lambda.TestTool --version {LambdaLifecycleHook.DefaultLambdaTestToolVersion} --allow-downgrade"
             );
     }
 
     private EndpointReference CreateFakeEndpointReference() => new EndpointReference(new Mock<IResourceWithEndpoints>().Object, "http");
 
-    private string GenerateVersionJson(string toolVersion) => $"{{\"version\":\"{toolVersion}\"}}";
+    private string GenerateVersionJson(string toolVersion) => $"{{\"Version\":\"{toolVersion}\"}}";
 
     public class MockProcessCommandService(params IProcessCommandService.RunProcessAndCaptureStdOutResult[] results) : IProcessCommandService
     {

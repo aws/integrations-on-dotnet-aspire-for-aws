@@ -3,13 +3,15 @@
 namespace Aspire.Hosting.AWS.Lambda;
 
 /// <summary>
-/// Options that can be added the Lambda emulator resource.
+/// Options that can be added to the Lambda emulator resource.
 /// </summary>
 public class LambdaEmulatorOptions
 {
     /// <summary>
-    /// If set to true, Amazon.Lambda.TestTool will updated/installed during AppHost startup. Amazon.Lambda.TestTool is 
+    /// By default Amazon.Lambda.TestTool will be updated/installed during AppHost startup. Amazon.Lambda.TestTool is 
     /// a .NET Tool that will be installed globally.
+    /// 
+    /// When DisableAutoInstall is set to true the auto installation is disabled.
     /// </summary>
     public bool DisableAutoInstall { get; set; }
 

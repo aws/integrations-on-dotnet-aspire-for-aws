@@ -98,7 +98,7 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
 
     private async Task<string> GetCurrentInstalledVersionAsync(CancellationToken cancellationToken)
     {
-        var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", "lambda-test-tool --tool-info", cancellationToken);
+        var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", "lambda-test-tool info --format json", cancellationToken);
         if (results.ExitCode != 0)
         {
             return string.Empty;
@@ -113,7 +113,7 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
                 return string.Empty;
 
             }
-            var version = versionDoc["version"]?.ToString();
+            var version = versionDoc["Version"]?.ToString();
             logger.LogDebug("Installed version of Amazon.Lambda.TestTool is {version}", version);
             return version ?? string.Empty;
         }

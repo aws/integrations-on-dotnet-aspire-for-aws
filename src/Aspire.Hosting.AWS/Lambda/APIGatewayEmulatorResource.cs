@@ -18,6 +18,7 @@ public class APIGatewayEmulatorResource(string name, APIGatewayType apiGatewayTy
     internal void AddCommandLineArguments(IList<object> arguments)
     {
         arguments.Add("lambda-test-tool");
+        arguments.Add("start");
         arguments.Add("--no-launch-window");
 
         arguments.Add("--api-gateway-emulator-mode");

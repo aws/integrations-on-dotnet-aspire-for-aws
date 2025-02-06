@@ -98,9 +98,9 @@ public static class LambdaExtensions
     }
 
     /// <summary>
-    /// Add the Lambda service emulator resource. The AddAWSLambdaFunction method will automatically add the Lambda service emulator if it hasn't
-    /// already been added. This method only needs to be called if the emulator needs to be customized with the LambdaEmulatorOptions. If
-    /// this method is called it must be called only once and before any AddAWSLambdaFunction calls.
+    /// Add the Lambda service emulator resource. The <see cref="AddAWSLambdaFunction"/> method will automatically add the Lambda service emulator if it hasn't
+    /// already been added. This method only needs to be called if the emulator needs to be customized with the <see cref="LambdaEmulatorOptions"/>. If
+    /// this method is called it must be called only once and before any <see cref="AddAWSLambdaFunction"/> calls.
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="options">The options to configure the emulator with.</param>
