@@ -24,15 +24,12 @@ public static class APIGatewayExtensions
     /// <param name="name">Aspire resource name</param>
     /// <param name="apiGatewayType">The type of API Gateway API. For example Rest, HttpV1 or HttpV2</param>
     /// <returns></returns>
-    public static IResourceBuilder<APIGatewayApiResource> AddAWSAPIGatewayEmulator(this IDistributedApplicationBuilder builder, string name, APIGatewayType apiGatewayType)
+    public static IResourceBuilder<APIGatewayEmulatorResource> AddAWSAPIGatewayEmulator(this IDistributedApplicationBuilder builder, string name, APIGatewayType apiGatewayType)
     {
-        var apiGatewayEmulator = builder.AddResource(new APIGatewayApiResource(name)).ExcludeFromManifest();
-
+        var apiGatewayEmulator = builder.AddResource(new APIGatewayEmulatorResource(name, apiGatewayType)).ExcludeFromManifest();
         apiGatewayEmulator.WithArgs(context =>
         {
-            context.Args.Add("--api-gateway-emulator-mode");
-            context.Args.Add(apiGatewayType.ToString());
-            context.Args.Add("--no-launch-window");
+            apiGatewayEmulator.Resource.AddCommandLineArguments(context.Args);
         });
 
         var annotation = new EndpointAnnotation(
@@ -62,7 +59,7 @@ public static class APIGatewayExtensions
     /// <param name="httpMethod">The HTTP method the Lambda function should be called for.</param>
     /// <param name="path">The resource path the Lambda function should be called for.</param>
     /// <returns></returns>
-    public static IResourceBuilder<APIGatewayApiResource> WithReference(this IResourceBuilder<APIGatewayApiResource> builder, IResourceBuilder<LambdaProjectResource> lambda, Method httpMethod, string path)
+    public static IResourceBuilder<APIGatewayEmulatorResource> WithReference(this IResourceBuilder<APIGatewayEmulatorResource> builder, IResourceBuilder<LambdaProjectResource> lambda, Method httpMethod, string path)
     {
         LambdaEmulatorAnnotation? lambdaEmulatorAnnotation = null;
         if (builder.ApplicationBuilder.Resources.FirstOrDefault(x => x.TryGetLastAnnotation<LambdaEmulatorAnnotation>(out lambdaEmulatorAnnotation)) == null ||

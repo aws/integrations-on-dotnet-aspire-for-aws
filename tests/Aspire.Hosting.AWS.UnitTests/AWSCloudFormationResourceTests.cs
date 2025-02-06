@@ -1,12 +1,11 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Amazon;
-using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.CloudFormation;
-using Aspire.Hosting.Utils;
+using Aspire.Hosting.AWS.UnitTests.Utils;
 using Xunit;
 
-namespace Aspire.Hosting.AWS.Tests;
+namespace Aspire.Hosting.AWS.UnitTests;
 
 public class AWSCloudFormationResourceTests
 {

@@ -2,11 +2,11 @@
 
 using Amazon;
 using Amazon.CDK.AWS.S3;
-using Aspire.Hosting.Utils;
+using Aspire.Hosting.AWS.UnitTests.Utils;
 using Constructs;
 using Xunit;
 
-namespace Aspire.Hosting.AWS.Tests;
+namespace Aspire.Hosting.AWS.UnitTests;
 
 public class AWSCDKResourceTests
 {

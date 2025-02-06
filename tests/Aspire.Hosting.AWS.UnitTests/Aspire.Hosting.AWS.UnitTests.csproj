@@ -7,6 +7,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" />
 
+    <PackageReference Include="Moq" />
     <PackageReference Include="JsonSchema.Net" />
 
     <Content Include="Schema\aspire-8.0.json">

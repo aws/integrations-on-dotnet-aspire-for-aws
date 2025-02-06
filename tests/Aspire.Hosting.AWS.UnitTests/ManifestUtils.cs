@@ -7,7 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Xunit;
 
-namespace Aspire.Hosting.Utils;
+namespace Aspire.Hosting.AWS.UnitTests.Utils;
 
 // copied from https://github.com/dotnet/aspire/blob/13bcaa03819f5e342d96bdffed92a50c7175198d/tests/Aspire.Hosting.Tests/Utils/ManifestUtils.cs
 

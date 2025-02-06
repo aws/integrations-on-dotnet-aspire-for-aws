@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Automatically install .NET Tool Amazon.Lambda.TestTool when running Lambda functions"
+      ]
+    }
+  ]
+}

@@ -6,7 +6,7 @@ using System.Text.Json.Nodes;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Aspire.Hosting.AWS.Tests;
+namespace Aspire.Hosting.AWS.UnitTests;
 
 public class AWSSchemaTests(ITestOutputHelper output)
 {
