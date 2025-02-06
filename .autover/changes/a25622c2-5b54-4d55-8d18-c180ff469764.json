@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Add OpenTelemetry support for Lambda in the Aspire Dashboard"
+      ]
+    }
+  ]
+}

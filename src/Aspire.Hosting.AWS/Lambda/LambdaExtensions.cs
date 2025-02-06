@@ -3,6 +3,7 @@
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS;
 using Aspire.Hosting.AWS.Lambda;
+using Microsoft.Extensions.Hosting;
 using Aspire.Hosting.AWS.Utils.Internal;
 using Aspire.Hosting.Lifecycle;
 using Microsoft.AspNetCore.Http;
@@ -48,6 +49,8 @@ public static class LambdaExtensions
                             .WithAnnotation(new TLambdaProject());
         }
 
+        resource.WithOpenTelemetry();
+
         resource.WithEnvironment(context =>
         {
             var serviceEmulatorEndpoint = serviceEmulator.GetEndpoint("http");
@@ -55,6 +58,7 @@ public static class LambdaExtensions
             // Add the Lambda function resource on the path so the emulator can distingish request
             // for each Lambda function.
             var apiPath = $"{serviceEmulatorEndpoint.Host}:{serviceEmulatorEndpoint.Port}/{name}";
+            context.EnvironmentVariables["AWS_EXECUTION_ENV"] = $"aspire.hosting.aws#{SdkUtilities.GetAssemblyVersion()}";
             context.EnvironmentVariables["AWS_LAMBDA_RUNTIME_API"] = apiPath;
             context.EnvironmentVariables["AWS_LAMBDA_FUNCTION_NAME"] = name;
             context.EnvironmentVariables["_HANDLER"] = lambdaHandler;
@@ -149,12 +153,39 @@ public static class LambdaExtensions
     }
 
     private static ExecutableResource AddOrGetLambdaServiceEmulatorResource(IDistributedApplicationBuilder builder)
-    {        
+    {
         if (builder.Resources.FirstOrDefault(x => x.TryGetAnnotationsOfType<LambdaEmulatorAnnotation>(out _)) is not ExecutableResource serviceEmulator)
         {
             serviceEmulator = builder.AddAWSLambdaServiceEmulator().Resource;
         }
 
         return serviceEmulator;
+    }
+
+    /// <summary>
+    /// This method is adapted from the Aspire WithProjectDefaults method.
+    /// https://github.com/dotnet/aspire/blob/157f312e39300912b37a14f59beda217c8195e14/src/Aspire.Hosting/ProjectResourceBuilderExtensions.cs#L287
+    /// </summary>
+    /// <param name="builder"></param>
+    /// <returns></returns>
+    private static IResourceBuilder<LambdaProjectResource> WithOpenTelemetry(this IResourceBuilder<LambdaProjectResource> builder)
+    {
+        builder.WithEnvironment("OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EXCEPTION_LOG_ATTRIBUTES", "true");
+        builder.WithEnvironment("OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES", "true");
+        // .NET SDK has experimental support for retries. Enable with env var.
+        // https://github.com/open-telemetry/opentelemetry-dotnet/pull/5495
+        // Remove once retry feature in opentelemetry-dotnet is enabled by default.
+        builder.WithEnvironment("OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY", "in_memory");
+
+        if (builder.ApplicationBuilder.ExecutionContext.IsRunMode && builder.ApplicationBuilder.Environment.IsDevelopment())
+        {
+            // Disable URL query redaction, e.g. ?myvalue=Redacted
+            builder.WithEnvironment("OTEL_DOTNET_EXPERIMENTAL_ASPNETCORE_DISABLE_URL_QUERY_REDACTION", "true");
+            builder.WithEnvironment("OTEL_DOTNET_EXPERIMENTAL_HTTPCLIENT_DISABLE_URL_QUERY_REDACTION", "true");
+        }
+
+        builder.WithOtlpExporter();
+
+        return builder;
     }
 }

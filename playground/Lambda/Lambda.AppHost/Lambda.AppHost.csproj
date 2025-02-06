@@ -13,6 +13,7 @@
 		<PackageReference Include="Aspire.Hosting.AppHost" />
 		<ProjectReference Include="..\ToUpperLambdaFunctionExecutable\ToUpperLambdaFunctionExecutable.csproj" />
 		<ProjectReference Include="..\WebAddLambdaFunction\WebAddLambdaFunction.csproj" />
+		<ProjectReference Include="..\WebAWSCallsLambdaFunction\WebAWSCallsLambdaFunction.csproj" />
 		<ProjectReference Include="..\WebDefaultLambdaFunction\WebDefaultLambdaFunction.csproj" />
 		<ProjectReference Include="..\WebMinusLambdaFunction\WebMinusLambdaFunction.csproj" />
 	</ItemGroup>
