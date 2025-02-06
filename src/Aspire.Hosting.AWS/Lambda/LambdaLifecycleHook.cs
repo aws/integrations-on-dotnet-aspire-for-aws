@@ -12,7 +12,7 @@ using static Google.Protobuf.Reflection.GeneratedCodeInfo.Types;
 namespace Aspire.Hosting.AWS.Lambda;
 
 /// <summary>
-/// Lambda lifecycle hook takes care of getting Amazon.Lambda.TestTool is installed if there was
+/// Lambda lifecycle hook takes care of getting Amazon.Lambda.TestTool installed if there was
 /// a Lambda service emulator added to the resources.
 /// </summary>
 /// <param name="logger"></param>
