@@ -1,3 +1,9 @@
+## Release 2025-02-07
+
+### Aspire.Hosting.AWS (9.1.2)
+* Add OpenTelemetry support for Lambda in the Aspire Dashboard
+* Automatically install .NET Tool Amazon.Lambda.TestTool when running Lambda functions
+
 ## Release 2025-01-31 #2
 
 ### Aspire.Hosting.AWS (9.1.1)
