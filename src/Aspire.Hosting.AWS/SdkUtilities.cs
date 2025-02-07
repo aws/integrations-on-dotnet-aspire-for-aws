@@ -15,18 +15,17 @@ internal static class SdkUtilities
     {
         if (s_userAgentHeader == null)
         {
-            var builder = new StringBuilder("lib/aspire.hosting.aws");
-            var attribute = typeof(AWSLifecycleHook).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
-            if (attribute != null)
-            {
-                builder.Append('#');
-                builder.Append(attribute.InformationalVersion);
-            }
-
+            var builder = new StringBuilder($"lib/aspire.hosting.aws#{GetAssemblyVersion()}");
             s_userAgentHeader = builder.ToString();
         }
 
         return s_userAgentHeader;
+    }
+
+    internal static string GetAssemblyVersion()
+    {
+        var attribute = typeof(AWSLifecycleHook).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        return attribute != null ? attribute.InformationalVersion.Split('+')[0] : "Unknown";
     }
 
     internal static void ConfigureUserAgentString(object sender, RequestEventArgs e)

@@ -3,7 +3,7 @@
 using Aspire.Hosting.AWS.DynamoDB;
 using Xunit;
 
-namespace Aspire.Hosting.AWS.Tests;
+namespace Aspire.Hosting.AWS.UnitTests;
 
 public class DynamoDBLocalCommandLineArgumentTests
 {

@@ -4,7 +4,7 @@ using Amazon.CloudFormation.Model;
 using Aspire.Hosting.AWS.CloudFormation;
 using Xunit;
 
-namespace Aspire.Hosting.AWS.Tests;
+namespace Aspire.Hosting.AWS.UnitTests;
 
 public class StackOutputReferenceTests
 {
