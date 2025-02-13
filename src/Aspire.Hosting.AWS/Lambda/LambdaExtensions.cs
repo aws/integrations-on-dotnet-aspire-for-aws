@@ -11,6 +11,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.Versioning;
+using Aspire.Hosting.AWS.Utils;
+using Microsoft.Extensions.DependencyInjection;
 
 #pragma warning disable IDE0130
 namespace Aspire.Hosting;
@@ -35,12 +37,13 @@ public static class LambdaExtensions
         var metadata = new TLambdaProject();
 
         var serviceEmulator = AddOrGetLambdaServiceEmulatorResource(builder);
-
         IResourceBuilder<LambdaProjectResource> resource;
         if (lambdaHandler.Contains("::"))
         {
-            // TODO Handle Class Library based Lambda functions.
-            throw new NotImplementedException("Currently the Lambda Aspire integration does not support class library based Lambda functions. Class library support will be implemented once a committed change to Aspire has been released allowing the feature to be implemented.");
+            var project = new LambdaProjectResource(name);
+            resource = builder.AddResource(project)
+                .WithAnnotation(new DefaultLaunchProfileAnnotation($"Aspire_{name}"))
+                .WithAnnotation(new TLambdaProject());
         }
         else
         {
@@ -50,6 +53,8 @@ public static class LambdaExtensions
         }
 
         resource.WithOpenTelemetry();
+
+        resource.WithAnnotation(new LambdaFunctionAnnotation(lambdaHandler));
 
         resource.WithEnvironment(context =>
         {
@@ -64,7 +69,16 @@ public static class LambdaExtensions
             context.EnvironmentVariables["_HANDLER"] = lambdaHandler;
 
             var lambdaEmulatorEndpoint = $"http://{serviceEmulatorEndpoint.Host}:{serviceEmulatorEndpoint.Port}/?function={Uri.EscapeDataString(name)}";
-
+            var processCommandService = context.ExecutionContext.ServiceProvider.GetRequiredService<IProcessCommandService>();
+            
+            // if (lambdaHandler.Contains("::"))
+            // {
+            //     var projectMetadata = resource.Resource.Annotations
+            //         .OfType<IProjectMetadata>()
+            //         .First();
+            //     ProjectUtilities.UpdateLaunchSettingsEndpoint($"Aspire_{name}", apiPath, projectMetadata.ProjectPath);
+            // }
+            
             resource.WithAnnotation(new ResourceCommandAnnotation(
                 name: "LambdaEmulator", 
                 displayName: "Lambda Service Emulator", 
@@ -95,9 +109,7 @@ public static class LambdaExtensions
                 isHighlighted: true)
             );
         });
-
-        resource.WithAnnotation(new LambdaFunctionAnnotation(lambdaHandler));
-
+        
         return resource;
     }
 
@@ -154,7 +166,7 @@ public static class LambdaExtensions
 
     private static ExecutableResource AddOrGetLambdaServiceEmulatorResource(IDistributedApplicationBuilder builder)
     {
-        if (builder.Resources.FirstOrDefault(x => x.TryGetAnnotationsOfType<LambdaEmulatorAnnotation>(out _)) is not ExecutableResource serviceEmulator)
+        if (builder.Resources.FirstOrDefault(x => x.TryGetAnnotationsOfType<LambdaEmulatorAnnotation>(out var emulatorAnnotations)) is not ExecutableResource serviceEmulator)
         {
             serviceEmulator = builder.AddAWSLambdaServiceEmulator().Resource;
         }

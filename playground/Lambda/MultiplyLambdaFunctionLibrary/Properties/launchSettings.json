@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "Aspire_MultiplyFunction": {
+      "commandName": "Executable",
+      "commandLineArgs": "exec --depsfile ./MultiplyLambdaFunctionLibrary.deps.json --runtimeconfig ./MultiplyLambdaFunctionLibrary.runtimeconfig.json $HOME/.dotnet/tools/.store/amazon.lambda.testtool/0.0.2-preview/amazon.lambda.testtool/0.0.2-preview/content/Amazon.Lambda.RuntimeSupport/net8.0/Amazon.Lambda.RuntimeSupport.dll MultiplyLambdaFunctionLibrary::MultiplyLambdaFunctionLibrary.Function::FunctionHandler",
+      "environmentVariables": {
+        "AWS_LAMBDA_RUNTIME_API": "localhost:59603/MultiplyFunction"
+      },
+      "workingDirectory": ".\\bin\\$(Configuration)\\net8.0",
+      "executablePath": "dotnet"
+    }
+  }
+}

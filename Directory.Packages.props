@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <AspireVersion>9.0.0</AspireVersion>
+    <AspireVersion>9.2.0-dev</AspireVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Aspire.Hosting" Version="$(AspireVersion)" />
@@ -10,7 +10,7 @@
     <PackageVersion Include="Aspire.Hosting.Testing" Version="$(AspireVersion)" />	
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="$(AspireVersion)" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery.Dns" Version="$(AspireVersion)" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="$(AspireVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.2.0" />
     <!-- AWS SDK for .NET dependencies -->
     <PackageVersion Include="AWSSDK.CloudFormation" Version="3.7.400.47" />
     <PackageVersion Include="AWSSDK.Core" Version="3.7.400.47" />

@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<Sdk Name="Aspire.AppHost.Sdk" Version="9.0.0" />
+	<Sdk Name="Aspire.AppHost.Sdk" Version="9.2.0-dev" />
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
@@ -11,6 +11,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" IsAspireProjectResource="false" />
 		<PackageReference Include="Aspire.Hosting.AppHost" />
+		<ProjectReference Include="..\MultiplyLambdaFunctionLibrary\MultiplyLambdaFunctionLibrary.csproj" />
 		<ProjectReference Include="..\ToUpperLambdaFunctionExecutable\ToUpperLambdaFunctionExecutable.csproj" />
 		<ProjectReference Include="..\WebAddLambdaFunction\WebAddLambdaFunction.csproj" />
 		<ProjectReference Include="..\WebAWSCallsLambdaFunction\WebAWSCallsLambdaFunction.csproj" />
