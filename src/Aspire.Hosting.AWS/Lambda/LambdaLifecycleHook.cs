@@ -43,30 +43,31 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
         {
             await ApplyLambdaEmulatorAnnotationAsync(emulatorAnnotation, cancellationToken);
 
-            // foreach (var projectResource in classLibraryProjectPaths)
-            // {
-            //     var projectMetadata = projectResource.Annotations
-            //         .OfType<IProjectMetadata>()
-            //         .First();
-            //     var lambdaFunctionAnnotation = projectResource.Annotations
-            //         .OfType<LambdaFunctionAnnotation>()
-            //         .First();
-            //
-            //     var installPath = await GetCurrentInstallPathAsync(cancellationToken);;
-            //     var targetFramework = await GetProjectTargetFrameworkAsync(projectMetadata.ProjectPath, cancellationToken);
-            //     var assemblyName = await GetProjectAssemblyNameAsync(projectMetadata.ProjectPath, cancellationToken);
-            //     var contentFolder = new DirectoryInfo(installPath).Parent?.Parent?.Parent?.FullName ?? string.Empty;
-            //     var runtimeSupportAssemblyPath = Path.Combine(contentFolder, "content", "Amazon.Lambda.RuntimeSupport",
-            //         targetFramework, "Amazon.Lambda.RuntimeSupport.dll");
-            //     ProjectUtilities.UpdateLaunchSettingsWithLambdaTester(
-            //         resourceName: projectResource.Name,
-            //         functionHandler: lambdaFunctionAnnotation.Handler,
-            //         assemblyName: assemblyName, 
-            //         projectPath: projectMetadata.ProjectPath,
-            //         runtimeSupportAssemblyPath: runtimeSupportAssemblyPath, 
-            //         targetFramework: targetFramework,
-            //         lambdaRuntimeApiEndpoint: $"localhost:5050/{projectResource.Name}");
-            // }
+            foreach (var projectResource in classLibraryProjectPaths)
+            {
+                var projectMetadata = projectResource.Annotations
+                    .OfType<IProjectMetadata>()
+                    .First();
+                var lambdaFunctionAnnotation = projectResource.Annotations
+                    .OfType<LambdaFunctionAnnotation>()
+                    .First();
+            
+                var installPath = await GetCurrentInstallPathAsync(cancellationToken);;
+                var targetFramework = await GetProjectTargetFrameworkAsync(projectMetadata.ProjectPath, cancellationToken);
+                var assemblyName = await GetProjectAssemblyNameAsync(projectMetadata.ProjectPath, cancellationToken);
+                var contentFolder = new DirectoryInfo(installPath).Parent?.Parent?.Parent?.FullName ?? string.Empty;
+                var runtimeSupportAssemblyPath = Path.Combine(contentFolder, "content", "Amazon.Lambda.RuntimeSupport",
+                    targetFramework, "Amazon.Lambda.RuntimeSupport.dll");
+                // ProjectUtilities.UpdateLaunchSettingsWithLambdaTester(
+                //     resourceName: projectResource.Name,
+                //     functionHandler: lambdaFunctionAnnotation.Handler,
+                //     assemblyName: assemblyName, 
+                //     projectPath: projectMetadata.ProjectPath,
+                //     runtimeSupportAssemblyPath: runtimeSupportAssemblyPath, 
+                //     targetFramework: targetFramework,
+                //     lambdaRuntimeApiEndpoint: $"localhost:5050/{projectResource.Name}");
+                emulatorAnnotation.RuntimeSupportPath = runtimeSupportAssemblyPath;
+            }
         }
         else
         {

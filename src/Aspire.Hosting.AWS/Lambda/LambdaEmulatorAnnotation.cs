@@ -34,4 +34,6 @@ internal class LambdaEmulatorAnnotation(EndpointReference endpoint) : IResourceA
     /// to match the expected version.
     /// </summary>
     public bool AllowDowngrade { get; set; }
+    
+    public string? RuntimeSupportPath { get; set; }
 }
