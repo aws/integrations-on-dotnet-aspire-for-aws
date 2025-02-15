@@ -58,14 +58,13 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
                 var contentFolder = new DirectoryInfo(installPath).Parent?.Parent?.Parent?.FullName ?? string.Empty;
                 var runtimeSupportAssemblyPath = Path.Combine(contentFolder, "content", "Amazon.Lambda.RuntimeSupport",
                     targetFramework, "Amazon.Lambda.RuntimeSupport.dll");
-                // ProjectUtilities.UpdateLaunchSettingsWithLambdaTester(
-                //     resourceName: projectResource.Name,
-                //     functionHandler: lambdaFunctionAnnotation.Handler,
-                //     assemblyName: assemblyName, 
-                //     projectPath: projectMetadata.ProjectPath,
-                //     runtimeSupportAssemblyPath: runtimeSupportAssemblyPath, 
-                //     targetFramework: targetFramework,
-                //     lambdaRuntimeApiEndpoint: $"localhost:5050/{projectResource.Name}");
+                ProjectUtilities.UpdateLaunchSettingsWithLambdaTester(
+                    resourceName: projectResource.Name,
+                    functionHandler: lambdaFunctionAnnotation.Handler,
+                    assemblyName: assemblyName,
+                    projectPath: projectMetadata.ProjectPath,
+                    runtimeSupportAssemblyPath: runtimeSupportAssemblyPath,
+                    targetFramework: targetFramework);
                 emulatorAnnotation.RuntimeSupportPath = runtimeSupportAssemblyPath;
             }
         }

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Aspire.Hosting.AWS.Utils;
 
-public static class ProjectUtilities
+internal static class ProjectUtilities
 {
     private const string LaunchSettingsFile = "launchSettings.json";
     private const string LaunchSettingsNodePrefix = "Aspire_";
@@ -22,8 +22,7 @@ public static class ProjectUtilities
         string assemblyName, 
         string projectPath, 
         string runtimeSupportAssemblyPath, 
-        string targetFramework,
-        string lambdaRuntimeApiEndpoint)
+        string targetFramework)
     {
         
         // Retrieve the current launch settings JSON from wherever it's stored.
@@ -51,11 +50,7 @@ public static class ProjectUtilities
             lambdaTester = new JsonObject
             {
                 ["commandName"] = "Executable",
-                ["commandLineArgs"] = $"exec --depsfile ./{assemblyName}.deps.json --runtimeconfig ./{assemblyName}.runtimeconfig.json {SubstituteHomePath(runtimeSupportAssemblyPath)} {functionHandler}",
-                ["environmentVariables"] = new JsonObject
-                {
-                    ["AWS_LAMBDA_RUNTIME_API"] = lambdaRuntimeApiEndpoint
-                }
+                ["commandLineArgs"] = $"exec --depsfile ./{assemblyName}.deps.json --runtimeconfig ./{assemblyName}.runtimeconfig.json {SubstituteHomePath(runtimeSupportAssemblyPath)} {functionHandler}"
             };
 
             profiles[launchSettingsNodeKey] = lambdaTester;
