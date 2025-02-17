@@ -6,7 +6,6 @@ using Aspire.Hosting.AWS.Lambda;
 using Microsoft.Extensions.Hosting;
 using Aspire.Hosting.AWS.Utils.Internal;
 using Aspire.Hosting.Lifecycle;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Diagnostics;
 using System.Net.Sockets;
@@ -20,7 +19,7 @@ namespace Aspire.Hosting;
 /// </summary>
 [RequiresPreviewFeatures(Constants.LambdaPreviewMessage)]
 public static class LambdaExtensions
-{
+{   
     /// <summary>
     /// Add a Lambda function as an Aspire resource.
     /// </summary>
@@ -36,12 +35,18 @@ public static class LambdaExtensions
         var metadata = new TLambdaProject();
 
         var serviceEmulator = AddOrGetLambdaServiceEmulatorResource(builder);
-
         IResourceBuilder<LambdaProjectResource> resource;
         if (lambdaHandler.Contains("::"))
         {
-            // TODO Handle Class Library based Lambda functions.
-            throw new NotImplementedException("Currently the Lambda Aspire integration does not support class library based Lambda functions. Class library support will be implemented once a committed change to Aspire has been released allowing the feature to be implemented.");
+            // TODO: Once 9.1 comes out LaunchProfileAnnotation will be public and we can remove the reflection and directly instantiate it.
+            var launchProfileAnnotationsType = typeof(IDistributedApplicationBuilder).Assembly.GetTypes().FirstOrDefault(x => string.Equals(x.FullName, "Aspire.Hosting.ApplicationModel.LaunchProfileAnnotation"));
+            var constructor = launchProfileAnnotationsType!.GetConstructors()[0];
+            var instance = constructor.Invoke(new object[] { $"{Constants.LaunchSettingsNodePrefix}{name}" }) as IResourceAnnotation;
+
+            var project = new LambdaProjectResource(name);
+            resource = builder.AddResource(project)
+                .WithAnnotation(instance!)
+                .WithAnnotation(new TLambdaProject());
         }
         else
         {
@@ -68,7 +73,7 @@ public static class LambdaExtensions
             context.EnvironmentVariables["AWS_LAMBDA_LOG_LEVEL"] = options.ApplicationLogLevel.Value;
 
             var lambdaEmulatorEndpoint = $"http://{serviceEmulatorEndpoint.Host}:{serviceEmulatorEndpoint.Port}/?function={Uri.EscapeDataString(name)}";
-
+            
             resource.WithAnnotation(new ResourceCommandAnnotation(
                 name: "LambdaEmulator", 
                 displayName: "Lambda Service Emulator", 
@@ -101,7 +106,7 @@ public static class LambdaExtensions
         });
 
         resource.WithAnnotation(new LambdaFunctionAnnotation(lambdaHandler));
-
+        
         return resource;
     }
 
