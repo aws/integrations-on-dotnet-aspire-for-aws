@@ -12,10 +12,9 @@
 		<ProjectReference Include="..\..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" IsAspireProjectResource="false" />
 		<PackageReference Include="Aspire.Hosting.AppHost" />
 		<ProjectReference Include="..\ToUpperLambdaFunctionExecutable\ToUpperLambdaFunctionExecutable.csproj" />
-		<ProjectReference Include="..\WebAddLambdaFunction\WebAddLambdaFunction.csproj" />
 		<ProjectReference Include="..\WebAWSCallsLambdaFunction\WebAWSCallsLambdaFunction.csproj" />
+		<ProjectReference Include="..\WebCalculatorFunctions\WebCalculatorFunctions.csproj" />
 		<ProjectReference Include="..\WebDefaultLambdaFunction\WebDefaultLambdaFunction.csproj" />
-		<ProjectReference Include="..\WebMinusLambdaFunction\WebMinusLambdaFunction.csproj" />
 	</ItemGroup>
 
 </Project>
