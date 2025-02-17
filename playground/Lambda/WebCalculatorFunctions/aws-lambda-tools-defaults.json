@@ -6,10 +6,11 @@
     "All the command line options for the Lambda command can be specified in this file."
   ],
   "profile": "default",
-  "region": "us-west-2",
+  "region": "",
   "configuration": "Release",
+  "function-architecture": "x86_64",
   "function-runtime": "dotnet8",
   "function-memory-size": 512,
   "function-timeout": 30,
-  "function-handler": "WebMinusLambdaFunction"
+  "function-handler": "WebCalculatorFunctions::WebCalculatorFunctions.Function::FunctionHandler"
 }
