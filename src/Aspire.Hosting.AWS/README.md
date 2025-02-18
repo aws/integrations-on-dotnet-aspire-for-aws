@@ -157,6 +157,102 @@ builder.AddProject<Projects.Frontend>("Frontend")
        .WithReference(construct, c => c.Url, "Url");
 ```
 
+## Integrating AWS Lambda Local Development
+
+You can develop and test AWS Lambda functions locally within your .NET Aspire application. This enables testing Lambda functions alongside other application resources during development.
+
+![alt text](image.png)
+
+### Adding Lambda Functions
+
+To add a Lambda function to your .NET Aspire AppHost, use the `AddAWSLambdaFunction` method. The method supports both executable Lambda functions and class library Lambda functions:
+
+```csharp
+// Add an executable Lambda function
+builder.AddAWSLambdaFunction<Projects.ExecutableLambdaFunction>(
+    "MyLambdaFunction", 
+    handler: "ExecutableLambdaFunction")
+    .WithReference(awsConfig);
+
+// Add a class library Lambda function
+builder.AddAWSLambdaFunction<Projects.ClassLibraryLambdaFunction>(
+    "MyLambdaFunction", 
+    handler: "ClassLibraryLambdaFunction::ClassLibraryLambdaFunction.Function::FunctionHandler")
+    .WithReference(awsConfig);
+
+```
+
+The handler parameter specifies the Lambda handler in different formats depending on the project type:
+
+- For executable projects: specify the assembly name.
+- For class library projects: use the format `{assembly}::{type}::{method}`.
+
+### API Gateway Local Emulation
+
+To add an API Gateaway emulator to your .NET Aspire AppHost, use the `AddAPIGatewayEmulator` method. 
+
+```csharp
+// Add Lambda functions
+var rootWebFunction = builder.AddAWSLambdaFunction<Projects.WebApiLambdaFunction>(
+    "RootLambdaFunction", 
+    handler: "WebApiLambdaFunction");
+
+var addFunction = builder.AddAWSLambdaFunction<Projects.WebAddLambdaFunction>(
+    "AddLambdaFunction", 
+    handler: "WebAddLambdaFunction");
+
+// Configure API Gateway emulator
+builder.AddAPIGatewayEmulator("APIGatewayEmulator", APIGatewayType.HttpApi)
+    .WithReference(rootWebFunction, Method.Get, "/")
+    .WithReference(addFunction, Method.Get, "/add/{x}/{y}");
+```
+
+The `AddAPIGatewayEmulator` method requires:
+
+- A name for the emulator resource
+- The API Gateway type (`HttpApi` or `RestApi`)
+
+Use the `WithReference` method to connect Lambda functions to HTTP routes, specifying:
+
+- The Lambda function resource
+- The HTTP method
+- The route pattern
+
+## Integrating Amazon DynamoDB Local  
+
+Amazon DynamoDB provides a [local version of DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocalHistory.html) for development and testing that is distributed as a container. With version 9.1.0 of the Aspire.Hosting.AWS package, you can easily integrate the DynamoDB local container with your .NET Aspire project. This enables seamless transition between DynamoDB Local for development and the production DynamoDB service in AWS, without requiring any code changes in your application.
+
+To get started in the .NET Aspire AppHost, call the `AddAWSDynamoDBLocal` method to add DynamoDB local as a resource to the .NET Aspire application.
+
+```csharp
+var builder = DistributedApplication.CreateBuilder(args);
+
+// Add a DynamoDB Local instance
+var localDynamoDB = builder.AddAWSDynamoDBLocal("DynamoDBLocal");
+```
+
+For each .NET project in the .NET Aspire application using DynamoDB, add a reference to the DynamoDB local resource.
+
+```csharp
+// Reference DynamoDB local in project
+builder.AddProject<Projects.Frontend>("Frontend")
+   .WithReference(localDynamoDB);
+```
+
+In the .NET projects that use DynamoDB, you need to construct the DynamoDB service client from the SDK without explicitly setting the AWS Region or service endpoint. This means constructing the `AmazonDynamoDBClient` object without passing in the Region or an `AmazonDynamoDBConfig` with the `RegionEndpoint` property set. By not explicitly setting the Region, the SDK searches the environment for configuration that informs the SDK where to send the requests. The Region is set locally by the `AWS_REGION` environment variable or in your credentials profile by setting the region property. Once deployed to AWS, the compute environments set environment configuration such as the `AWS_REGION` environment variable so that the SDK knows what Region to use for the service client.
+
+The AWS SDKs have a feature called [Service-specific endpoints](https://docs.aws.amazon.com/sdkref/latest/guide/feature-ss-endpoints.html) that allow setting an endpoint for a service via an environment variable. The `WithReference` call made on the .NET project sets the `AWS_ENDPOINT_URL_DYNAMODB` environment variable. It will be set to the DynamoDB local container that was started as part of the `AddAWSDynamoDBLocal` method.
+
+![\[\]!(.)](Resources/dynamo.png)
+
+The `AWS_ENDPOINT_URL_DYNAMODB` environment variable overrides other config settings like the `AWS_REGION` environment variable, ensuring your projects running locally use DynamoDB local. After the `AmazonDynamoDBClient` has been created pointing to DynamoDB local, all other service calls work the same as if you are going to the real DynamoDB service. No code changes are required.
+
+### Options for DynamoDB Local
+
+When the `AddAWSDynamoDBLocal` method is called, any data and table definitions are stored in memory by default. This means that every time the .NET Aspire application is started, DynamoDB local is initiated with a fresh instance with no tables or data. The `AddAWSDynamoDBLocal` method takes in an optional `DynamoDBLocalOptions` object that exposes the [options](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.UsageNotes.html) that are available for DynamoDB local.
+
+If you want the tables and data to persist between .NET Aspire debug sessions, set the `LocalStorageDirectory` property on the `DynamoDBLocalOptions` object to a local folder where the data will be persisted. The `AddAWSDynamoDBLocal` method will take care of mounting the local directory to the container and configuring the DynamoDB local process to use the mount point.
+
 ## Feedback & contributing
 
 https://github.com/dotnet/aspire
