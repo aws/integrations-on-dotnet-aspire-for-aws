@@ -10,10 +10,16 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.Versioning;
+using System.Text;
 using Aspire.Hosting.AWS.Utils;
 
 #pragma warning disable IDE0130
 namespace Aspire.Hosting;
+
+internal sealed class LambdaProjectMetadata(string projectPath) : IProjectMetadata
+{
+    public string ProjectPath { get; } = projectPath;
+}
 
 /// <summary>
 /// Extension methods for adding Lambda functions as Aspire resources.
@@ -52,7 +58,48 @@ public static class LambdaExtensions
             }
             else
             {
-                throw new NotImplementedException("Current class library programming model for Lambda is only supported when launched from Visual Studio with the debugger attached");
+                var project = new LambdaProjectResource(name);
+                resource = builder.AddResource(project)
+                    // .WithAnnotation(new LambdaProjectMetadata(projectPath))
+                    .WithAnnotation(new TLambdaProject());
+                var projectMetadata = project.Annotations.OfType<IProjectMetadata>().First();
+                project.Annotations.Remove(projectMetadata);
+                string tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+                Directory.CreateDirectory(tempPath);
+
+                // Define the .csproj content.
+                var projectContent = $@"
+<Project Sdk=""Microsoft.NET.Sdk"">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include=""Amazon.Lambda.RuntimeSupport"" Version=""1.12.2"" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include=""{projectMetadata.ProjectPath}"" />
+  </ItemGroup>
+</Project>
+";
+                var projectName = $"Wrapper{Path.GetFileName(projectMetadata.ProjectPath)}";
+                var projectPath = Path.Combine(tempPath, projectName);
+                File.WriteAllText(projectPath, projectContent);
+                
+                string programContent = $@"
+using Amazon.Lambda.RuntimeSupport;
+
+RuntimeSupportInitializer runtimeSupportInitializer = new RuntimeSupportInitializer(""{lambdaHandler}"");
+await runtimeSupportInitializer.RunLambdaBootstrap();
+";
+                var programPath = Path.Combine(tempPath, "Program.cs");
+                File.WriteAllText(programPath, programContent);
+
+                RunProcess("dotnet", $"build {projectPath}", Directory.GetParent(projectMetadata.ProjectPath)!.FullName);
+                // RunProcess("dotnet", $"build -c Release {projectPath}");
+                
+                resource = resource
+                    .WithAnnotation(new LambdaProjectMetadata(projectPath));
             }
         }
         else
@@ -200,5 +247,56 @@ public static class LambdaExtensions
         builder.WithOtlpExporter();
 
         return builder;
+    }
+    
+    /// <summary>
+    /// Utility method for running a command on the commandline. It returns backs the exit code and anything written to stdout or stderr.
+    /// </summary>
+    /// <param name="logger"></param>
+    /// <param name="path"></param>
+    /// <param name="arguments"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static int RunProcess(string path, string arguments, string workingDirectory)
+    {
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                WorkingDirectory = workingDirectory,
+                FileName = path,
+                Arguments = arguments,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                WindowStyle = ProcessWindowStyle.Hidden
+            }
+        };
+
+        var output = new StringBuilder();
+
+        process.OutputDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+            {
+                output.Append(e.Data);
+            }
+        };
+
+        process.ErrorDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+            {
+                output.Append(e.Data);
+            }
+        };
+
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+
+        process.WaitForExit(int.MaxValue);
+
+        return process.ExitCode;
     }
 }
