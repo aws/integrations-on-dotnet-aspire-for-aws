@@ -22,6 +22,8 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
 
     public async Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
     {
+        SdkUtilities.BackgroundSDKDefaultConfigValidation(logger);
+
         LambdaEmulatorAnnotation? emulatorAnnotation = null;
         if (appModel.Resources.FirstOrDefault(x => x.TryGetLastAnnotation<LambdaEmulatorAnnotation>(out emulatorAnnotation)) != null && emulatorAnnotation != null)
         {
