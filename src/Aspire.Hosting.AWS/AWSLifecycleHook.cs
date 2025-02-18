@@ -1,5 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
+using Amazon.Runtime.Internal.Util;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.CDK;
 using Aspire.Hosting.AWS.Provisioning;
@@ -10,6 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace Aspire.Hosting.AWS;
 
 internal sealed class AWSLifecycleHook(
+    ILogger<AWSLifecycleHook> logger,
     DistributedApplicationExecutionContext executionContext,
     IServiceProvider serviceProvider,
     ResourceNotificationService notificationService,
@@ -17,6 +19,8 @@ internal sealed class AWSLifecycleHook(
 {
     public Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
     {
+        SdkUtilities.BackgroundSDKDefaultConfigValidation(logger);
+
         var awsResources = appModel.Resources.OfType<IAWSResource>().ToList();
         if (awsResources.Count == 0) // Skip when no AWS resources are found
         {

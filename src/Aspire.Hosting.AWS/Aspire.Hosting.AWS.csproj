@@ -14,6 +14,9 @@
     <PackageReference Include="Amazon.CDK.Lib" />
     <PackageReference Include="AWSSDK.Core" />
     <PackageReference Include="AWSSDK.CloudFormation" />
+    <PackageReference Include="AWSSDK.SecurityToken" />	  
+    <PackageReference Include="AWSSDK.SSO" />	  
+    <PackageReference Include="AWSSDK.SSOOIDC" />	  
   </ItemGroup>
   
   <ItemGroup>
