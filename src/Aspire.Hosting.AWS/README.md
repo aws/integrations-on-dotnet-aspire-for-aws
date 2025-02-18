@@ -202,7 +202,7 @@ var addFunction = builder.AddAWSLambdaFunction<Projects.WebAddLambdaFunction>(
     handler: "WebAddLambdaFunction");
 
 // Configure API Gateway emulator
-builder.AddAPIGatewayEmulator("APIGatewayEmulator", APIGatewayType.HttpApi)
+builder.AddAPIGatewayEmulator("APIGatewayEmulator", APIGatewayType.HttpV2)
     .WithReference(rootWebFunction, Method.Get, "/")
     .WithReference(addFunction, Method.Get, "/add/{x}/{y}");
 ```
@@ -210,7 +210,7 @@ builder.AddAPIGatewayEmulator("APIGatewayEmulator", APIGatewayType.HttpApi)
 The `AddAPIGatewayEmulator` method requires:
 
 - A name for the emulator resource
-- The API Gateway type (`HttpApi` or `RestApi`)
+- The API Gateway type (`Rest`, `HttpV1`, or `HttpV2` )
 
 Use the `WithReference` method to connect Lambda functions to HTTP routes, specifying:
 
