@@ -163,11 +163,14 @@ You can develop and test AWS Lambda functions locally within your .NET Aspire ap
 
 ![\[\]!(.)](Resources/lambda.png)
 
+
 ### Adding Lambda Functions
 
 To add a Lambda function to your .NET Aspire AppHost, use the `AddAWSLambdaFunction` method. The method supports both executable Lambda functions and class library Lambda functions:
 
 ```csharp
+#pragma warning disable CA2252 // This API requires opting into preview features
+
 // Add an executable Lambda function
 builder.AddAWSLambdaFunction<Projects.ExecutableLambdaFunction>(
     "MyLambdaFunction", 
@@ -192,6 +195,8 @@ The handler parameter specifies the Lambda handler in different formats dependin
 To add an API Gateaway emulator to your .NET Aspire AppHost, use the `AddAPIGatewayEmulator` method. 
 
 ```csharp
+#pragma warning disable CA2252 // This API requires opting into preview features
+
 // Add Lambda functions
 var rootWebFunction = builder.AddAWSLambdaFunction<Projects.WebApiLambdaFunction>(
     "RootLambdaFunction", 
