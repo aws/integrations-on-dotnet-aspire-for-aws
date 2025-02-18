@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.Versioning;
+using Aspire.Hosting.AWS.Utils;
 
 #pragma warning disable IDE0130
 namespace Aspire.Hosting;
@@ -37,15 +38,22 @@ public static class LambdaExtensions
         IResourceBuilder<LambdaProjectResource> resource;
         if (lambdaHandler.Contains("::"))
         {
-            // TODO: Once 9.1 comes out LaunchProfileAnnotation will be public and we can remove the reflection and directly instantiate it.
-            var launchProfileAnnotationsType = typeof(IDistributedApplicationBuilder).Assembly.GetTypes().FirstOrDefault(x => string.Equals(x.FullName, "Aspire.Hosting.ApplicationModel.LaunchProfileAnnotation"));
-            var constructor = launchProfileAnnotationsType!.GetConstructors()[0];
-            var instance = constructor.Invoke(new object[] { $"{Constants.LaunchSettingsNodePrefix}{name}" }) as IResourceAnnotation;
+            if(AspireUtilities.IsRunningInDebugger)
+            {
+                // TODO: Once 9.1 comes out LaunchProfileAnnotation will be public and we can remove the reflection and directly instantiate it.
+                var launchProfileAnnotationsType = typeof(IDistributedApplicationBuilder).Assembly.GetTypes().FirstOrDefault(x => string.Equals(x.FullName, "Aspire.Hosting.ApplicationModel.LaunchProfileAnnotation"));
+                var constructor = launchProfileAnnotationsType!.GetConstructors()[0];
+                var instance = constructor.Invoke(new object[] { $"{Constants.LaunchSettingsNodePrefix}{name}" }) as IResourceAnnotation;
 
-            var project = new LambdaProjectResource(name);
-            resource = builder.AddResource(project)
-                .WithAnnotation(instance!)
-                .WithAnnotation(new TLambdaProject());
+                var project = new LambdaProjectResource(name);
+                resource = builder.AddResource(project)
+                    .WithAnnotation(instance!)
+                    .WithAnnotation(new TLambdaProject());
+            }
+            else
+            {
+                throw new NotImplementedException("Current class library programming model for Lambda is only supported when launched from Visual Studio with the debugger attached");
+            }
         }
         else
         {
