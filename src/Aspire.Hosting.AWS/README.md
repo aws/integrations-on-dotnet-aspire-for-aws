@@ -161,7 +161,7 @@ builder.AddProject<Projects.Frontend>("Frontend")
 
 You can develop and test AWS Lambda functions locally within your .NET Aspire application. This enables testing Lambda functions alongside other application resources during development.
 
-![alt text](image.png)
+![\[\]!(.)](Resources/lambda.png)
 
 ### Adding Lambda Functions
 
