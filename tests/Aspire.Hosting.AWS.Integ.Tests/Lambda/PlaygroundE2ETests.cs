@@ -42,16 +42,24 @@ public class PlaygroundE2ETests
             Assert.Equal("The root page for the REST API defined in the Aspire AppHost. Try using endpoints /add/{1}/2, /minus/3/2, /multiply/6/7, /divide/20/4 or /aws/{sqs|dynamodb}",
                 await TestEndpoint("/", app, "APIGatewayEmulator"));
             Assert.Equal("[\"Found caller identity\"]", await TestEndpoint("/aws/STS", app, "APIGatewayEmulator"));
-            
-            var client = CreateLambdaServiceClient(lambdaEmulatorAnnotation.Endpoint.Url);
             Assert.Equal("3",
-                await TestLambda("AddFunction", "1", "2", client));
+                await TestEndpoint("/add/1/2", app, "APIGatewayEmulator"));
             Assert.Equal("1",
-                await TestLambda("MinusFunction", "2", "1", client));
+                await TestEndpoint("/minus/2/1", app, "APIGatewayEmulator"));
             Assert.Equal("2",
-                await TestLambda("MultiplyFunction", "2", "1", client));
+                await TestEndpoint("/multiply/2/1", app, "APIGatewayEmulator"));
             Assert.Equal("2",
-                await TestLambda("DivideFunction", "2", "1", client));
+                await TestEndpoint("/divide/2/1", app, "APIGatewayEmulator"));
+            
+            // var client = CreateLambdaServiceClient(lambdaEmulatorAnnotation.Endpoint.Url);
+            // Assert.Equal("3",
+            //     await TestLambda("AddFunction", "1", "2", client));
+            // Assert.Equal("1",
+            //     await TestLambda("MinusFunction", "2", "1", client));
+            // Assert.Equal("2",
+            //     await TestLambda("MultiplyFunction", "2", "1", client));
+            // Assert.Equal("2",
+            //     await TestLambda("DivideFunction", "2", "1", client));
         }
         finally
         {
