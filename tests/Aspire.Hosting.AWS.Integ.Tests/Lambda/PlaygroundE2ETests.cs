@@ -22,6 +22,9 @@ public class PlaygroundE2ETests
             await resourceNotificationService
                 .WaitForResourceAsync("APIGatewayEmulator", KnownResourceStates.Running)
                 .WaitAsync(TimeSpan.FromSeconds(120));
+            await resourceNotificationService
+                .WaitForResourceAsync("AddFunction", KnownResourceStates.Running)
+                .WaitAsync(TimeSpan.FromSeconds(120));
 
             var lambdaServiceEmulator = (LambdaEmulatorResource)appHost.Resources
                                 .Single(static r => r.Name == "LambdaServiceEmulator");
