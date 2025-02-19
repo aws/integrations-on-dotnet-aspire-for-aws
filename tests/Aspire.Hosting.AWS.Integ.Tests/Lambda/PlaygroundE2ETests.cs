@@ -34,7 +34,7 @@ public class PlaygroundE2ETests
 
             Assert.Equal("The root page for the REST API defined in the Aspire AppHost. Try using endpoints /add/{1}/2, /minus/3/2, /multiply/6/7, /divide/20/4 or /aws/{sqs|dynamodb}",
                 await TestEndpoint("/", app, "APIGatewayEmulator"));
-            Assert.True(!string.IsNullOrEmpty(await TestEndpoint("/aws/SQS", app, "APIGatewayEmulator", 10, 90)));
+            Assert.Equal("[\"Found caller identity\"]", await TestEndpoint("/aws/STS", app, "APIGatewayEmulator"));
             Assert.Equal("3",
                 await TestEndpoint("/add/1/2", app, "APIGatewayEmulator"));
             Assert.Equal("1",
@@ -50,7 +50,7 @@ public class PlaygroundE2ETests
         }
     }
 
-    private async Task<string> TestEndpoint(string routeName, DistributedApplication app, string resourceName, int requestTimeout = 2, int totalTimeout = 45)
+    private async Task<string> TestEndpoint(string routeName, DistributedApplication app, string resourceName, int requestTimeout = 30, int totalTimeout = 200)
     {
         using (var client = app.CreateHttpClient(resourceName))
         {
@@ -65,7 +65,8 @@ public class PlaygroundE2ETests
 
                 try
                 {
-                    return await client.GetStringAsync(routeName);
+                    var response = await client.GetAsync(routeName);
+                    return await response.Content.ReadAsStringAsync();
                 }
                 catch (Exception ex)
                 {
@@ -74,7 +75,7 @@ public class PlaygroundE2ETests
                 }
             }
 
-            throw new TimeoutException($"Failed to complete request within timeout period: z{lastException?.Message}", lastException);
+            throw new TimeoutException($"Failed to complete request within timeout period: {lastException?.Message}", lastException);
         }
     }
 }

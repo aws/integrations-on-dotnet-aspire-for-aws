@@ -53,20 +53,44 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
                     .First();
             
                 var installPath = await GetCurrentInstallPathAsync(cancellationToken);
-                var targetFramework = await GetProjectTargetFrameworkAsync(projectMetadata.ProjectPath, cancellationToken);
-                var assemblyName = await GetProjectAssemblyNameAsync(projectMetadata.ProjectPath, cancellationToken);
-                var contentFolder = new DirectoryInfo(installPath).Parent?.Parent?.Parent?.FullName ?? string.Empty;
+                if (string.IsNullOrEmpty(installPath))
+                {
+                    logger.LogError("Failed to determine The location of Amazon.Lambda.TestTool on disk which is required for running class library Lambda functions.");
+                    return;
+                }
+                var contentFolder = new DirectoryInfo(installPath).Parent?.Parent?.Parent?.FullName;
                 if (string.IsNullOrEmpty(contentFolder))
+                {
                     logger.LogError("Failed to determine the content folder of Amazon.Lambda.TestTool NuGet package which is required for running class library Lambda functions.");
+                    return;
+                }
+                var targetFramework = await GetProjectTargetFrameworkAsync(projectMetadata.ProjectPath, cancellationToken);
+                if (string.IsNullOrEmpty(targetFramework))
+                {
+                    logger.LogError("Cannot determine the target framework of the project '{ProjectPath}'", projectMetadata.ProjectPath);
+                    continue;
+                }
+                var assemblyName = await GetProjectAssemblyNameAsync(projectMetadata.ProjectPath, cancellationToken);
+                if (string.IsNullOrEmpty(assemblyName))
+                {
+                    logger.LogError("Cannot determine the assembly name of the project '{ProjectPath}'", projectMetadata.ProjectPath);
+                    continue;
+                }
                 var runtimeSupportAssemblyPath = Path.Combine(contentFolder, "content", "Amazon.Lambda.RuntimeSupport",
                     targetFramework, "Amazon.Lambda.RuntimeSupport.dll");
+                if (!File.Exists(runtimeSupportAssemblyPath))
+                {
+                    logger.LogError("Cannot find a version of Amazon.Lambda.RuntimeSupport that supports your project's target framework '{Framework}'. The following directory does not exist '{RuntimeSupportPath}'.", targetFramework, runtimeSupportAssemblyPath);
+                    continue;
+                }
                 ProjectUtilities.UpdateLaunchSettingsWithLambdaTester(
                     resourceName: projectResource.Name,
                     functionHandler: lambdaFunctionAnnotation.Handler,
                     assemblyName: assemblyName,
                     projectPath: projectMetadata.ProjectPath,
                     runtimeSupportAssemblyPath: runtimeSupportAssemblyPath,
-                    targetFramework: targetFramework);
+                    targetFramework: targetFramework,
+                    logger: logger);
             }
         }
         else

@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.Logging;
 
 namespace Aspire.Hosting.AWS.Utils;
 
@@ -10,55 +11,70 @@ internal static class ProjectUtilities
     /// Initializes the project's launch settings if necessary, and
     /// ensures they are referencing the Amazon.Lambda.TestTool's location.
     /// </summary>
+    /// <param name="resourceName">Lambda function name to be used part of the launch setting profile</param>
+    /// <param name="functionHandler">Lambda function handler</param>
+    /// <param name="assemblyName">Assembly name of the Lambda function to retrieve the deps file and runtime config file</param>
+    /// <param name="projectPath">Project file path</param>
+    /// <param name="runtimeSupportAssemblyPath">Runtime Support dll path</param>
+    /// <param name="targetFramework">Lambda function target framework</param>
+    /// <param name="logger">A logger instance</param>
     public static void UpdateLaunchSettingsWithLambdaTester(
         string resourceName, 
         string functionHandler, 
         string assemblyName, 
         string projectPath, 
         string runtimeSupportAssemblyPath, 
-        string targetFramework)
+        string targetFramework,
+        ILogger? logger = null)
     {
-        // Retrieve the current launch settings JSON from wherever it's stored.
-        string launchSettingsJson = GetLaunchSettings(projectPath);
-
-        // Parse the JSON into a mutable JsonNode (root is expected to be an object)
-        JsonNode? rootNode = JsonNode.Parse(launchSettingsJson);
-        if (rootNode is not JsonObject root)
+        try
         {
-            // If the parsed JSON isn’t an object, initialize a new one.
-            root = new JsonObject();
-        }
+            // Retrieve the current launch settings JSON from wherever it's stored.
+            string launchSettingsJson = GetLaunchSettings(projectPath);
 
-        // Get or create the "profiles" JSON object
-        JsonObject profiles = root["profiles"]?.AsObject() ?? new JsonObject();
-        root["profiles"] = profiles;  // Ensure it's added to the root
-
-        var launchSettingsNodeKey = $"{Constants.LaunchSettingsNodePrefix}{resourceName}";
-
-        // Get or create the specific profile for Amazon.Lambda.TestTool
-        JsonObject? lambdaTester = profiles[launchSettingsNodeKey]?.AsObject();
-        if (lambdaTester == null)
-        {
-            lambdaTester = new JsonObject
+            // Parse the JSON into a mutable JsonNode (root is expected to be an object)
+            JsonNode? rootNode = JsonNode.Parse(launchSettingsJson);
+            if (rootNode is not JsonObject root)
             {
-                ["commandName"] = "Executable",
-                ["executablePath"] = "dotnet"
-            };
+                // If the parsed JSON isn’t an object, initialize a new one.
+                root = new JsonObject();
+            }
 
-            profiles[launchSettingsNodeKey] = lambdaTester;
+            // Get or create the "profiles" JSON object
+            JsonObject profiles = root["profiles"]?.AsObject() ?? new JsonObject();
+            root["profiles"] = profiles;  // Ensure it's added to the root
+
+            var launchSettingsNodeKey = $"{Constants.LaunchSettingsNodePrefix}{resourceName}";
+
+            // Get or create the specific profile for Amazon.Lambda.TestTool
+            JsonObject? lambdaTester = profiles[launchSettingsNodeKey]?.AsObject();
+            if (lambdaTester == null)
+            {
+                lambdaTester = new JsonObject
+                {
+                    ["commandName"] = "Executable",
+                    ["executablePath"] = "dotnet"
+                };
+
+                profiles[launchSettingsNodeKey] = lambdaTester;
+            }
+
+            // Update properties that contain a path that is environment-specific
+            lambdaTester["commandLineArgs"] =
+                $"exec --depsfile ./{assemblyName}.deps.json --runtimeconfig ./{assemblyName}.runtimeconfig.json {SubstituteHomePath(runtimeSupportAssemblyPath)} {functionHandler}";
+            lambdaTester["workingDirectory"] = Path.Combine(".", "bin", "$(Configuration)", targetFramework);
+
+            // Serialize the updated JSON with indentation
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            string updatedJson = root.ToJsonString(options);
+
+            // Save the updated JSON back to the launch settings file.
+            SaveLaunchSettings(projectPath, updatedJson);
         }
-
-        // Update properties that contain a path that is environment-specific
-        lambdaTester["commandLineArgs"] =
-            $"exec --depsfile ./{assemblyName}.deps.json --runtimeconfig ./{assemblyName}.runtimeconfig.json {SubstituteHomePath(runtimeSupportAssemblyPath)} {functionHandler}";
-        lambdaTester["workingDirectory"] = Path.Combine(".", "bin", "$(Configuration)", targetFramework);
-
-        // Serialize the updated JSON with indentation
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        string updatedJson = root.ToJsonString(options);
-
-        // Save the updated JSON back to the launch settings file.
-        SaveLaunchSettings(projectPath, updatedJson);
+        catch (JsonException ex)
+        {
+            logger?.LogError(ex, "Failed to parse the launchSettings.json file for the project '{ProjectPath}'.", projectPath);
+        }
     }
     
     /// <summary>
@@ -96,7 +112,6 @@ internal static class ProjectUtilities
         var properties = Path.Combine(parentDirectory, "Properties");
         if (!Directory.Exists(properties))
         {
-            Directory.CreateDirectory(properties);
             return "{}";
         }
 
@@ -117,7 +132,12 @@ internal static class ProjectUtilities
         var parentDirectory = Path.GetDirectoryName(projectPath);
         if (string.IsNullOrEmpty(parentDirectory))
             throw new ArgumentException($"The project path '{projectPath}' is invalid. Unable to retrieve the '{Constants.LaunchSettingsFile}' file.");
-        var fullPath = Path.Combine(parentDirectory, "Properties", Constants.LaunchSettingsFile);
+        var properties = Path.Combine(parentDirectory, "Properties");
+        if (!Directory.Exists(properties))
+        {
+            Directory.CreateDirectory(properties);
+        }
+        var fullPath = Path.Combine(properties, Constants.LaunchSettingsFile);
         File.WriteAllText(fullPath, content);
     }
 }
