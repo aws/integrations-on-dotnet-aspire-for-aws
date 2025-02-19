@@ -96,8 +96,7 @@ await runtimeSupportInitializer.RunLambdaBootstrap();
                 var programPath = Path.Combine(tempPath, "Program.cs");
                 File.WriteAllText(programPath, programContent);
 
-                RunProcess("dotnet", $"build {projectPath}", Directory.GetParent(projectMetadata.ProjectPath)!.FullName);
-                // RunProcess("dotnet", $"build -c Release {projectPath}");
+                RunProcess("dotnet", $"build {new FileInfo(projectPath).Name}", Directory.GetParent(projectPath)!.FullName);
                 
                 resource = resource
                     .WithAnnotation(new LambdaProjectMetadata(projectPath));
