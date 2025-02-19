@@ -9,6 +9,7 @@ using Aspire.Hosting.Lifecycle;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
 using Aspire.Hosting.AWS.Utils;
@@ -64,7 +65,7 @@ public static class LambdaExtensions
                     .WithAnnotation(new TLambdaProject());
                 var projectMetadata = project.Annotations.OfType<IProjectMetadata>().First();
                 project.Annotations.Remove(projectMetadata);
-                string tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+                string tempPath = GetTempDirectory();
                 Directory.CreateDirectory(tempPath);
 
                 // Define the .csproj content.
@@ -297,5 +298,18 @@ await runtimeSupportInitializer.RunLambdaBootstrap();
         process.WaitForExit(int.MaxValue);
 
         return process.ExitCode;
+    }
+    
+    private static string GetTempDirectory()
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            return Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        } 
+        else
+        {
+            var userProfilePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            return Path.Combine(userProfilePath, ".lambda-test-tool", Guid.NewGuid().ToString());
+        }
     }
 }
