@@ -297,6 +297,8 @@ await runtimeSupportInitializer.RunLambdaBootstrap();
 
         process.WaitForExit(int.MaxValue);
 
+        Console.WriteLine(output.ToString());
+        
         return process.ExitCode;
     }
     
