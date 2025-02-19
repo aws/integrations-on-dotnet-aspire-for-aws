@@ -65,7 +65,7 @@ public static class LambdaExtensions
                     .WithAnnotation(new TLambdaProject());
                 var projectMetadata = project.Annotations.OfType<IProjectMetadata>().First();
                 project.Annotations.Remove(projectMetadata);
-                string tempPath = GetTempDirectory();
+                string tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
                 Directory.CreateDirectory(tempPath);
 
                 // Define the .csproj content.
