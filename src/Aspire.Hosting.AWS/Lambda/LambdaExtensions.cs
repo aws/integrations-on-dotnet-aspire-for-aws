@@ -45,7 +45,7 @@ public static class LambdaExtensions
         IResourceBuilder<LambdaProjectResource> resource;
         if (lambdaHandler.Contains("::"))
         {
-            if(AspireUtilities.IsRunningInDebugger)
+            if(!AspireUtilities.IsRunningInDebugger)
             {
                 // TODO: Once 9.1 comes out LaunchProfileAnnotation will be public and we can remove the reflection and directly instantiate it.
                 var launchProfileAnnotationsType = typeof(IDistributedApplicationBuilder).Assembly.GetTypes().FirstOrDefault(x => string.Equals(x.FullName, "Aspire.Hosting.ApplicationModel.LaunchProfileAnnotation"));

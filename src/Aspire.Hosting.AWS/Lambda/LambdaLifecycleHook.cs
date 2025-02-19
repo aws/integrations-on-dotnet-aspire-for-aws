@@ -9,6 +9,8 @@ using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspire.Hosting.AWS.Utils;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 
 namespace Aspire.Hosting.AWS.Lambda;
 
@@ -61,8 +63,11 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
                 var projectMetadata = projectResource.Annotations
                     .OfType<IProjectMetadata>()
                     .First();
-                
-                RunProcess("dotnet", $"build {new FileInfo(projectMetadata.ProjectPath).Name}", Directory.GetParent(projectMetadata.ProjectPath)!.FullName);
+
+                var projectName = new FileInfo(projectMetadata.ProjectPath).Name;
+                var workingDirectory = Directory.GetParent(projectMetadata.ProjectPath)!.FullName;
+                RunProcess("dotnet", $"build {projectName}", workingDirectory);
+                RunProcess("dotnet", $"build -c Release {projectName}", workingDirectory);
             }
 
             foreach (var projectResource in classLibraryProjectPaths)
