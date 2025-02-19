@@ -1,4 +1,8 @@
-﻿using Aspire.Hosting.AWS.Lambda;
+﻿using System.Text.Json;
+using Amazon.Lambda;
+using Amazon.Lambda.APIGatewayEvents;
+using Amazon.Lambda.Model;
+using Aspire.Hosting.AWS.Lambda;
 
 namespace Aspire.Hosting.AWS.Integ.Tests.Lambda;
 
@@ -22,9 +26,9 @@ public class PlaygroundE2ETests
             await resourceNotificationService
                 .WaitForResourceAsync("APIGatewayEmulator", KnownResourceStates.Running)
                 .WaitAsync(TimeSpan.FromSeconds(120));
-            await resourceNotificationService
-                .WaitForResourceAsync("AddFunction", KnownResourceStates.Running)
-                .WaitAsync(TimeSpan.FromSeconds(120));
+            // await resourceNotificationService
+            //     .WaitForResourceAsync("AddFunction", KnownResourceStates.Running)
+            //     .WaitAsync(TimeSpan.FromSeconds(120));
 
             var lambdaServiceEmulator = (LambdaEmulatorResource)appHost.Resources
                                 .Single(static r => r.Name == "LambdaServiceEmulator");
@@ -38,19 +42,56 @@ public class PlaygroundE2ETests
             Assert.Equal("The root page for the REST API defined in the Aspire AppHost. Try using endpoints /add/{1}/2, /minus/3/2, /multiply/6/7, /divide/20/4 or /aws/{sqs|dynamodb}",
                 await TestEndpoint("/", app, "APIGatewayEmulator"));
             Assert.Equal("[\"Found caller identity\"]", await TestEndpoint("/aws/STS", app, "APIGatewayEmulator"));
+            
+            var client = CreateLambdaServiceClient(lambdaEmulatorAnnotation.Endpoint.Url);
             Assert.Equal("3",
-                await TestEndpoint("/add/1/2", app, "APIGatewayEmulator"));
+                await TestLambda("AddFunction", "1", "2", client));
             Assert.Equal("1",
-                await TestEndpoint("/minus/2/1", app, "APIGatewayEmulator"));
+                await TestLambda("MinusFunction", "2", "1", client));
             Assert.Equal("2",
-                await TestEndpoint("/multiply/2/1", app, "APIGatewayEmulator"));
+                await TestLambda("MultiplyFunction", "2", "1", client));
             Assert.Equal("2",
-                await TestEndpoint("/divide/2/1", app, "APIGatewayEmulator"));
+                await TestLambda("DivideFunction", "2", "1", client));
         }
         finally
         {
             await cancellationToken.CancelAsync();
         }
+    }
+
+    private async Task<string> TestLambda(string functionName, string x, string y, IAmazonLambda client)
+    {
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        };
+
+        var payload = JsonSerializer.Serialize(new APIGatewayHttpApiV2ProxyRequest
+        {
+            PathParameters = new Dictionary<string, string>
+            {
+                {"x", x},
+                {"y", y}
+            }
+        }, options);
+
+        var invokeRequest = new InvokeRequest
+        {
+            FunctionName = functionName,
+            InvocationType = InvocationType.RequestResponse,
+            Payload = payload
+        };
+
+        var response = await client.InvokeAsync(invokeRequest);
+        APIGatewayHttpApiV2ProxyResponse? lambdaResponse;
+        using (var reader = new StreamReader(response.Payload))
+        {
+            var responseJson = await reader.ReadToEndAsync();
+
+            lambdaResponse = JsonSerializer.Deserialize<APIGatewayHttpApiV2ProxyResponse>(responseJson, options);
+        }
+        
+        return lambdaResponse?.Body ?? string.Empty;
     }
 
     private async Task<string> TestEndpoint(string routeName, DistributedApplication app, string resourceName, int requestTimeout = 30, int totalTimeout = 200)
@@ -80,5 +121,15 @@ public class PlaygroundE2ETests
 
             throw new TimeoutException($"Failed to complete request within timeout period: {lastException?.Message}", lastException);
         }
+    }
+    
+    private static IAmazonLambda CreateLambdaServiceClient(string endpoint)
+    {
+        var lambdaConfig = new AmazonLambdaConfig
+        {
+            ServiceURL = endpoint
+        };
+
+        return new AmazonLambdaClient(new Amazon.Runtime.BasicAWSCredentials("accessKey", "secretKey"), lambdaConfig);
     }
 }

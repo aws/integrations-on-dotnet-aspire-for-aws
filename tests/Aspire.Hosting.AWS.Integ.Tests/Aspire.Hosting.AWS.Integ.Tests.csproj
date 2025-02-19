@@ -21,5 +21,10 @@
 		<Using Include="Aspire.Hosting.Testing" />
 		<Using Include="Xunit" />
 	</ItemGroup>
+	
+	<ItemGroup>
+		<PackageReference Include="AWSSDK.Lambda" />
+		<PackageReference Include="Amazon.Lambda.APIGatewayEvents" />
+	</ItemGroup>
 
 </Project>
