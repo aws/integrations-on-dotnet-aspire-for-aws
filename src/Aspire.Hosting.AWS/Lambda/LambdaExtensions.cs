@@ -30,8 +30,9 @@ public static class LambdaExtensions
     /// <param name="lambdaHandler">Lambda function handler</param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    public static IResourceBuilder<LambdaProjectResource> AddAWSLambdaFunction<TLambdaProject>(this IDistributedApplicationBuilder builder, string name, string lambdaHandler) where TLambdaProject : IProjectMetadata, new()
+    public static IResourceBuilder<LambdaProjectResource> AddAWSLambdaFunction<TLambdaProject>(this IDistributedApplicationBuilder builder, string name, string lambdaHandler, LambdaFunctionOptions? options = null) where TLambdaProject : IProjectMetadata, new()
     {
+        options ??= new LambdaFunctionOptions();
         var metadata = new TLambdaProject();
 
         var serviceEmulator = AddOrGetLambdaServiceEmulatorResource(builder);
@@ -62,6 +63,9 @@ public static class LambdaExtensions
             context.EnvironmentVariables["AWS_LAMBDA_RUNTIME_API"] = apiPath;
             context.EnvironmentVariables["AWS_LAMBDA_FUNCTION_NAME"] = name;
             context.EnvironmentVariables["_HANDLER"] = lambdaHandler;
+
+            context.EnvironmentVariables["AWS_LAMBDA_LOG_FORMAT"] = options.LogFormat.Value;
+            context.EnvironmentVariables["AWS_LAMBDA_LOG_LEVEL"] = options.ApplicationLogLevel.Value;
 
             var lambdaEmulatorEndpoint = $"http://{serviceEmulatorEndpoint.Host}:{serviceEmulatorEndpoint.Port}/?function={Uri.EscapeDataString(name)}";
 
