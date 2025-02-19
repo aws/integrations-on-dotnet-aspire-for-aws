@@ -96,7 +96,7 @@ await runtimeSupportInitializer.RunLambdaBootstrap();
                 var programPath = Path.Combine(tempPath, "Program.cs");
                 File.WriteAllText(programPath, programContent);
 
-                RunProcess("dotnet", $"build {new FileInfo(projectPath).Name}", Directory.GetParent(projectPath)!.FullName);
+                // RunProcess("dotnet", $"build {new FileInfo(projectPath).Name}", Directory.GetParent(projectPath)!.FullName);
                 
                 resource = resource
                     .WithAnnotation(new LambdaProjectMetadata(projectPath));
@@ -247,59 +247,6 @@ await runtimeSupportInitializer.RunLambdaBootstrap();
         builder.WithOtlpExporter();
 
         return builder;
-    }
-    
-    /// <summary>
-    /// Utility method for running a command on the commandline. It returns backs the exit code and anything written to stdout or stderr.
-    /// </summary>
-    /// <param name="logger"></param>
-    /// <param name="path"></param>
-    /// <param name="arguments"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    public static int RunProcess(string path, string arguments, string workingDirectory)
-    {
-        using var process = new Process
-        {
-            StartInfo = new ProcessStartInfo
-            {
-                WorkingDirectory = workingDirectory,
-                FileName = path,
-                Arguments = arguments,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                WindowStyle = ProcessWindowStyle.Hidden
-            }
-        };
-
-        var output = new StringBuilder();
-
-        process.OutputDataReceived += (sender, e) =>
-        {
-            if (e.Data != null)
-            {
-                output.Append(e.Data);
-            }
-        };
-
-        process.ErrorDataReceived += (sender, e) =>
-        {
-            if (e.Data != null)
-            {
-                output.Append(e.Data);
-            }
-        };
-
-        process.Start();
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
-
-        process.WaitForExit(int.MaxValue);
-
-        Console.WriteLine(output.ToString());
-        
-        return process.ExitCode;
     }
     
     private static string GetTempDirectory()

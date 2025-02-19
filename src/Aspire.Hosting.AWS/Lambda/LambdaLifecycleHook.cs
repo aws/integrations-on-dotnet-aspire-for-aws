@@ -1,5 +1,7 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
+using System.Diagnostics;
+using System.Text;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Utils.Internal;
 using Aspire.Hosting.Lifecycle;
@@ -37,11 +39,31 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
                     return true;
                 })
                 .ToList();
+        var wrapperProjectPaths = 
+            appModel.Resources
+                .OfType<LambdaProjectResource>()
+                .Where(x =>
+                {
+                    if (!x.TryGetLastAnnotation<LambdaProjectMetadata>(out _))
+                        return false;
+
+                    return true;
+                })
+                .ToList();
         
         LambdaEmulatorAnnotation? emulatorAnnotation = null;
         if (appModel.Resources.FirstOrDefault(x => x.TryGetLastAnnotation<LambdaEmulatorAnnotation>(out emulatorAnnotation)) != null && emulatorAnnotation != null)
         {
             await ApplyLambdaEmulatorAnnotationAsync(emulatorAnnotation, cancellationToken);
+
+            foreach (var projectResource in wrapperProjectPaths)
+            {
+                var projectMetadata = projectResource.Annotations
+                    .OfType<IProjectMetadata>()
+                    .First();
+                
+                RunProcess("dotnet", $"build {new FileInfo(projectMetadata.ProjectPath).Name}", Directory.GetParent(projectMetadata.ProjectPath)!.FullName);
+            }
 
             foreach (var projectResource in classLibraryProjectPaths)
             {
@@ -97,6 +119,59 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
         {
             logger.LogDebug("Skipping installing Amazon.Lambda.TestTool since no Lambda emulator resource was found");
         }
+    }
+    
+    /// <summary>
+    /// Utility method for running a command on the commandline. It returns backs the exit code and anything written to stdout or stderr.
+    /// </summary>
+    /// <param name="logger"></param>
+    /// <param name="path"></param>
+    /// <param name="arguments"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static int RunProcess(string path, string arguments, string workingDirectory)
+    {
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                WorkingDirectory = workingDirectory,
+                FileName = path,
+                Arguments = arguments,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                WindowStyle = ProcessWindowStyle.Hidden
+            }
+        };
+
+        var output = new StringBuilder();
+
+        process.OutputDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+            {
+                output.Append(e.Data);
+            }
+        };
+
+        process.ErrorDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+            {
+                output.Append(e.Data);
+            }
+        };
+
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+
+        process.WaitForExit(int.MaxValue);
+
+        Console.WriteLine(output.ToString());
+        
+        return process.ExitCode;
     }
 
     internal async Task ApplyLambdaEmulatorAnnotationAsync(LambdaEmulatorAnnotation emulatorAnnotation, CancellationToken cancellationToken = default)
