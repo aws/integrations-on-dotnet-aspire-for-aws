@@ -27,4 +27,24 @@ internal static class Constants
     internal const string IsAspireHostedEnvVariable = "ASPIRE_HOSTED";
 
     internal const string LambdaPreviewMessage = "Local Lambda development feature is still in active development. Check out the following GitHub issue for status: https://github.com/aws/integrations-on-dotnet-aspire-for-aws/issues/17";
+    
+    /// <summary>
+    /// The launch settings profile name prefix
+    /// </summary>
+    internal const string LaunchSettingsNodePrefix = "Aspire_";
+    
+    /// <summary>
+    /// The launch settings file name
+    /// </summary>
+    internal const string LaunchSettingsFile = "launchSettings.json";
+    
+    /// <summary>
+    /// The version of RuntimeSupport used in the executable wrapper project
+    /// </summary>
+    internal const string RuntimeSupportPackageVersion = "1.12.2";
+    
+    /// <summary>
+    /// The default version of Amazon.Lambda.TestTool that will be automatically installed
+    /// </summary>
+    internal const string DefaultLambdaTestToolVersion = "0.0.2-preview";
 }

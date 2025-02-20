@@ -18,6 +18,7 @@
     <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" />
     <PackageReference Include="AWSSDK.DynamoDBv2" />
     <PackageReference Include="AWSSDK.SQS" />
+    <PackageReference Include="AWSSDK.SecurityToken" />
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" />
   </ItemGroup>
   <ItemGroup>

@@ -6,11 +6,11 @@ using Aspire.Hosting.AWS.Lambda;
 using Microsoft.Extensions.Hosting;
 using Aspire.Hosting.AWS.Utils.Internal;
 using Aspire.Hosting.Lifecycle;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.Versioning;
+using Aspire.Hosting.AWS.Utils;
 
 #pragma warning disable IDE0130
 namespace Aspire.Hosting;
@@ -20,7 +20,7 @@ namespace Aspire.Hosting;
 /// </summary>
 [RequiresPreviewFeatures(Constants.LambdaPreviewMessage)]
 public static class LambdaExtensions
-{
+{   
     /// <summary>
     /// Add a Lambda function as an Aspire resource.
     /// </summary>
@@ -29,19 +29,29 @@ public static class LambdaExtensions
     /// <param name="name">Aspire resource name</param>
     /// <param name="lambdaHandler">Lambda function handler</param>
     /// <returns></returns>
-    /// <exception cref="NotImplementedException"></exception>
     public static IResourceBuilder<LambdaProjectResource> AddAWSLambdaFunction<TLambdaProject>(this IDistributedApplicationBuilder builder, string name, string lambdaHandler, LambdaFunctionOptions? options = null) where TLambdaProject : IProjectMetadata, new()
     {
         options ??= new LambdaFunctionOptions();
         var metadata = new TLambdaProject();
 
         var serviceEmulator = AddOrGetLambdaServiceEmulatorResource(builder);
-
         IResourceBuilder<LambdaProjectResource> resource;
-        if (lambdaHandler.Contains("::"))
+        // The Lambda function handler for a Class Library contains "::".
+        // This is an example of a class library function handler "WebCalculatorFunctions::WebCalculatorFunctions.Functions::AddFunctionHandler".
+        if (lambdaHandler.Contains("::") && AspireUtilities.IsRunningInDebugger)
         {
-            // TODO Handle Class Library based Lambda functions.
-            throw new NotImplementedException("Currently the Lambda Aspire integration does not support class library based Lambda functions. Class library support will be implemented once a committed change to Aspire has been released allowing the feature to be implemented.");
+            // If we are running Aspire through an IDE where a debugger is attached,
+            // we want to configure the Aspire resource to use a Launch Setting Profile that will be able to run the class library Lambda function.
+            
+            // TODO: Once 9.1 comes out LaunchProfileAnnotation will be public and we can remove the reflection and directly instantiate it.
+            var launchProfileAnnotationsType = typeof(IDistributedApplicationBuilder).Assembly.GetTypes().FirstOrDefault(x => string.Equals(x.FullName, "Aspire.Hosting.ApplicationModel.LaunchProfileAnnotation"));
+            var constructor = launchProfileAnnotationsType!.GetConstructors()[0];
+            var instance = constructor.Invoke(new object[] { $"{Constants.LaunchSettingsNodePrefix}{name}" }) as IResourceAnnotation;
+
+            var project = new LambdaProjectResource(name);
+            resource = builder.AddResource(project)
+                .WithAnnotation(instance!)
+                .WithAnnotation(new TLambdaProject());
         }
         else
         {
@@ -68,7 +78,7 @@ public static class LambdaExtensions
             context.EnvironmentVariables["AWS_LAMBDA_LOG_LEVEL"] = options.ApplicationLogLevel.Value;
 
             var lambdaEmulatorEndpoint = $"http://{serviceEmulatorEndpoint.Host}:{serviceEmulatorEndpoint.Port}/?function={Uri.EscapeDataString(name)}";
-
+            
             resource.WithAnnotation(new ResourceCommandAnnotation(
                 name: "LambdaEmulator", 
                 displayName: "Lambda Service Emulator", 
@@ -101,7 +111,7 @@ public static class LambdaExtensions
         });
 
         resource.WithAnnotation(new LambdaFunctionAnnotation(lambdaHandler));
-
+        
         return resource;
     }
 

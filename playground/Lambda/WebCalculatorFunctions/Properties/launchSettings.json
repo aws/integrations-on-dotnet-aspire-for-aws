@@ -1,0 +1,28 @@
+{
+  "profiles": {
+    "Aspire_AddFunction": {
+      "commandName": "Executable",
+      "commandLineArgs": "exec --depsfile ./WebCalculatorFunctions.deps.json --runtimeconfig ./WebCalculatorFunctions.runtimeconfig.json %USERPROFILE%\\.dotnet\\tools\\.store\\amazon.lambda.testtool\\0.0.2-preview\\amazon.lambda.testtool\\0.0.2-preview\\content\\Amazon.Lambda.RuntimeSupport\\net8.0\\Amazon.Lambda.RuntimeSupport.dll WebCalculatorFunctions::WebCalculatorFunctions.Functions::AddFunctionHandler",
+      "workingDirectory": ".\\bin\\$(Configuration)\\net8.0",
+      "executablePath": "dotnet"
+    },
+    "Aspire_MinusFunction": {
+      "commandName": "Executable",
+      "commandLineArgs": "exec --depsfile ./WebCalculatorFunctions.deps.json --runtimeconfig ./WebCalculatorFunctions.runtimeconfig.json %USERPROFILE%\\.dotnet\\tools\\.store\\amazon.lambda.testtool\\0.0.2-preview\\amazon.lambda.testtool\\0.0.2-preview\\content\\Amazon.Lambda.RuntimeSupport\\net8.0\\Amazon.Lambda.RuntimeSupport.dll WebCalculatorFunctions::WebCalculatorFunctions.Functions::MinusFunctionHandler",
+      "workingDirectory": ".\\bin\\$(Configuration)\\net8.0",
+      "executablePath": "dotnet"
+    },
+    "Aspire_MultiplyFunction": {
+      "commandName": "Executable",
+      "commandLineArgs": "exec --depsfile ./WebCalculatorFunctions.deps.json --runtimeconfig ./WebCalculatorFunctions.runtimeconfig.json %USERPROFILE%\\.dotnet\\tools\\.store\\amazon.lambda.testtool\\0.0.2-preview\\amazon.lambda.testtool\\0.0.2-preview\\content\\Amazon.Lambda.RuntimeSupport\\net8.0\\Amazon.Lambda.RuntimeSupport.dll WebCalculatorFunctions::WebCalculatorFunctions.Functions::MultiplyFunctionHandler",
+      "workingDirectory": ".\\bin\\$(Configuration)\\net8.0",
+      "executablePath": "dotnet"
+    },
+    "Aspire_DivideFunction": {
+      "commandName": "Executable",
+      "commandLineArgs": "exec --depsfile ./WebCalculatorFunctions.deps.json --runtimeconfig ./WebCalculatorFunctions.runtimeconfig.json %USERPROFILE%\\.dotnet\\tools\\.store\\amazon.lambda.testtool\\0.0.2-preview\\amazon.lambda.testtool\\0.0.2-preview\\content\\Amazon.Lambda.RuntimeSupport\\net8.0\\Amazon.Lambda.RuntimeSupport.dll WebCalculatorFunctions::WebCalculatorFunctions.Functions::DivideFunctionHandler",
+      "workingDirectory": ".\\bin\\$(Configuration)\\net8.0",
+      "executablePath": "dotnet"
+    }
+  }
+}

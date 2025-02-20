@@ -8,12 +8,13 @@ using Amazon.SQS.Model;
 using Microsoft.Extensions.Hosting;
 using OpenTelemetry.Instrumentation.AWSLambda;
 using OpenTelemetry.Trace;
-using System.Reflection.Metadata.Ecma335;
 using System.Text.Json;
+using Amazon.SecurityToken;
+using Amazon.SecurityToken.Model;
 
 namespace WebAWSCallsLambdaFunction;
 
-internal class LambdaFunction(TracerProvider traceProvider, IAmazonSQS sqsClient, IAmazonDynamoDB ddbClient) : BackgroundService
+internal class LambdaFunction(TracerProvider traceProvider, IAmazonSQS sqsClient, IAmazonDynamoDB ddbClient, IAmazonSecurityTokenService stsClient) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -41,7 +42,10 @@ internal class LambdaFunction(TracerProvider traceProvider, IAmazonSQS sqsClient
                 var ddbResponse = await ddbClient.ListTablesAsync();
                 resources = ddbResponse.TableNames;
                 break;
-
+            case "STS":
+                var iamResponse = await stsClient.GetCallerIdentityAsync(new GetCallerIdentityRequest());
+                resources = new(){ "Found caller identity" };
+                break;
         }
 
         if (resources == null)

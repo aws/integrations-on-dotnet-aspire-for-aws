@@ -6,8 +6,7 @@ using Aspire.Hosting.Lifecycle;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Threading;
-using static Google.Protobuf.Reflection.GeneratedCodeInfo.Types;
+using Aspire.Hosting.AWS.Utils;
 
 namespace Aspire.Hosting.AWS.Lambda;
 
@@ -18,16 +17,109 @@ namespace Aspire.Hosting.AWS.Lambda;
 /// <param name="logger"></param>
 internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProcessCommandService processCommandService) : IDistributedApplicationLifecycleHook
 {
-    internal const string DefaultLambdaTestToolVersion = "0.0.2-preview";
-
     public async Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
     {
         SdkUtilities.BackgroundSDKDefaultConfigValidation(logger);
 
+        // The Lambda function handler for a Class Library contains "::".
+        // This is an example of a class library function handler "WebCalculatorFunctions::WebCalculatorFunctions.Functions::AddFunctionHandler".
+        var classLibraryProjectPaths = 
+            appModel.Resources
+                .OfType<LambdaProjectResource>()
+                .Where(x =>
+                {
+                    if (!x.TryGetLastAnnotation<LambdaFunctionAnnotation>(out var functionAnnotation))
+                        return false;
+
+                    if (!functionAnnotation.Handler.Contains("::"))
+                        return false;
+
+                    return true;
+                })
+                .ToList();
+        
         LambdaEmulatorAnnotation? emulatorAnnotation = null;
         if (appModel.Resources.FirstOrDefault(x => x.TryGetLastAnnotation<LambdaEmulatorAnnotation>(out emulatorAnnotation)) != null && emulatorAnnotation != null)
         {
             await ApplyLambdaEmulatorAnnotationAsync(emulatorAnnotation, cancellationToken);
+
+            foreach (var projectResource in classLibraryProjectPaths)
+            {
+                var projectMetadata = projectResource.Annotations
+                    .OfType<IProjectMetadata>()
+                    .First();
+                var lambdaFunctionAnnotation = projectResource.Annotations
+                    .OfType<LambdaFunctionAnnotation>()
+                    .First();
+                
+                // If we are running Aspire through an IDE where a debugger is attached,
+                // we want to configure the Aspire resource to use a Launch Setting Profile that will be able to run the class library Lambda function.
+                if (AspireUtilities.IsRunningInDebugger)
+                {
+                    var installPath = await GetCurrentInstallPathAsync(cancellationToken);
+                    if (string.IsNullOrEmpty(installPath))
+                    {
+                        logger.LogError("Failed to determine The location of Amazon.Lambda.TestTool on disk which is required for running class library Lambda functions.");
+                        return;
+                    }
+                    var contentFolder = new DirectoryInfo(installPath).Parent?.Parent?.Parent?.FullName;
+                    if (string.IsNullOrEmpty(contentFolder))
+                    {
+                        logger.LogError("Failed to determine the content folder of Amazon.Lambda.TestTool NuGet package which is required for running class library Lambda functions.");
+                        return;
+                    }
+                    var targetFramework = await GetProjectTargetFrameworkAsync(projectMetadata.ProjectPath, cancellationToken);
+                    if (string.IsNullOrEmpty(targetFramework))
+                    {
+                        logger.LogError("Cannot determine the target framework of the project '{ProjectPath}'", projectMetadata.ProjectPath);
+                        continue;
+                    }
+                    var assemblyName = await GetProjectAssemblyNameAsync(projectMetadata.ProjectPath, cancellationToken);
+                    if (string.IsNullOrEmpty(assemblyName))
+                    {
+                        logger.LogError("Cannot determine the assembly name of the project '{ProjectPath}'", projectMetadata.ProjectPath);
+                        continue;
+                    }
+                    var runtimeSupportAssemblyPath = Path.Combine(contentFolder, "content", "Amazon.Lambda.RuntimeSupport",
+                        targetFramework, "Amazon.Lambda.RuntimeSupport.dll");
+                    if (!File.Exists(runtimeSupportAssemblyPath))
+                    {
+                        logger.LogError("Cannot find a version of Amazon.Lambda.RuntimeSupport that supports your project's target framework '{Framework}'. The following directory does not exist '{RuntimeSupportPath}'.", targetFramework, runtimeSupportAssemblyPath);
+                        continue;
+                    }
+                    ProjectUtilities.UpdateLaunchSettingsWithLambdaTester(
+                        resourceName: projectResource.Name,
+                        functionHandler: lambdaFunctionAnnotation.Handler,
+                        assemblyName: assemblyName,
+                        projectPath: projectMetadata.ProjectPath,
+                        runtimeSupportAssemblyPath: runtimeSupportAssemblyPath,
+                        targetFramework: targetFramework,
+                        logger: logger);
+                }
+                // If we are running outside an IDE, the Launch Setting Profile approach does not work.
+                // We need to create a wrapper executable project that runs the class library project and add the wrapper project as the Aspire resource.
+                else
+                {
+                    var targetFramework = await GetProjectTargetFrameworkAsync(projectMetadata.ProjectPath, cancellationToken);
+                    if (string.IsNullOrEmpty(targetFramework))
+                    {
+                        logger.LogError("Cannot determine the target framework of the project '{ProjectPath}'", projectMetadata.ProjectPath);
+                        continue;
+                    }
+                    
+                    projectResource.Annotations.Remove(projectMetadata);
+
+                    var projectPath =
+                        ProjectUtilities.CreateExecutableWrapperProject(projectMetadata.ProjectPath, lambdaFunctionAnnotation.Handler, targetFramework);
+                
+                    projectResource.Annotations.Add(new LambdaProjectMetadata(projectPath));
+                    
+                    var projectName = new FileInfo(projectPath).Name;
+                    var workingDirectory = Directory.GetParent(projectPath)!.FullName;
+                    processCommandService.RunProcess(logger, "dotnet", $"build {projectName}", workingDirectory);
+                    processCommandService.RunProcess(logger, "dotnet", $"build -c Release {projectName}", workingDirectory);
+                }
+            }
         }
         else
         {
@@ -42,7 +134,7 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
             return;
         }
 
-        var expectedVersion = emulatorAnnotation.OverrideMinimumInstallVersion ?? DefaultLambdaTestToolVersion;
+        var expectedVersion = emulatorAnnotation.OverrideMinimumInstallVersion ?? Constants.DefaultLambdaTestToolVersion;
         var installedVersion = await GetCurrentInstalledVersionAsync(cancellationToken);
 
         if (ShouldInstall(installedVersion, expectedVersion, emulatorAnnotation.AllowDowngrade))
@@ -125,4 +217,77 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
             return string.Empty;
         }
     }
+
+    internal async Task<string> GetCurrentInstallPathAsync(CancellationToken cancellationToken)
+    {
+        var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", "lambda-test-tool info --format json", cancellationToken);
+        if (results.ExitCode != 0)
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            var installPathDoc = JsonNode.Parse(results.Output);
+            if (installPathDoc == null)
+            {
+                logger.LogWarning("Error parsing install path information from Amazon.Lambda.TestTool: {versionInfo}", results.Output);
+                return string.Empty;
+
+            }
+            var installPath = installPathDoc["InstallPath"]?.ToString();
+            logger.LogDebug("Install path of Amazon.Lambda.TestTool is {version}", installPath);
+            return installPath ?? string.Empty;
+        }
+        catch (JsonException ex)
+        {
+            logger.LogWarning(ex, "Error parsing install path information from Amazon.Lambda.TestTool: {versionInfo}", results.Output);
+            return string.Empty;
+        }
+    }
+
+    internal async Task<string> GetProjectAssemblyNameAsync(string projectPath, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", $"msbuild \"{projectPath}\" -nologo -v:q -getProperty:AssemblyName", cancellationToken);
+            if (results.ExitCode != 0)
+            {
+                return string.Empty;
+            }
+
+            logger.LogDebug("The assembly name of '{projectPath}' is {assemblyName}", projectPath, results.Output);
+            return results.Output;
+        }
+        catch (JsonException ex)
+        {
+            logger.LogWarning(ex, "Error retrieving the assembly name of '{projectPath}'", projectPath);
+            return string.Empty;
+        }
+    }
+
+    internal async Task<string> GetProjectTargetFrameworkAsync(string projectPath, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", $"msbuild \"{projectPath}\" -nologo -v:q -getProperty:TargetFramework", cancellationToken);
+            if (results.ExitCode != 0)
+            {
+                return string.Empty;
+            }
+
+            logger.LogDebug("The target framework of '{projectPath}' is {targetFramework}", projectPath, results.Output);
+            return results.Output;
+        }
+        catch (JsonException ex)
+        {
+            logger.LogWarning(ex, "Error retrieving the target framework of '{projectPath}'", projectPath);
+            return string.Empty;
+        }
+    }
+}
+
+internal sealed class LambdaProjectMetadata(string projectPath) : IProjectMetadata
+{
+    public string ProjectPath { get; } = projectPath;
 }

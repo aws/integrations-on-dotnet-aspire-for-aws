@@ -27,7 +27,7 @@ public class InstallLambdaTestToolTests
 
         processCommandService.AssertCommands(
             "lambda-test-tool info --format json",
-            $"tool install -g Amazon.Lambda.TestTool --version {LambdaLifecycleHook.DefaultLambdaTestToolVersion}"
+            $"tool install -g Amazon.Lambda.TestTool --version {Constants.DefaultLambdaTestToolVersion}"
             );
     }
 
@@ -37,7 +37,7 @@ public class InstallLambdaTestToolTests
         var loggerMock = new Mock<ILogger<LambdaEmulatorResource>>();
 
         var processCommandService = new MockProcessCommandService(
-                new IProcessCommandService.RunProcessAndCaptureStdOutResult(0, GenerateVersionJson(LambdaLifecycleHook.DefaultLambdaTestToolVersion))
+                new IProcessCommandService.RunProcessAndCaptureStdOutResult(0, GenerateVersionJson(Constants.DefaultLambdaTestToolVersion))
                 );
 
         var lambdaHook = new LambdaLifecycleHook(loggerMock.Object, processCommandService);
@@ -63,7 +63,7 @@ public class InstallLambdaTestToolTests
 
         processCommandService.AssertCommands(
             "lambda-test-tool info --format json",
-            $"tool install -g Amazon.Lambda.TestTool --version {LambdaLifecycleHook.DefaultLambdaTestToolVersion}"
+            $"tool install -g Amazon.Lambda.TestTool --version {Constants.DefaultLambdaTestToolVersion}"
             );
     }
 
@@ -92,7 +92,7 @@ public class InstallLambdaTestToolTests
         var loggerMock = new Mock<ILogger<LambdaEmulatorResource>>();
 
         var processCommandService = new MockProcessCommandService(
-                new IProcessCommandService.RunProcessAndCaptureStdOutResult(0, GenerateVersionJson(LambdaLifecycleHook.DefaultLambdaTestToolVersion)),
+                new IProcessCommandService.RunProcessAndCaptureStdOutResult(0, GenerateVersionJson(Constants.DefaultLambdaTestToolVersion)),
                 new IProcessCommandService.RunProcessAndCaptureStdOutResult(0, "Installed successfully")
                 );
 
@@ -134,7 +134,7 @@ public class InstallLambdaTestToolTests
 
         processCommandService.AssertCommands(
             "lambda-test-tool info --format json",
-            $"tool install -g Amazon.Lambda.TestTool --version {LambdaLifecycleHook.DefaultLambdaTestToolVersion} --allow-downgrade"
+            $"tool install -g Amazon.Lambda.TestTool --version {Constants.DefaultLambdaTestToolVersion} --allow-downgrade"
             );
     }
 
@@ -160,6 +160,19 @@ public class InstallLambdaTestToolTests
             var result = results[CallCount];
             CallCount++;
             return Task.FromResult(result);
+        }
+
+        public int RunProcess(ILogger logger, string path, string arguments, string workingDirectory)
+        {
+            if (CallCount == results.Length)
+            {
+                throw new InvalidOperationException("The process command was called more times than expected");
+            }
+            CommandsExecuted.Add(new Tuple<string, string>(path, arguments));
+
+            var result = results[CallCount];
+            CallCount++;
+            return result.ExitCode;
         }
 
         public void AssertCommands(params string[] commandArguments)
