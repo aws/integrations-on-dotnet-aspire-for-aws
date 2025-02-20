@@ -39,11 +39,6 @@ internal static class Constants
     internal const string LaunchSettingsFile = "launchSettings.json";
     
     /// <summary>
-    /// The target framework of the executable wrapper project
-    /// </summary>
-    internal const string ExecutableWrapperProjectTargetFramework = "net8.0";
-    
-    /// <summary>
     /// The version of RuntimeSupport used in the executable wrapper project
     /// </summary>
     internal const string RuntimeSupportPackageVersion = "1.12.2";

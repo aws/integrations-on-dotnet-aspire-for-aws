@@ -15,11 +15,6 @@ using Aspire.Hosting.AWS.Utils;
 #pragma warning disable IDE0130
 namespace Aspire.Hosting;
 
-internal sealed class LambdaProjectMetadata(string projectPath) : IProjectMetadata
-{
-    public string ProjectPath { get; } = projectPath;
-}
-
 /// <summary>
 /// Extension methods for adding Lambda functions as Aspire resources.
 /// </summary>
@@ -43,38 +38,20 @@ public static class LambdaExtensions
         IResourceBuilder<LambdaProjectResource> resource;
         // The Lambda function handler for a Class Library contains "::".
         // This is an example of a class library function handler "WebCalculatorFunctions::WebCalculatorFunctions.Functions::AddFunctionHandler".
-        if (lambdaHandler.Contains("::"))
+        if (lambdaHandler.Contains("::") && AspireUtilities.IsRunningInDebugger)
         {
             // If we are running Aspire through an IDE where a debugger is attached,
             // we want to configure the Aspire resource to use a Launch Setting Profile that will be able to run the class library Lambda function.
-            if(AspireUtilities.IsRunningInDebugger)
-            {
-                // TODO: Once 9.1 comes out LaunchProfileAnnotation will be public and we can remove the reflection and directly instantiate it.
-                var launchProfileAnnotationsType = typeof(IDistributedApplicationBuilder).Assembly.GetTypes().FirstOrDefault(x => string.Equals(x.FullName, "Aspire.Hosting.ApplicationModel.LaunchProfileAnnotation"));
-                var constructor = launchProfileAnnotationsType!.GetConstructors()[0];
-                var instance = constructor.Invoke(new object[] { $"{Constants.LaunchSettingsNodePrefix}{name}" }) as IResourceAnnotation;
+            
+            // TODO: Once 9.1 comes out LaunchProfileAnnotation will be public and we can remove the reflection and directly instantiate it.
+            var launchProfileAnnotationsType = typeof(IDistributedApplicationBuilder).Assembly.GetTypes().FirstOrDefault(x => string.Equals(x.FullName, "Aspire.Hosting.ApplicationModel.LaunchProfileAnnotation"));
+            var constructor = launchProfileAnnotationsType!.GetConstructors()[0];
+            var instance = constructor.Invoke(new object[] { $"{Constants.LaunchSettingsNodePrefix}{name}" }) as IResourceAnnotation;
 
-                var project = new LambdaProjectResource(name);
-                resource = builder.AddResource(project)
-                    .WithAnnotation(instance!)
-                    .WithAnnotation(new TLambdaProject());
-            }
-            // If we are running outside an IDE, the Launch Setting Profile approach does not work.
-            // We need to create a wrapper executable project that runs the class library project and add the wrapper project as the Aspire resource.
-            else
-            {
-                var project = new LambdaProjectResource(name);
-                resource = builder.AddResource(project)
-                    .WithAnnotation(new TLambdaProject());
-                var projectMetadata = project.Annotations.OfType<IProjectMetadata>().First();
-                project.Annotations.Remove(projectMetadata);
-
-                var projectPath =
-                    ProjectUtilities.CreateExecutableWrapperProject(projectMetadata.ProjectPath, lambdaHandler);
-                
-                resource = resource
-                    .WithAnnotation(new LambdaProjectMetadata(projectPath));
-            }
+            var project = new LambdaProjectResource(name);
+            resource = builder.AddResource(project)
+                .WithAnnotation(instance!)
+                .WithAnnotation(new TLambdaProject());
         }
         else
         {

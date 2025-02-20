@@ -146,8 +146,9 @@ internal static class ProjectUtilities
     /// </summary>
     /// <param name="classLibraryProjectPath">The project path of the class library Lambda function</param>
     /// <param name="lambdaHandler">The Lambda function handler</param>
+    /// <param name="targetFramework">The Lambda project target framework</param>
     /// <returns>A project file path of the executable wrapper project</returns>
-    public static string CreateExecutableWrapperProject(string classLibraryProjectPath, string lambdaHandler)
+    public static string CreateExecutableWrapperProject(string classLibraryProjectPath, string lambdaHandler, string targetFramework)
     {
         string tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(tempPath);
@@ -156,7 +157,7 @@ internal static class ProjectUtilities
 <Project Sdk=""Microsoft.NET.Sdk"">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>{Constants.ExecutableWrapperProjectTargetFramework}</TargetFramework>
+    <TargetFramework>{targetFramework}</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include=""Amazon.Lambda.RuntimeSupport"" Version=""{Constants.RuntimeSupportPackageVersion}"" />
