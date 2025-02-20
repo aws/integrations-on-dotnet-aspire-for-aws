@@ -22,6 +22,8 @@ internal class LambdaFunction(TracerProvider traceProvider) : BackgroundService
 
     private string LambdaHandler(string input, ILambdaContext context)
     {
+        context.Logger.LogDebug("Performing ToUpper for {input}", input);
+
         return input.ToUpper();
     }
 }

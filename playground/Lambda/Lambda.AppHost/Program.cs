@@ -1,4 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+using Amazon.Lambda;
 using Aspire.Hosting.AWS.Lambda;
 
 #pragma warning disable CA2252 // This API requires opting into preview features
@@ -7,7 +8,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.USWest2);
 
-builder.AddAWSLambdaFunction<Projects.ToUpperLambdaFunctionExecutable>("ToUpperFunction", lambdaHandler: "ToUpperLambdaFunctionExecutable");
+builder.AddAWSLambdaFunction<Projects.ToUpperLambdaFunctionExecutable>("ToUpperFunction", lambdaHandler: "ToUpperLambdaFunctionExecutable", new LambdaFunctionOptions { ApplicationLogLevel = ApplicationLogLevel.DEBUG, LogFormat = LogFormat.JSON});
 
 var defaultRouteLambda = builder.AddAWSLambdaFunction<Projects.WebDefaultLambdaFunction>("LambdaDefaultRoute", lambdaHandler: "WebDefaultLambdaFunction");
 var addRouteLambda = builder.AddAWSLambdaFunction<Projects.WebAddLambdaFunction>("AddDefaultRoute", lambdaHandler: "WebAddLambdaFunction");
