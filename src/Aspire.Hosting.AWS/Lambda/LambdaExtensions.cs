@@ -34,7 +34,6 @@ public static class LambdaExtensions
     /// <param name="name">Aspire resource name</param>
     /// <param name="lambdaHandler">Lambda function handler</param>
     /// <returns></returns>
-    /// <exception cref="NotImplementedException"></exception>
     public static IResourceBuilder<LambdaProjectResource> AddAWSLambdaFunction<TLambdaProject>(this IDistributedApplicationBuilder builder, string name, string lambdaHandler, LambdaFunctionOptions? options = null) where TLambdaProject : IProjectMetadata, new()
     {
         options ??= new LambdaFunctionOptions();
@@ -42,8 +41,12 @@ public static class LambdaExtensions
 
         var serviceEmulator = AddOrGetLambdaServiceEmulatorResource(builder);
         IResourceBuilder<LambdaProjectResource> resource;
+        // The Lambda function handler for a Class Library contains "::".
+        // This is an example of a class library function handler "WebCalculatorFunctions::WebCalculatorFunctions.Functions::AddFunctionHandler".
         if (lambdaHandler.Contains("::"))
         {
+            // If we are running Aspire through an IDE where a debugger is attached,
+            // we want to configure the Aspire resource to use a Launch Setting Profile that will be able to run the class library Lambda function.
             if(AspireUtilities.IsRunningInDebugger)
             {
                 // TODO: Once 9.1 comes out LaunchProfileAnnotation will be public and we can remove the reflection and directly instantiate it.
@@ -56,6 +59,8 @@ public static class LambdaExtensions
                     .WithAnnotation(instance!)
                     .WithAnnotation(new TLambdaProject());
             }
+            // If we are running outside an IDE, the Launch Setting Profile approach does not work.
+            // We need to create a wrapper executable project that runs the class library project and add the wrapper project as the Aspire resource.
             else
             {
                 var project = new LambdaProjectResource(name);
