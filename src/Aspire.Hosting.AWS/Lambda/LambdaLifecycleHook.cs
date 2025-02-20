@@ -139,7 +139,7 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
 
         if (ShouldInstall(installedVersion, expectedVersion, emulatorAnnotation.AllowDowngrade))
         {
-            logger.LogDebug("Installing .NET Tool Amazon.Lambda.TestTool ({version})", installedVersion);
+            logger.LogDebug("Installing .NET Tool Amazon.Lambda.TestTool ({version})", expectedVersion);
 
             var commandLineArgument = $"tool install -g Amazon.Lambda.TestTool --version {expectedVersion}";
             if (emulatorAnnotation.AllowDowngrade)

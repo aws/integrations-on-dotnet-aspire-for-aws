@@ -17,6 +17,8 @@ The hosting package to include in Aspire AppHost projects for provisioning and c
 * Configure AWS credentials and region for AWS SDK for .NET
 * Provisioning AWS resources with CloudFormation template
 * Provisioning AWS resources with AWS Cloud Development Kit (CDK)
+* Local development with DynamoDB
+* Local development with AWS Lambda and API Gateway
 
 Check out the package's [README](./src/Aspire.Hosting.AWS/README.md) for a deeper explanation of these features.
 
