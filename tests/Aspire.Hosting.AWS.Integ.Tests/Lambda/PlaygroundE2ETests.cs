@@ -49,7 +49,7 @@ public class PlaygroundE2ETests
             await cancellationToken.CancelAsync();
         }
     }
-
+    
     private async Task<string> TestEndpoint(string routeName, DistributedApplication app, string resourceName, int requestTimeout = 30, int totalTimeout = 200)
     {
         using (var client = app.CreateHttpClient(resourceName))

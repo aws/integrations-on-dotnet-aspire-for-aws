@@ -37,11 +37,34 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
                     return true;
                 })
                 .ToList();
+        var wrapperProjectPaths = 
+            appModel.Resources
+                .OfType<LambdaProjectResource>()
+                .Where(x =>
+                {
+                    if (!x.TryGetLastAnnotation<LambdaProjectMetadata>(out _))
+                        return false;
+
+                    return true;
+                })
+                .ToList();
         
         LambdaEmulatorAnnotation? emulatorAnnotation = null;
         if (appModel.Resources.FirstOrDefault(x => x.TryGetLastAnnotation<LambdaEmulatorAnnotation>(out emulatorAnnotation)) != null && emulatorAnnotation != null)
         {
             await ApplyLambdaEmulatorAnnotationAsync(emulatorAnnotation, cancellationToken);
+
+            foreach (var projectResource in wrapperProjectPaths)
+            {
+                var projectMetadata = projectResource.Annotations
+                    .OfType<IProjectMetadata>()
+                    .First();
+
+                var projectName = new FileInfo(projectMetadata.ProjectPath).Name;
+                var workingDirectory = Directory.GetParent(projectMetadata.ProjectPath)!.FullName;
+                processCommandService.RunProcess(logger, "dotnet", $"build {projectName}", workingDirectory);
+                processCommandService.RunProcess(logger, "dotnet", $"build -c Release {projectName}", workingDirectory);
+            }
 
             foreach (var projectResource in classLibraryProjectPaths)
             {

@@ -27,6 +27,17 @@ public interface IProcessCommandService
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     Task<RunProcessAndCaptureStdOutResult> RunProcessAndCaptureOuputAsync(ILogger logger, string path, string arguments, CancellationToken cancellationToken);
+
+
+    /// <summary>
+    /// Method to shell out commands.
+    /// </summary>
+    /// <param name="logger"></param>
+    /// <param name="path"></param>
+    /// <param name="arguments"></param>
+    /// <param name="workingDirectory"></param>
+    /// <returns>Exit code</returns>
+    int RunProcess(ILogger logger, string path, string arguments, string workingDirectory);
 }
 
 internal class ProcessCommandService : IProcessCommandService
@@ -97,5 +108,63 @@ internal class ProcessCommandService : IProcessCommandService
 
         return new IProcessCommandService.RunProcessAndCaptureStdOutResult(process.ExitCode, output.ToString());
 
+    }
+    
+    /// <summary>
+    /// Utility method for running a command on the commandline. It returns backs the exit code.
+    /// </summary>
+    /// <param name="logger"></param>
+    /// <param name="path"></param>
+    /// <param name="arguments"></param>
+    /// <param name="workingDirectory"></param>
+    /// <returns></returns>
+    public int RunProcess(ILogger logger, string path, string arguments, string workingDirectory)
+    {
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                WorkingDirectory = workingDirectory,
+                FileName = path,
+                Arguments = arguments,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                WindowStyle = ProcessWindowStyle.Hidden
+            }
+        };
+
+        var output = new StringBuilder();
+
+        process.OutputDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+            {
+                output.Append(e.Data);
+            }
+        };
+
+        process.ErrorDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+            {
+                output.Append(e.Data);
+            }
+        };
+
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+
+        process.WaitForExit(int.MaxValue);
+
+        logger.LogDebug(output.ToString());
+        
+        if (process.ExitCode != 0)
+        {
+            logger.LogDebug("Process {process} exited with code {exitCode}.", path, process.ExitCode);
+        }
+        
+        return process.ExitCode;
     }
 }

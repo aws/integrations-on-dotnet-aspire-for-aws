@@ -140,4 +140,45 @@ internal static class ProjectUtilities
         var fullPath = Path.Combine(properties, Constants.LaunchSettingsFile);
         File.WriteAllText(fullPath, content);
     }
+
+    /// <summary>
+    /// Create an executable wrapper project that invokes the specified Lambda function.
+    /// </summary>
+    /// <param name="classLibraryProjectPath">The project path of the class library Lambda function</param>
+    /// <param name="lambdaHandler">The Lambda function handler</param>
+    /// <returns>A project file path of the executable wrapper project</returns>
+    public static string CreateExecutableWrapperProject(string classLibraryProjectPath, string lambdaHandler)
+    {
+        string tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempPath);
+
+        var projectContent = $@"
+<Project Sdk=""Microsoft.NET.Sdk"">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include=""Amazon.Lambda.RuntimeSupport"" Version=""1.12.2"" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include=""{classLibraryProjectPath}"" />
+  </ItemGroup>
+</Project>
+";
+        var projectName = $"Wrapper{Path.GetFileName(classLibraryProjectPath)}";
+        var projectPath = Path.Combine(tempPath, projectName);
+        File.WriteAllText(projectPath, projectContent);
+                
+        string programContent = $@"
+using Amazon.Lambda.RuntimeSupport;
+
+RuntimeSupportInitializer runtimeSupportInitializer = new RuntimeSupportInitializer(""{lambdaHandler}"");
+await runtimeSupportInitializer.RunLambdaBootstrap();
+";
+        var programPath = Path.Combine(tempPath, "Program.cs");
+        File.WriteAllText(programPath, programContent);
+
+        return projectPath;
+    }
 }

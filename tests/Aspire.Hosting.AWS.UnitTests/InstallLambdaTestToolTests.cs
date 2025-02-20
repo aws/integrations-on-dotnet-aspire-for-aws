@@ -162,6 +162,19 @@ public class InstallLambdaTestToolTests
             return Task.FromResult(result);
         }
 
+        public int RunProcess(ILogger logger, string path, string arguments, string workingDirectory)
+        {
+            if (CallCount == results.Length)
+            {
+                throw new InvalidOperationException("The process command was called more times than expected");
+            }
+            CommandsExecuted.Add(new Tuple<string, string>(path, arguments));
+
+            var result = results[CallCount];
+            CallCount++;
+            return result.ExitCode;
+        }
+
         public void AssertCommands(params string[] commandArguments)
         {
             Assert.Equal(commandArguments.Length, CommandsExecuted.Count);
