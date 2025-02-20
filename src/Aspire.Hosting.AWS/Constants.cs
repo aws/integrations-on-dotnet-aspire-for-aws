@@ -46,5 +46,5 @@ internal static class Constants
     /// <summary>
     /// The default version of Amazon.Lambda.TestTool that will be automatically installed
     /// </summary>
-    internal const string DefaultLambdaTestToolVersion = "0.0.2-preview";
+    internal const string DefaultLambdaTestToolVersion = "0.0.3";
 }
