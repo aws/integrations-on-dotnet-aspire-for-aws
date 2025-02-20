@@ -1,3 +1,11 @@
+## Release 2025-02-20
+
+### Aspire.Hosting.AWS (9.1.3)
+* Add validation of AWS credentials
+* Add support for adding Class Library Lambda Functions
+* Add ability to configure log format and level for Lambda functions
+* Version bump Amazon.Lambda.TestTool to 0.0.3
+
 ## Release 2025-02-07
 
 ### Aspire.Hosting.AWS (9.1.2)
