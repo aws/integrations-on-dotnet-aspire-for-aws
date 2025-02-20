@@ -156,10 +156,10 @@ internal static class ProjectUtilities
 <Project Sdk=""Microsoft.NET.Sdk"">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>{Constants.ExecutableWrapperProjectTargetFramework}</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include=""Amazon.Lambda.RuntimeSupport"" Version=""1.12.2"" />
+    <PackageReference Include=""Amazon.Lambda.RuntimeSupport"" Version=""{Constants.RuntimeSupportPackageVersion}"" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include=""{classLibraryProjectPath}"" />

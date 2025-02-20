@@ -2,7 +2,7 @@
 
 namespace Aspire.Hosting.AWS.Utils;
 
-public static class AspireUtilities
+internal static class AspireUtilities
 {
-    public static bool IsRunningInDebugger => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DEBUG_SESSION_PORT"));
+    internal static bool IsRunningInDebugger => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DEBUG_SESSION_PORT"));
 }

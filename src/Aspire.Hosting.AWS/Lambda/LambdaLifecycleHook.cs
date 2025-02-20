@@ -17,8 +17,6 @@ namespace Aspire.Hosting.AWS.Lambda;
 /// <param name="logger"></param>
 internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProcessCommandService processCommandService) : IDistributedApplicationLifecycleHook
 {
-    internal const string DefaultLambdaTestToolVersion = "0.0.2-preview";
-
     public async Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
     {
         SdkUtilities.BackgroundSDKDefaultConfigValidation(logger);
@@ -129,7 +127,7 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
             return;
         }
 
-        var expectedVersion = emulatorAnnotation.OverrideMinimumInstallVersion ?? DefaultLambdaTestToolVersion;
+        var expectedVersion = emulatorAnnotation.OverrideMinimumInstallVersion ?? Constants.DefaultLambdaTestToolVersion;
         var installedVersion = await GetCurrentInstalledVersionAsync(cancellationToken);
 
         if (ShouldInstall(installedVersion, expectedVersion, emulatorAnnotation.AllowDowngrade))
