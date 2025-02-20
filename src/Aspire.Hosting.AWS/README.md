@@ -161,15 +161,17 @@ builder.AddProject<Projects.Frontend>("Frontend")
 
 You can develop and test AWS Lambda functions locally within your .NET Aspire application. This enables testing Lambda functions alongside other application resources during development.
 
-![\[\]!(.)](Resources/lambda.png)
-
-
 ### Adding Lambda Functions
 
 To add a Lambda function to your .NET Aspire AppHost, use the `AddAWSLambdaFunction` method. The method supports both executable Lambda functions and class library Lambda functions:
 
 ```csharp
 #pragma warning disable CA2252 // This API requires opting into preview features
+
+
+var awsConfig = builder.AddAWSSDKConfig()
+                        .WithProfile("default")
+                        .WithRegion(RegionEndpoint.USWest2);
 
 // Add an executable Lambda function
 builder.AddAWSLambdaFunction<Projects.ExecutableLambdaFunction>(
@@ -189,6 +191,29 @@ The handler parameter specifies the Lambda handler in different formats dependin
 
 - For executable projects: specify the assembly name.
 - For class library projects: use the format `{assembly}::{type}::{method}`.
+
+### Amazon Lambda Test Tool Automatic Installation
+When adding Lambda functions to your .NET Aspire application, the integration automatically manages the installation and updates of the [`Amazon.Lambda.TestTool`](https://github.com/aws/aws-lambda-dotnet/tree/master/Tools/LambdaTestTool-v2). This tool is needed for local Lambda function emulation.
+
+You can customize the tool installation behavior by calling `AddAWSLambdaServiceEmulator` before any `AddAWSLambdaFunction` calls:
+
+```csharp
+builder.AddAWSLambdaServiceEmulator(options =>
+{
+    options.DisableAutoInstall = false;
+    options.OverrideMinimumInstallVersion = "0.1.0";
+    options.AllowDowngrade = false;
+});
+
+// Add Lambda functions after configuring the emulator
+var function = builder.AddAWSLambdaFunction<Projects.MyFunction>("MyFunction", "MyFunction");
+```
+
+The `LambdaEmulatorOptions` provide the following customization:
+
+- `DisableAutoInstall`: When set to `true`, it prevents the automatic installation or update of the Lambda Test Tool.
+- `OverrideMinimumInstallVersion`: Allows you to specify a minimum version of the Lambda Test Tool to be installed. If a newer version is already installed, it will be used unless `AllowDowngrade` is set to `true`.
+- `AllowDowngrade`: If set to `true`, it permits downgrading to an older version of the Lambda Test Tool when the specified version is older than the currently installed version.
 
 ### API Gateway Local Emulation
 
@@ -223,6 +248,30 @@ Use the `WithReference` method to connect Lambda functions to HTTP routes, speci
 - The HTTP method
 - The route pattern
 
+#### Wildcard Paths
+The API Gateway emulator supports the use of wildcard path. To define a wildcard path, you can use the `{proxy+}` syntax in the route pattern.
+
+Here's an example of how to set up an API Gateway emulator with a wildcard path:
+
+```csharp
+#pragma warning disable CA2252 // This API requires opting into preview features
+
+// Add an ASP.NET Core Lambda function
+var aspNetCoreLambdaFunction = builder.AddAWSLambdaFunction<Projects.AWSServerless>("Resource", "AWSServerless");
+
+// Configure the API Gateway emulator
+builder.AddAPIGatewayEmulator("APIGatewayEmulator", APIGatewayType.Rest)
+    .WithReference(aspNetCoreLambdaFunction, Method.Any, "/")
+    .WithReference(aspNetCoreLambdaFunction, Method.Any, "/{proxy+}");
+
+```
+
+In this example, the first `WithReference` call maps the root path (`/`) to the ASP.NET Core Lambda function. The second `WithReference` call maps the wildcard path (`/{proxy+}`) to the same Lambda function.
+
+The `{proxy+}` syntax captures the entire remaining part of the URL path and passes it as a parameter to the Lambda function.
+
+By combining the [ASP.NET Core bridge library](https://github.com/aws/aws-lambda-dotnet/blob/master/Libraries/src/Amazon.Lambda.AspNetCoreServer/README.md) and the API Gateway emulator with wildcard paths, you can easily develop and test your serverless ASP.NET Core applications locally, providing a seamless experience between local development and deployment to AWS Lambda.
+
 ## Integrating Amazon DynamoDB Local  
 
 Amazon DynamoDB provides a [local version of DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocalHistory.html) for development and testing that is distributed as a container. With version 9.1.0 of the Aspire.Hosting.AWS package, you can easily integrate the DynamoDB local container with your .NET Aspire project. This enables seamless transition between DynamoDB Local for development and the production DynamoDB service in AWS, without requiring any code changes in your application.
@@ -248,7 +297,6 @@ In the .NET projects that use DynamoDB, you need to construct the DynamoDB servi
 
 The AWS SDKs have a feature called [Service-specific endpoints](https://docs.aws.amazon.com/sdkref/latest/guide/feature-ss-endpoints.html) that allow setting an endpoint for a service via an environment variable. The `WithReference` call made on the .NET project sets the `AWS_ENDPOINT_URL_DYNAMODB` environment variable. It will be set to the DynamoDB local container that was started as part of the `AddAWSDynamoDBLocal` method.
 
-![\[\]!(.)](Resources/dynamo.png)
 
 The `AWS_ENDPOINT_URL_DYNAMODB` environment variable overrides other config settings like the `AWS_REGION` environment variable, ensuring your projects running locally use DynamoDB local. After the `AmazonDynamoDBClient` has been created pointing to DynamoDB local, all other service calls work the same as if you are going to the real DynamoDB service. No code changes are required.
 
