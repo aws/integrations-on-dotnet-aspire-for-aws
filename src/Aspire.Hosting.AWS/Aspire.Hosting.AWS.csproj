@@ -7,6 +7,7 @@
     <Description>Add support for provisioning AWS application resources and configuring the AWS SDK for .NET.</Description>
     <NoWarn>$(NoWarn);CS8002</NoWarn> <!-- AWS CDK packages are not signed -->
     <Version>9.1.2</Version>
+    <PackageReadmeFile>docs\README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +23,7 @@
   <ItemGroup>
     <None Include="../../icon.png" Pack="true" PackagePath="" />
     <None Include="../../LICENSE" Pack="true" PackagePath="" />
+    <None Include="./README.md" Pack="true" PackagePath="docs\README.md" />
   </ItemGroup>  
 
   <ItemGroup>
