@@ -41,7 +41,7 @@ internal static class Constants
     /// <summary>
     /// The version of RuntimeSupport used in the executable wrapper project
     /// </summary>
-    internal const string RuntimeSupportPackageVersion = "1.12.2";
+    internal const string RuntimeSupportPackageVersion = "1.12.3";
     
     /// <summary>
     /// The default version of Amazon.Lambda.TestTool that will be automatically installed

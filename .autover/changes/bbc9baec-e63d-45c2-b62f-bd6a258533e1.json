@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Update Aspire to 9.1.0 and switched to using LaunchProfileAnnotation instead of reflection"
+      ]
+    }
+  ]
+}

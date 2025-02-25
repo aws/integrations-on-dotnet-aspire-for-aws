@@ -42,15 +42,9 @@ public static class LambdaExtensions
         {
             // If we are running Aspire through an IDE where a debugger is attached,
             // we want to configure the Aspire resource to use a Launch Setting Profile that will be able to run the class library Lambda function.
-            
-            // TODO: Once 9.1 comes out LaunchProfileAnnotation will be public and we can remove the reflection and directly instantiate it.
-            var launchProfileAnnotationsType = typeof(IDistributedApplicationBuilder).Assembly.GetTypes().FirstOrDefault(x => string.Equals(x.FullName, "Aspire.Hosting.ApplicationModel.LaunchProfileAnnotation"));
-            var constructor = launchProfileAnnotationsType!.GetConstructors()[0];
-            var instance = constructor.Invoke(new object[] { $"{Constants.LaunchSettingsNodePrefix}{name}" }) as IResourceAnnotation;
-
             var project = new LambdaProjectResource(name);
             resource = builder.AddResource(project)
-                .WithAnnotation(instance!)
+                .WithAnnotation(new LaunchProfileAnnotation($"{Constants.LaunchSettingsNodePrefix}{name}"))
                 .WithAnnotation(new TLambdaProject());
         }
         else
