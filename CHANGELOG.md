@@ -1,3 +1,9 @@
+## Release 2025-02-27
+
+### Aspire.Hosting.AWS (9.1.4)
+* Version bump Amazon.Lambda.TestTool to 0.9.0
+* Update Aspire to 9.1.0 and switched to using LaunchProfileAnnotation instead of reflection
+
 ## Release 2025-02-20
 
 ### Aspire.Hosting.AWS (9.1.3)
