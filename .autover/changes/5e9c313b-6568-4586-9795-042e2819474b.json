@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Add a parent relationship between lambda emulator and functions"
+      ]
+    }
+  ]
+}
