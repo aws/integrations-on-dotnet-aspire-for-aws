@@ -54,6 +54,8 @@ public static class LambdaExtensions
                             .WithAnnotation(new TLambdaProject());
         }
 
+        resource.WithParentRelationship(serviceEmulator);
+
         resource.WithOpenTelemetry();
 
         resource.WithEnvironment(context =>
