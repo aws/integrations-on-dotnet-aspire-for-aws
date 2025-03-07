@@ -90,7 +90,7 @@ public class ProjectUtilitiesTests : IDisposable
         string commandLineArgs = profile["commandLineArgs"]?.GetValue<string>() ?? "";
         string expectedRuntimePath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
             ? runtimeSupportAssemblyPath.Replace(userProfile, "%USERPROFILE%")
-            : runtimeSupportAssemblyPath.Replace(userProfile, "$HOME");
+            : runtimeSupportAssemblyPath.Replace(userProfile, "$(HOME)");
 
         Assert.Contains(expectedRuntimePath, commandLineArgs);
         Assert.Contains(functionHandler, commandLineArgs);
