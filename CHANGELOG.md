@@ -1,3 +1,9 @@
+## Release 2025-03-07
+
+### Aspire.Hosting.AWS (9.1.5)
+* Add a parent relationship between lambda emulator and functions
+* Use the correct environment variable syntax to fix an issue on Rider macOS
+
 ## Release 2025-02-27
 
 ### Aspire.Hosting.AWS (9.1.4)
