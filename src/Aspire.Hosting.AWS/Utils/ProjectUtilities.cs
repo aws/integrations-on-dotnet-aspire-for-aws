@@ -88,7 +88,7 @@ internal static class ProjectUtilities
         var userProfilePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            userProfileEnvironmentVariable = "$HOME";
+            userProfileEnvironmentVariable = "$(HOME)";
         }
 
         if (path.StartsWith(userProfilePath))

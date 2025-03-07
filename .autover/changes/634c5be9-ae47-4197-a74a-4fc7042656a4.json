@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Use the correct environment variable syntax to fix an issue on Rider macOS"
+      ]
+    }
+  ]
+}
