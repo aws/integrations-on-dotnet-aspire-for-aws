@@ -1,5 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 using Amazon.Lambda;
+using Aspire.Hosting;
 using Aspire.Hosting.AWS.Lambda;
 
 #pragma warning disable CA2252 // This API requires opting into preview features
@@ -7,6 +8,13 @@ using Aspire.Hosting.AWS.Lambda;
 var builder = DistributedApplication.CreateBuilder(args);
 
 var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.USWest2);
+
+var cdkStackResource = builder.AddAWSCDKStack("AWSLambdaPlaygroundResources");
+var sqsDemoQueue = cdkStackResource.AddSQSQueue("DemoQueue");
+
+
+// TODO: Remove this once the new version of the test tool that supports SQS has been released.
+builder.AddAWSLambdaServiceEmulator(new LambdaEmulatorOptions { DisableAutoInstall = true });
 
 builder.AddAWSLambdaFunction<Projects.ToUpperLambdaFunctionExecutable>("ToUpperFunction", lambdaHandler: "ToUpperLambdaFunctionExecutable", new LambdaFunctionOptions { ApplicationLogLevel = ApplicationLogLevel.DEBUG, LogFormat = LogFormat.JSON});
 
@@ -29,6 +37,12 @@ builder.AddAWSAPIGatewayEmulator("APIGatewayEmulator", Aspire.Hosting.AWS.Lambda
         .WithReference(minusFunction, Method.Get, "/minus/{x}/{y}")
         .WithReference(multiplyFunction, Method.Get, "/multiply/{x}/{y}")
         .WithReference(divideFunction, Method.Get, "/divide/{x}/{y}");
+
+
+builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
+        .WithReference(awsSdkConfig)
+        .WithSQSEventSource(sqsDemoQueue);
+
 
 builder.Build().Run();
  

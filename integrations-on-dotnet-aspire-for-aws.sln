@@ -44,6 +44,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebAWSCallsLambdaFunction",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebCalculatorFunctions", "playground\Lambda\WebCalculatorFunctions\WebCalculatorFunctions.csproj", "{4CE69424-50B4-1D2F-EA87-E9FC81C4BEA6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SQSProcessorFunction", "playground\Lambda\SQSProcessorFunction\SQSProcessorFunction.csproj", "{FC2267CD-9769-68B1-A271-774F98326A43}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -102,6 +104,10 @@ Global
 		{4CE69424-50B4-1D2F-EA87-E9FC81C4BEA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4CE69424-50B4-1D2F-EA87-E9FC81C4BEA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4CE69424-50B4-1D2F-EA87-E9FC81C4BEA6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FC2267CD-9769-68B1-A271-774F98326A43}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FC2267CD-9769-68B1-A271-774F98326A43}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FC2267CD-9769-68B1-A271-774F98326A43}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FC2267CD-9769-68B1-A271-774F98326A43}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -122,6 +128,7 @@ Global
 		{A2750C2D-1F82-47CB-9EAB-B819E3EBDD74} = {C3C0B096-DB7C-4D1B-B8A0-91631B32B4DE}
 		{96396A08-6FB9-49C2-A923-1AF1C97087EF} = {C3C0B096-DB7C-4D1B-B8A0-91631B32B4DE}
 		{4CE69424-50B4-1D2F-EA87-E9FC81C4BEA6} = {C3C0B096-DB7C-4D1B-B8A0-91631B32B4DE}
+		{FC2267CD-9769-68B1-A271-774F98326A43} = {C3C0B096-DB7C-4D1B-B8A0-91631B32B4DE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FBA55172-92F1-4495-A082-E0ABE4F4AF09}

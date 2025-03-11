@@ -55,6 +55,8 @@ public static class SDKResourceExtensions
     public static IResourceBuilder<TDestination> WithReference<TDestination>(this IResourceBuilder<TDestination> builder, IAWSSDKConfig awsSdkConfig)
         where TDestination : IResourceWithEnvironment
     {
+        builder.WithAnnotation(new SDKResourceAnnotation(awsSdkConfig));
+
         builder.WithEnvironment(context =>
         {
             if (context.ExecutionContext.IsPublishMode)

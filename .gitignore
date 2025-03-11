@@ -403,3 +403,6 @@ FodyWeavers.xsd
 *.sln.iml
 
 .idea/
+
+# CDK temp files
+**/cdk.out/**
