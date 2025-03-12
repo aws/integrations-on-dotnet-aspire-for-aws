@@ -27,6 +27,8 @@ public static class APIGatewayExtensions
     /// <returns></returns>
     public static IResourceBuilder<APIGatewayEmulatorResource> AddAWSAPIGatewayEmulator(this IDistributedApplicationBuilder builder, string name, APIGatewayType apiGatewayType, APIGatewayEmulatorOptions? options = null)
     {
+        options ??= new APIGatewayEmulatorOptions();
+
         var apiGatewayEmulator = builder.AddResource(new APIGatewayEmulatorResource(name, apiGatewayType)).ExcludeFromManifest();
         apiGatewayEmulator.WithArgs(context =>
         {
@@ -36,7 +38,7 @@ public static class APIGatewayExtensions
         var annotation = new EndpointAnnotation(
             protocol: ProtocolType.Tcp,
             uriScheme: "http",
-            port: options?.Port);
+            port: options.Port);
 
         apiGatewayEmulator.WithAnnotation(annotation);
         var endpointReference = new EndpointReference(apiGatewayEmulator.Resource, annotation);
