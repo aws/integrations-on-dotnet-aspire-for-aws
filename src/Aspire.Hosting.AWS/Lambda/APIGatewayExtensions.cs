@@ -23,9 +23,9 @@ public static class APIGatewayExtensions
     /// <param name="builder"></param>
     /// <param name="name">Aspire resource name</param>
     /// <param name="apiGatewayType">The type of API Gateway API. For example Rest, HttpV1 or HttpV2</param>
-    /// <param name="port">Desired port for the API Gateway emulator. For example 5050</param>
+    /// <param name="options">The options to configure the emulator with.</param>
     /// <returns></returns>
-    public static IResourceBuilder<APIGatewayEmulatorResource> AddAWSAPIGatewayEmulator(this IDistributedApplicationBuilder builder, string name, APIGatewayType apiGatewayType, int? port)
+    public static IResourceBuilder<APIGatewayEmulatorResource> AddAWSAPIGatewayEmulator(this IDistributedApplicationBuilder builder, string name, APIGatewayType apiGatewayType, APIGatewayEmulatorOptions? options = null)
     {
         var apiGatewayEmulator = builder.AddResource(new APIGatewayEmulatorResource(name, apiGatewayType)).ExcludeFromManifest();
         apiGatewayEmulator.WithArgs(context =>
@@ -36,7 +36,7 @@ public static class APIGatewayExtensions
         var annotation = new EndpointAnnotation(
             protocol: ProtocolType.Tcp,
             uriScheme: "http",
-            port: port);
+            port: options?.Port);
 
         apiGatewayEmulator.WithAnnotation(annotation);
         var endpointReference = new EndpointReference(apiGatewayEmulator.Resource, annotation);
