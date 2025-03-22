@@ -17,15 +17,18 @@ namespace Aspire.Hosting;
 public static class APIGatewayExtensions
 {
     /// <summary>
-    /// Adds an API Gateway emulator resource to the Aspire application. Lambda function resoures 
+    /// Adds an API Gateway emulator resource to the Aspire application. Lambda function resources
     /// should be added to this resource using the WithReference method.
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="name">Aspire resource name</param>
     /// <param name="apiGatewayType">The type of API Gateway API. For example Rest, HttpV1 or HttpV2</param>
+    /// <param name="options">The options to configure the emulator with.</param>
     /// <returns></returns>
-    public static IResourceBuilder<APIGatewayEmulatorResource> AddAWSAPIGatewayEmulator(this IDistributedApplicationBuilder builder, string name, APIGatewayType apiGatewayType)
+    public static IResourceBuilder<APIGatewayEmulatorResource> AddAWSAPIGatewayEmulator(this IDistributedApplicationBuilder builder, string name, APIGatewayType apiGatewayType, APIGatewayEmulatorOptions? options = null)
     {
+        options ??= new APIGatewayEmulatorOptions();
+
         var apiGatewayEmulator = builder.AddResource(new APIGatewayEmulatorResource(name, apiGatewayType)).ExcludeFromManifest();
         apiGatewayEmulator.WithArgs(context =>
         {
@@ -34,7 +37,8 @@ public static class APIGatewayExtensions
 
         var annotation = new EndpointAnnotation(
             protocol: ProtocolType.Tcp,
-            uriScheme: "http");
+            uriScheme: "http",
+            port: options.Port);
 
         apiGatewayEmulator.WithAnnotation(annotation);
         var endpointReference = new EndpointReference(apiGatewayEmulator.Resource, annotation);
