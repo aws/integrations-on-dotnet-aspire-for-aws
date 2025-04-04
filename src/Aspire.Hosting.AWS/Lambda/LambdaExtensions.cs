@@ -62,7 +62,7 @@ public static class LambdaExtensions
         {
             var serviceEmulatorEndpoint = serviceEmulator.GetEndpoint("http");
 
-            // Add the Lambda function resource on the path so the emulator can distingish request
+            // Add the Lambda function resource on the path so the emulator can distinguish request
             // for each Lambda function.
             var apiPath = $"{serviceEmulatorEndpoint.Host}:{serviceEmulatorEndpoint.Port}/{name}";
             context.EnvironmentVariables["AWS_EXECUTION_ENV"] = $"aspire.hosting.aws#{SdkUtilities.GetAssemblyVersion()}";
@@ -122,6 +122,8 @@ public static class LambdaExtensions
     /// <exception cref="InvalidOperationException">Thrown if the Lambda service emulator has already been added.</exception>
     public static IResourceBuilder<LambdaEmulatorResource> AddAWSLambdaServiceEmulator(this IDistributedApplicationBuilder builder, LambdaEmulatorOptions? options = null)
     {
+        options ??= new LambdaEmulatorOptions();
+
         if (builder.Resources.FirstOrDefault(x => x.TryGetAnnotationsOfType<LambdaEmulatorAnnotation>(out _)) is ExecutableResource serviceEmulator)
         {
             throw new InvalidOperationException("A Lambda service emulator has already been added. The AddAWSLambdaFunction will add the emulator " +
@@ -138,16 +140,17 @@ public static class LambdaExtensions
 
         var annotation = new EndpointAnnotation(
             protocol: ProtocolType.Tcp,
-            uriScheme: "http");
+            uriScheme: "http",
+            port: options.Port);
 
         lambdaEmulator.WithAnnotation(annotation);
         var endpointReference = new EndpointReference(lambdaEmulator.Resource, annotation);
 
         lambdaEmulator.WithAnnotation(new LambdaEmulatorAnnotation(endpointReference)
         {
-            DisableAutoInstall = options?.DisableAutoInstall ?? false,
-            OverrideMinimumInstallVersion = options?.OverrideMinimumInstallVersion,
-            AllowDowngrade = options?.AllowDowngrade ?? false,
+            DisableAutoInstall = options.DisableAutoInstall,
+            OverrideMinimumInstallVersion = options.OverrideMinimumInstallVersion,
+            AllowDowngrade = options.AllowDowngrade,
         });
 
         lambdaEmulator.WithAnnotation(new EnvironmentCallbackAnnotation(context =>

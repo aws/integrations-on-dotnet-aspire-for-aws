@@ -176,18 +176,18 @@ var awsConfig = builder.AddAWSSDKConfig()
 // Add an executable Lambda function
 builder.AddAWSLambdaFunction<Projects.ExecutableLambdaFunction>(
     "MyLambdaFunction", 
-    handler: "ExecutableLambdaFunction")
+    lambdaHandler: "ExecutableLambdaFunction")
     .WithReference(awsConfig);
 
 // Add a class library Lambda function
 builder.AddAWSLambdaFunction<Projects.ClassLibraryLambdaFunction>(
     "MyLambdaFunction", 
-    handler: "ClassLibraryLambdaFunction::ClassLibraryLambdaFunction.Function::FunctionHandler")
+    lambdaHandler: "ClassLibraryLambdaFunction::ClassLibraryLambdaFunction.Function::FunctionHandler")
     .WithReference(awsConfig);
 
 ```
 
-The handler parameter specifies the Lambda handler in different formats depending on the project type:
+The lambdaHandler parameter specifies the Lambda handler in different formats depending on the project type:
 
 - For executable projects: specify the assembly name.
 - For class library projects: use the format `{assembly}::{type}::{method}`.
@@ -225,11 +225,11 @@ To add an API Gateaway emulator to your .NET Aspire AppHost, use the `AddAPIGate
 // Add Lambda functions
 var rootWebFunction = builder.AddAWSLambdaFunction<Projects.WebApiLambdaFunction>(
     "RootLambdaFunction", 
-    handler: "WebApiLambdaFunction");
+    lambdaHandler: "WebApiLambdaFunction");
 
 var addFunction = builder.AddAWSLambdaFunction<Projects.WebAddLambdaFunction>(
     "AddLambdaFunction", 
-    handler: "WebAddLambdaFunction");
+    lambdaHandler: "WebAddLambdaFunction");
 
 // Configure API Gateway emulator
 builder.AddAPIGatewayEmulator("APIGatewayEmulator", APIGatewayType.HttpV2)
