@@ -1,5 +1,6 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
+using Amazon.CDK.AWS.Events.Targets;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS;
 using Aspire.Hosting.AWS.CDK;
@@ -102,41 +103,12 @@ public static class SQSEventSourceExtensions
 
             var queueUrl = await queueUrlResolver();
 
-            var configBuilder = new StringBuilder();
-            configBuilder.Append($"QueueUrl={queueUrl},FunctionName={lambdaFunction.Resource.Name},LambdaRuntimeApi={lambdaEmulatorAnnotation.Endpoint.Url}");
-
-            if (options != null)
-            {
-                if (options.BatchSize.HasValue)
-                {
-                    configBuilder.Append($",BatchSize={options.BatchSize.Value}");
-                }
-                if (options.DisableMessageDelete.HasValue)
-                {
-                    configBuilder.Append($",DisableMessageDelete={options.DisableMessageDelete.Value}");
-                }
-                if (options.VisibilityTimeout.HasValue)
-                {
-                    configBuilder.Append($",VisibilityTimeout={options.VisibilityTimeout.Value}");
-                }
-            }
-
             // Look to see if the Lambda function has been configured with an AWS SDK config. If so then
             // configure the SQS event source with the same config to access the SQS queue.
             var awsSdkConfig = lambdaFunction.Resource.Annotations.OfType<SDKResourceAnnotation>().FirstOrDefault()?.SdkConfig;
-            if (awsSdkConfig != null)
-            {
-                if (!string.IsNullOrEmpty(awsSdkConfig.Profile))
-                {
-                    configBuilder.Append($",Profile={awsSdkConfig.Profile}");
-                }
-                if (awsSdkConfig.Region != null)
-                {
-                    configBuilder.Append($",Region={awsSdkConfig.Region.SystemName}");
-                }
-            }
 
-            context.EnvironmentVariables[SQSEventSourceResource.SQS_EVENT_CONFIG_ENV_VAR] = configBuilder.ToString();
+            var sqsEventConfig = SQSEventSourceResource.CreateSQSEventConfig(queueUrl, lambdaFunction.Resource.Name, lambdaEmulatorAnnotation.Endpoint.Url, options, awsSdkConfig);
+            context.EnvironmentVariables[SQSEventSourceResource.SQS_EVENT_CONFIG_ENV_VAR] = sqsEventConfig;
         });
 
         return lambdaFunction;

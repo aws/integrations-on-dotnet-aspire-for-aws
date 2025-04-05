@@ -1,4 +1,8 @@
-﻿using Aspire.Hosting.AWS.Lambda;
+﻿using Aspire.Hosting.AWS.CDK;
+using Aspire.Hosting.AWS.Lambda;
+using Amazon;
+using Amazon.SQS;
+using Amazon.SQS.Model;
 
 namespace Aspire.Hosting.AWS.Integ.Tests.Lambda;
 
@@ -22,6 +26,12 @@ public class PlaygroundE2ETests
             await resourceNotificationService
                 .WaitForResourceAsync("APIGatewayEmulator", KnownResourceStates.Running)
                 .WaitAsync(TimeSpan.FromSeconds(120));
+            await resourceNotificationService
+                .WaitForResourceAsync("AWSLambdaPlaygroundResources", KnownResourceStates.Running)
+                .WaitAsync(TimeSpan.FromSeconds(120));
+            await resourceNotificationService
+                .WaitForResourceAsync("SQSEventSource-SQSProcessorFunction", KnownResourceStates.Running)
+                .WaitAsync(TimeSpan.FromSeconds(120));
 
             var lambdaServiceEmulator = (LambdaEmulatorResource)appHost.Resources
                                 .Single(static r => r.Name == "LambdaServiceEmulator");
@@ -43,6 +53,26 @@ public class PlaygroundE2ETests
                 await TestEndpoint("/multiply/2/1", app, "APIGatewayEmulator"));
             Assert.Equal("2",
                 await TestEndpoint("/divide/2/1", app, "APIGatewayEmulator"));
+
+            var stackResource = (IStackResource)appHost.Resources
+                                .Single(static r => r.Name == "AWSLambdaPlaygroundResources");
+
+            var queueUrl = stackResource.Outputs?.FirstOrDefault(x =>
+            {
+                // The output key has a hash in the middle which could change. To avoid hardcoded logic on the hash check the start and end.
+                // Example value of the output key "DemoQueue955156E8QueueUrl".
+                return x.OutputKey.StartsWith("DemoQueue") && x.OutputKey.EndsWith("QueueUrl");
+            })?.OutputValue;
+            
+            Assert.NotNull(queueUrl);
+
+            using var sqsClient = new AmazonSQSClient(RegionEndpoint.USWest2);
+            await sqsClient.SendMessageAsync(queueUrl, "themessage", cancellationToken.Token);
+
+            // Wait for the Lambda function to consume the message it gets deleted.
+            await Task.Delay(5000);
+            var queueAttributesRepsonse = await sqsClient.GetQueueAttributesAsync(new GetQueueAttributesRequest { QueueUrl = queueUrl, AttributeNames = new List<string> { "All" } });
+            Assert.Equal(0, queueAttributesRepsonse.ApproximateNumberOfMessages + queueAttributesRepsonse.ApproximateNumberOfMessagesNotVisible);
         }
         finally
         {

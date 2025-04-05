@@ -12,10 +12,6 @@ var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.US
 var cdkStackResource = builder.AddAWSCDKStack("AWSLambdaPlaygroundResources");
 var sqsDemoQueue = cdkStackResource.AddSQSQueue("DemoQueue");
 
-
-// TODO: Remove this once the new version of the test tool that supports SQS has been released.
-builder.AddAWSLambdaServiceEmulator(new LambdaEmulatorOptions { DisableAutoInstall = true });
-
 builder.AddAWSLambdaFunction<Projects.ToUpperLambdaFunctionExecutable>("ToUpperFunction", lambdaHandler: "ToUpperLambdaFunctionExecutable", new LambdaFunctionOptions { ApplicationLogLevel = ApplicationLogLevel.DEBUG, LogFormat = LogFormat.JSON});
 
 var defaultRouteLambda = builder.AddAWSLambdaFunction<Projects.WebDefaultLambdaFunction>("LambdaDefaultRoute", lambdaHandler: "WebDefaultLambdaFunction");

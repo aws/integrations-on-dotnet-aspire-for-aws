@@ -15,7 +15,7 @@
     "Aspire_SQSProcessorFunction": {
       "commandName": "Executable",
       "executablePath": "dotnet",
-      "commandLineArgs": "exec --depsfile ./SQSProcessorFunction.deps.json --runtimeconfig ./SQSProcessorFunction.runtimeconfig.json %USERPROFILE%\\.dotnet\\tools\\.store\\amazon.lambda.testtool\\0.9.888\\amazon.lambda.testtool\\0.9.888\\content\\Amazon.Lambda.RuntimeSupport\\net8.0\\Amazon.Lambda.RuntimeSupport.dll SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler",
+      "commandLineArgs": "exec --depsfile ./SQSProcessorFunction.deps.json --runtimeconfig ./SQSProcessorFunction.runtimeconfig.json %USERPROFILE%\\.dotnet\\tools\\.store\\amazon.lambda.testtool\\0.10.0\\amazon.lambda.testtool\\0.10.0\\content\\Amazon.Lambda.RuntimeSupport\\net8.0\\Amazon.Lambda.RuntimeSupport.dll SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler",
       "workingDirectory": ".\\bin\\$(Configuration)\\net8.0"
     }
   }
