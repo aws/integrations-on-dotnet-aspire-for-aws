@@ -1,3 +1,10 @@
+## Release 2025-04-07
+
+### Aspire.Hosting.AWS (9.1.6)
+* Add support for configuring a port for API Gateway and Lambda emulators
+* Add support for configuring SQS event source for a Lambda function
+* Update version of Amazon.Lambda.TestTool to install to version 0.10.0
+
 ## Release 2025-03-07
 
 ### Aspire.Hosting.AWS (9.1.5)
