@@ -6,11 +6,14 @@
 		<OutputType>Exe</OutputType>
 		<TargetFramework>$(DefaultTargetFramework)</TargetFramework>
 		<IsAspireHost>true</IsAspireHost>
+		<NoWarn>$(NoWarn);CS8002</NoWarn> <!-- AWS CDK packages are not signed -->
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="AWSSDK.SQS" />
 		<ProjectReference Include="..\..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" IsAspireProjectResource="false" />
 		<PackageReference Include="Aspire.Hosting.AppHost" />
+		<ProjectReference Include="..\SQSProcessorFunction\SQSProcessorFunction.csproj" />
 		<ProjectReference Include="..\ToUpperLambdaFunctionExecutable\ToUpperLambdaFunctionExecutable.csproj" />
 		<ProjectReference Include="..\WebAWSCallsLambdaFunction\WebAWSCallsLambdaFunction.csproj" />
 		<ProjectReference Include="..\WebCalculatorFunctions\WebCalculatorFunctions.csproj" />

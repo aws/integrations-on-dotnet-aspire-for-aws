@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -10,10 +10,10 @@
     <!-- Generate ready to run images during publishing to improve cold start time. -->
     <PublishReadyToRun>true</PublishReadyToRun>
   </PropertyGroup>
-  <ItemGroup>  
-	  <PackageReference Include="Amazon.Lambda.APIGatewayEvents" />
-	  <PackageReference Include="Amazon.Lambda.Core" />
-	  <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" />
+  <ItemGroup>
+    <PackageReference Include="Amazon.Lambda.Core" />
+    <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" />
+    <PackageReference Include="Amazon.Lambda.SQSEvents" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Lambda.ServiceDefaults\Lambda.ServiceDefaults.csproj" />

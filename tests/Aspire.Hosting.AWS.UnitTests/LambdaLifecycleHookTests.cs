@@ -17,7 +17,9 @@ public class LambdaLifecycleHookTests
     {
         // Arrange
         string expectedInstallPath = Path.GetTempPath();
-        string jsonOutput = JsonNode.Parse($"{{ \"InstallPath\": \"{expectedInstallPath}\" }}")!.ToJsonString();
+
+        // Escape Windows forward slashes when injecting the value into the JSON document.
+        string jsonOutput = JsonNode.Parse($"{{ \"InstallPath\": \"{expectedInstallPath.Replace("\\", "\\\\")}\" }}")!.ToJsonString();
 
         _processCommandService
             .Setup(s => s.RunProcessAndCaptureOuputAsync(

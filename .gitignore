@@ -10,6 +10,8 @@
 *.userosscache
 *.sln.docstates
 
+playground/**/launchSettings.json
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
@@ -403,3 +405,6 @@ FodyWeavers.xsd
 *.sln.iml
 
 .idea/
+
+# CDK temp files
+**/cdk.out/**
