@@ -22,8 +22,6 @@ var minusFunction = builder.AddAWSLambdaFunction<Projects.WebCalculatorFunctions
 var multiplyFunction = builder.AddAWSLambdaFunction<Projects.WebCalculatorFunctions>("MultiplyFunction", lambdaHandler: "WebCalculatorFunctions::WebCalculatorFunctions.Functions::MultiplyFunctionHandler");
 var divideFunction = builder.AddAWSLambdaFunction<Projects.WebCalculatorFunctions>("DivideFunction", lambdaHandler: "WebCalculatorFunctions::WebCalculatorFunctions.Functions::DivideFunctionHandler");
 
-
-
 builder.AddAWSAPIGatewayEmulator("APIGatewayEmulator", Aspire.Hosting.AWS.Lambda.APIGatewayType.HttpV2)
         .WithReference(defaultRouteLambda, Method.Get, "/")
         // Add route demonstrating making AWS servic calls
@@ -37,7 +35,10 @@ builder.AddAWSAPIGatewayEmulator("APIGatewayEmulator", Aspire.Hosting.AWS.Lambda
 
 builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
         .WithReference(awsSdkConfig)
-        .WithSQSEventSource(sqsDemoQueue);
+        .WithSQSEventSource(sqsDemoQueue)
+        // This reference is not necessary. It is added to confirm duplicate
+        // CDK output parameters are not attempted to be added.
+        .WithReference(sqsDemoQueue);
 
 
 builder.Build().Run();

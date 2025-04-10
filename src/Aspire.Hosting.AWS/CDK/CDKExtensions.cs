@@ -153,7 +153,10 @@ public static class CDKExtensions
     public static StackOutputReference GetOutput<T>(this IResourceBuilder<IConstructResource<T>> builder, string name, ConstructOutputDelegate<T> output)
         where T : Construct
     {
-        builder.WithAnnotation(new ConstructOutputAnnotation<T>(name, output));
+        if (!builder.Resource.Annotations.Any(x => x is ConstructOutputAnnotation<T> con && string.Equals(name, con.OutputName, StringComparison.Ordinal)))
+        {
+            builder.WithAnnotation(new ConstructOutputAnnotation<T>(name, output));
+        }
         return new StackOutputReference(builder.Resource.Construct.GetStackUniqueId() + name, builder.Resource.Parent.SelectParentResource<IStackResource>());
     }
 
