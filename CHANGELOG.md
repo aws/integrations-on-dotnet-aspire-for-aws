@@ -1,3 +1,8 @@
+## Release 2025-04-10
+
+### Aspire.Hosting.AWS (9.1.7)
+* Fixed issue with duplicate CDK output parameters attempting to be added
+
 ## Release 2025-04-07
 
 ### Aspire.Hosting.AWS (9.1.6)
