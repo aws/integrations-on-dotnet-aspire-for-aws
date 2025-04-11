@@ -10,7 +10,8 @@ var builder = DistributedApplication.CreateBuilder(args);
 var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.USWest2);
 
 var cdkStackResource = builder.AddAWSCDKStack("AWSLambdaPlaygroundResources");
-var sqsDemoQueue = cdkStackResource.AddSQSQueue("DemoQueue");
+var sqsDemoQueue1 = cdkStackResource.AddSQSQueue("DemoQueue1");
+var sqsDemoQueue2 = cdkStackResource.AddSQSQueue("DemoQueue2");
 
 builder.AddAWSLambdaFunction<Projects.ToUpperLambdaFunctionExecutable>("ToUpperFunction", lambdaHandler: "ToUpperLambdaFunctionExecutable", new LambdaFunctionOptions { ApplicationLogLevel = ApplicationLogLevel.DEBUG, LogFormat = LogFormat.JSON});
 
@@ -35,10 +36,11 @@ builder.AddAWSAPIGatewayEmulator("APIGatewayEmulator", Aspire.Hosting.AWS.Lambda
 
 builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
         .WithReference(awsSdkConfig)
-        .WithSQSEventSource(sqsDemoQueue)
-        // This reference is not necessary. It is added to confirm duplicate
+        .WithSQSEventSource(sqsDemoQueue1)
+        // These references are not necessary. It is added to confirm duplicate
         // CDK output parameters are not attempted to be added.
-        .WithReference(sqsDemoQueue);
+        .WithReference(sqsDemoQueue1)
+        .WithReference(sqsDemoQueue2);
 
 
 builder.Build().Run();
