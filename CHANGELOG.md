@@ -1,3 +1,10 @@
+## Release 2025-04-11
+
+### Aspire.Hosting.AWS (9.1.8)
+* Fixed issue with duplicate CDK output parameter names being used
+* Update Amazon.Lambda.TestTool to version 0.10.1
+* Update Amazon.Lambda.RuntimeSupport to version 1.13.0
+
 ## Release 2025-04-10
 
 ### Aspire.Hosting.AWS (9.1.7)
