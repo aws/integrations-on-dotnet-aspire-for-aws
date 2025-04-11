@@ -61,7 +61,7 @@ public class PlaygroundE2ETests
             {
                 // The output key has a hash in the middle which could change. To avoid hardcoded logic on the hash check the start and end.
                 // Example value of the output key "DemoQueue955156E8QueueUrl".
-                return x.OutputKey.StartsWith("DemoQueue") && x.OutputKey.EndsWith("QueueUrl");
+                return x.OutputKey.StartsWith("DemoQueue1") && x.OutputKey.EndsWith("QueueUrl");
             })?.OutputValue;
             
             Assert.NotNull(queueUrl);
