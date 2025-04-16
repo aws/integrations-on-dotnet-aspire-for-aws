@@ -45,7 +45,7 @@ internal static class SdkUtilities
 
     internal static void ApplySDKConfig(EnvironmentCallbackContext context, IAWSSDKConfig awsSdkConfig, bool force)
     {
-        if (context.Logger != null)
+        if (context.Logger != null && awsSdkConfig.SDKValidationEnabled)
         {
             // To help debugging do a validation of the SDK config. The results will be logged.
             BackgroundSDKConfigValidation(context.Logger, awsSdkConfig);
