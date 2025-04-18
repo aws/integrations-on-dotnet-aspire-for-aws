@@ -217,7 +217,7 @@ The `LambdaEmulatorOptions` provide the following customization:
 
 ### API Gateway Local Emulation
 
-To add an API Gateaway emulator to your .NET Aspire AppHost, use the `AddAPIGatewayEmulator` method. 
+To add an API Gateaway emulator to your .NET Aspire AppHost, use the `AddAWSLambdaServiceEmulator` method. 
 
 ```csharp
 #pragma warning disable CA2252 // This API requires opting into preview features
