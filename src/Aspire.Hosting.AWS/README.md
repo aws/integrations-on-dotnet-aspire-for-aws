@@ -198,11 +198,11 @@ When adding Lambda functions to your .NET Aspire application, the integration au
 You can customize the tool installation behavior by calling `AddAWSLambdaServiceEmulator` before any `AddAWSLambdaFunction` calls:
 
 ```csharp
-builder.AddAWSLambdaServiceEmulator(options =>
+builder.AddAWSLambdaServiceEmulator(new LambdaEmulatorOptions
 {
-    options.DisableAutoInstall = false;
-    options.OverrideMinimumInstallVersion = "0.1.0";
-    options.AllowDowngrade = false;
+    DisableAutoInstall = false,
+    OverrideMinimumInstallVersion = "0.1.0",
+    AllowDowngrade = false
 });
 
 // Add Lambda functions after configuring the emulator
@@ -217,7 +217,7 @@ The `LambdaEmulatorOptions` provide the following customization:
 
 ### API Gateway Local Emulation
 
-To add an API Gateaway emulator to your .NET Aspire AppHost, use the `AddAPIGatewayEmulator` method. 
+To add an API Gateaway emulator to your .NET Aspire AppHost, use the `AddAWSAPIGatewayEmulator` method. 
 
 ```csharp
 #pragma warning disable CA2252 // This API requires opting into preview features
@@ -232,12 +232,12 @@ var addFunction = builder.AddAWSLambdaFunction<Projects.WebAddLambdaFunction>(
     lambdaHandler: "WebAddLambdaFunction");
 
 // Configure API Gateway emulator
-builder.AddAPIGatewayEmulator("APIGatewayEmulator", APIGatewayType.HttpV2)
+builder.AddAWSAPIGatewayEmulator("APIGatewayEmulator", APIGatewayType.HttpV2)
     .WithReference(rootWebFunction, Method.Get, "/")
     .WithReference(addFunction, Method.Get, "/add/{x}/{y}");
 ```
 
-The `AddAPIGatewayEmulator` method requires:
+The `AddAWSAPIGatewayEmulator` method requires:
 
 - A name for the emulator resource
 - The API Gateway type (`Rest`, `HttpV1`, or `HttpV2` )
@@ -260,7 +260,7 @@ Here's an example of how to set up an API Gateway emulator with a wildcard path:
 var aspNetCoreLambdaFunction = builder.AddAWSLambdaFunction<Projects.AWSServerless>("Resource", "AWSServerless");
 
 // Configure the API Gateway emulator
-builder.AddAPIGatewayEmulator("APIGatewayEmulator", APIGatewayType.Rest)
+builder.AddAWSAPIGatewayEmulator("APIGatewayEmulator", APIGatewayType.Rest)
     .WithReference(aspNetCoreLambdaFunction, Method.Any, "/")
     .WithReference(aspNetCoreLambdaFunction, Method.Any, "/{proxy+}");
 
