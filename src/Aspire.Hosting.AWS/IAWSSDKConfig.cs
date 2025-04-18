@@ -20,6 +20,11 @@ public interface IAWSSDKConfig
     /// </summary>
     RegionEndpoint? Region { get; set; }
 
+    /// <summary>
+    /// Set if the sdk will validate the profile.
+    /// </summary>
+    public bool SDKValidationEnabled { get; set; }
+
     internal T CreateServiceConfig<T>() where T : ClientConfig, new()
     {
         var config = new T();

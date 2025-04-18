@@ -47,6 +47,18 @@ public static class SDKResourceExtensions
     }
 
     /// <summary>
+    /// Set validation preference for profile in sdk.
+    /// </summary>
+    /// <param name="config">An <see cref="IAWSSDKConfig"/> instance.</param>
+    /// <param name="sdkValidationEnabled">option for toggle sdk validation</param>
+    public static IAWSSDKConfig WithSdkValidation(this IAWSSDKConfig config, bool sdkValidationEnabled)
+    {
+        config.SDKValidationEnabled = sdkValidationEnabled;
+
+        return config;
+    }
+
+    /// <summary>
     /// Add a reference to an AWS SDK configuration to the resource.
     /// </summary>
     /// <param name="builder">An <see cref="IResourceBuilder{T}"/> for <see cref="IResourceWithEnvironment"/></param>

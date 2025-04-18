@@ -11,4 +11,7 @@ internal sealed class AWSSDKConfig : IAWSSDKConfig
 
     /// <inheritdoc/>
     public RegionEndpoint? Region { get; set; }
+
+    /// <inheritdoc/>
+    public bool SDKValidationEnabled { get; set; } = true;
 }
