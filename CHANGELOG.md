@@ -1,3 +1,8 @@
+## Release 2025-04-23
+
+### Aspire.Hosting.AWS (9.1.9)
+* Add option to disable sdk validation
+
 ## Release 2025-04-11
 
 ### Aspire.Hosting.AWS (9.1.8)
