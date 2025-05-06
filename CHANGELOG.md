@@ -1,3 +1,9 @@
+## Release 2025-05-06
+
+### Aspire.Hosting.AWS (9.2.0)
+* Update to V4 of the AWS SDK for .NET
+* Update to Aspire 9.2
+
 ## Release 2025-04-23
 
 ### Aspire.Hosting.AWS (9.1.9)
