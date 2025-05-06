@@ -417,7 +417,7 @@ internal sealed class CloudFormationStackExecutor(
             for (var i = events.Count - 1; i >= 0; i--)
             {
                 var line = new StringBuilder();
-                line.Append(events[i].Timestamp.ToString("g", CultureInfo.InvariantCulture).PadRight(TIMESTAMP_WIDTH));
+                line.Append(events[i].Timestamp.GetValueOrDefault().ToString("g", CultureInfo.InvariantCulture).PadRight(TIMESTAMP_WIDTH));
                 line.Append(' ');
                 line.Append(events[i].LogicalResourceId.PadRight(LOGICAL_RESOURCE_WIDTH));
                 line.Append(' ');
@@ -431,7 +431,7 @@ internal sealed class CloudFormationStackExecutor(
 
                 if (minTimeStampForEvents < events[i].Timestamp)
                 {
-                    minTimeStampForEvents = events[i].Timestamp;
+                    minTimeStampForEvents = events[i].Timestamp.GetValueOrDefault();
                 }
 
                 logger.LogInformation(line.ToString());
@@ -463,15 +463,18 @@ internal sealed class CloudFormationStackExecutor(
             {
                 throw new AWSProvisioningException($"Error getting events for CloudFormation stack: {e.Message}", e);
             }
-            foreach (var evnt in response.StackEvents)
+            if (response.StackEvents != null)
             {
-                if (string.Equals(evnt.EventId, mostRecentEventId) || evnt.Timestamp < minTimeStampForEvents)
+                foreach (var evnt in response.StackEvents)
                 {
-                    noNewEvents = true;
-                    break;
-                }
+                    if (string.Equals(evnt.EventId, mostRecentEventId) || evnt.Timestamp < minTimeStampForEvents)
+                    {
+                        noNewEvents = true;
+                        break;
+                    }
 
-                events.Add(evnt);
+                    events.Add(evnt);
+                }
             }
 
         } while (!noNewEvents && !string.IsNullOrEmpty(response.NextToken));

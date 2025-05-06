@@ -6,6 +6,7 @@ using Amazon;
 using Amazon.CloudFormation;
 using Amazon.CloudFormation.Model;
 using Amazon.Runtime;
+using Amazon.Runtime.Credentials;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.CloudFormation;
 
@@ -96,7 +97,7 @@ internal abstract partial class CloudFormationResourceProvisioner<T>(ResourceLog
             {
                 var config = resource.AWSSDKConfig.CreateServiceConfig<AmazonCloudFormationConfig>();
 
-                var awsCredentials = FallbackCredentialsFactory.GetCredentials(config);
+                var awsCredentials = DefaultAWSCredentialsIdentityResolver.GetCredentials(config);
                 client = new AmazonCloudFormationClient(awsCredentials, config);
             }
             else
