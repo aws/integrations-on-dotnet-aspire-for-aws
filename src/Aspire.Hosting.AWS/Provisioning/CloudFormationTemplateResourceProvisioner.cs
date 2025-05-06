@@ -34,7 +34,7 @@ internal class CloudFormationTemplateResourceProvisioner<T>(
             if (stack != null)
             {
                 logger.LogInformation("CloudFormation stack has {Count} output parameters", stack.Outputs.Count);
-                if (logger.IsEnabled(LogLevel.Information))
+                if (stack.Outputs != null && logger.IsEnabled(LogLevel.Information))
                 {
                     foreach (var output in stack.Outputs)
                     {
@@ -46,7 +46,7 @@ internal class CloudFormationTemplateResourceProvisioner<T>(
 
                 if (resource is CloudFormationResource cloudformationResource)
                 {
-                    cloudformationResource.Outputs = stack.Outputs;
+                    cloudformationResource.Outputs = stack.Outputs ?? new List<Amazon.CloudFormation.Model.Output>();
                 }
 
                 var templatePath = resource.TemplatePath;
