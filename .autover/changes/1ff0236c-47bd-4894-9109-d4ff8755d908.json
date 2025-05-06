@@ -1,0 +1,12 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Minor",
+      "ChangelogMessages": [
+        "Update to V4 of the AWS SDK for .NET",
+		"Update to Aspire 9.2"
+      ]
+    }
+  ]
+}
