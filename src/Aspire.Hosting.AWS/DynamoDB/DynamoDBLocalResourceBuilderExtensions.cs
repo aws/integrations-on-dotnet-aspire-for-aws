@@ -22,7 +22,7 @@ public static class DynamoDBLocalResourceBuilderExtensions
         var container = new DynamoDBLocalResource(name, options ?? new DynamoDBLocalOptions());
         var containerBuilder = builder.AddResource(container)
                   .ExcludeFromManifest()
-                  .WithEndpoint(targetPort: DynamoDBLocalResource.DynamoDBInternalPort, scheme: "http")
+                  .WithEndpoint(targetPort: DynamoDBLocalResource.DynamoDBInternalPort, scheme: "http", port: options?.Port)
                   .WithArgs( container.CreateContainerImageArguments())
                   .WithImage(container.Options.Image, container.Options.Tag)
                   .WithImageRegistry(container.Options.Registry);
@@ -33,6 +33,23 @@ public static class DynamoDBLocalResourceBuilderExtensions
         }
 
         return containerBuilder;
+    }
+
+    /// <summary>
+    /// Sets the pull policy for pulling the DynamoDB Local container image.
+    /// </summary>
+    /// <typeparam name="T">The resource type.</typeparam>
+    /// <param name="builder">Builder for the container resource.</param>
+    /// <param name="pullPolicy">The pull policy behavior for the container resource.</param>
+    /// <returns>The <see cref="IResourceBuilder{IDynamoDBLocalResource}"/>.</returns>
+    public static IResourceBuilder<IDynamoDBLocalResource> WithImagePullPolicy(this IResourceBuilder<IDynamoDBLocalResource> builder, ImagePullPolicy imagePullPolicy)
+    {
+        if (builder is IResourceBuilder<ContainerResource> containerBuilder)
+        {
+            containerBuilder.WithImagePullPolicy(imagePullPolicy);
+        }
+
+        return builder;
     }
 
     /// <summary>
