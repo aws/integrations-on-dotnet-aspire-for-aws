@@ -1,3 +1,11 @@
+## Release 2025-05-08
+
+### Aspire.Hosting.AWS (9.2.1)
+* Add ability to set host port for DynamoDB Local
+* Add ability to call WithImagePullPolicy for DynamoDB Local resource
+* Add Display Names for API Gateway Emulator and Lambda Service Emulator endpoints
+* Add Display Names for AWS CloudFormation Console stack links
+
 ## Release 2025-05-06
 
 ### Aspire.Hosting.AWS (9.2.0)
