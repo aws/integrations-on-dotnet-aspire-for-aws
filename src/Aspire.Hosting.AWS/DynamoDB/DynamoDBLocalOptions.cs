@@ -56,4 +56,9 @@ public class DynamoDBLocalOptions
     /// </summary>
     public bool DelayTransientStatuses { get; set; }
 
+    /// <summary>
+    /// The host port used to connect to DynamoDB local. If not set, a random port will be used.
+    /// </summary>
+    public int? Port { get; set; } = null;
+
 }
