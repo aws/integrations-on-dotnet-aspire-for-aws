@@ -144,6 +144,7 @@ public static class LambdaExtensions
             port: options.Port);
 
         lambdaEmulator.WithAnnotation(annotation);
+        lambdaEmulator.WithUrlForEndpoint("http", u => u.DisplayText = "Lambda Test Tool UI");
         var endpointReference = new EndpointReference(lambdaEmulator.Resource, annotation);
 
         lambdaEmulator.WithAnnotation(new LambdaEmulatorAnnotation(endpointReference)

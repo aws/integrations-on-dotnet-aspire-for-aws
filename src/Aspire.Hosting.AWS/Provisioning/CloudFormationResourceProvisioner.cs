@@ -75,6 +75,9 @@ internal abstract partial class CloudFormationResourceProvisioner<T>(ResourceLog
             return
             [
                 new UrlSnapshot("aws-console", url, IsInternal: false)
+                {
+                    DisplayProperties = new UrlDisplayPropertiesSnapshot("AWS CloudFormation Console")
+                }
             ];
         }
         catch (Exception)

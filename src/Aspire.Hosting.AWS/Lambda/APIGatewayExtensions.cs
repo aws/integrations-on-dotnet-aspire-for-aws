@@ -41,6 +41,8 @@ public static class APIGatewayExtensions
             port: options.Port);
 
         apiGatewayEmulator.WithAnnotation(annotation);
+        apiGatewayEmulator.WithUrlForEndpoint("http", u => u.DisplayText = "API Gateway Endpoint");
+
         var endpointReference = new EndpointReference(apiGatewayEmulator.Resource, annotation);
 
         apiGatewayEmulator.WithAnnotation(new EnvironmentCallbackAnnotation(context =>
