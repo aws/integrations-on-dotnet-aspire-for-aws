@@ -11,7 +11,7 @@ public class LambdaPlaygroundStack : Stack
     public LambdaPlaygroundStack(Construct scope, string id, IStackProps? props = null) 
         : base(scope, id, props)
     {
-        Aspects.Of(this).Add(new Tag("aws-tests", "AWSLambdaPlaygroundResources"));
-        Aspects.Of(this).Add(new Tag("aws-repo", "integrations-on-dotnet-aspire-for-aws"));
+        Amazon.CDK.Tags.Of(this).Add("aws-tests", "AWSLambdaPlaygroundResources");
+        Amazon.CDK.Tags.Of(this).Add("aws-repo", "integrations-on-dotnet-aspire-for-aws");
     }
 }
