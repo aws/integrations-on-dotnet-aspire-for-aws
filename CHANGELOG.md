@@ -1,3 +1,9 @@
+## Release 2025-05-19
+
+### Aspire.Hosting.AWS (9.2.2)
+* Update default Amazon.Lambda.TestTool version to 0.10.3
+* Add IResourceWithWaitSupport support for CloudFormation provisioning. This is useful when using LocalStack container as the CloudFormation endpoint.
+
 ## Release 2025-05-08
 
 ### Aspire.Hosting.AWS (9.2.1)
