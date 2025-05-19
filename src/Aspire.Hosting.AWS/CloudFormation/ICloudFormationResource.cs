@@ -2,13 +2,14 @@
 
 using Amazon.CloudFormation;
 using Amazon.CloudFormation.Model;
+using Aspire.Hosting.ApplicationModel;
 
 namespace Aspire.Hosting.AWS.CloudFormation;
 
 /// <summary>
 /// Resource representing an AWS CloudFormation stack.
 /// </summary>
-public interface ICloudFormationResource : IAWSResource
+public interface ICloudFormationResource : IAWSResource, IResourceWithWaitSupport
 {
     /// <summary>
     /// The configured Amazon CloudFormation service client used to make service calls. If this property set

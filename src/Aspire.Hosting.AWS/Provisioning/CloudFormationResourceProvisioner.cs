@@ -12,12 +12,10 @@ using Aspire.Hosting.AWS.CloudFormation;
 
 namespace Aspire.Hosting.AWS.Provisioning;
 
-internal abstract partial class CloudFormationResourceProvisioner<T>(ResourceLoggerService loggerService, ResourceNotificationService notificationService) : AWSResourceProvisioner<T>
+internal abstract partial class CloudFormationResourceProvisioner<T>(ResourceLoggerService loggerService, ResourceNotificationService notificationService) : AWSResourceProvisioner<T>(notificationService) 
     where T : ICloudFormationResource
 {
     protected ResourceLoggerService LoggerService => loggerService;
-
-    protected ResourceNotificationService NotificationService => notificationService;
 
     protected async Task PublishCloudFormationUpdatePropertiesAsync(T resource, ImmutableArray<ResourcePropertySnapshot>? properties = null, ImmutableArray<UrlSnapshot>? urls = default)
     {
