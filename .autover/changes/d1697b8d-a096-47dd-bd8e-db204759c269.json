@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Add IResourceWithWaitSupport support for CloudFormation provisioning. This is useful when using LocalStack container as the CloudFormation endpoint."
+      ]
+    }
+  ]
+}
