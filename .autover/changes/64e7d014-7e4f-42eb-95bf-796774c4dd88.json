@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Update default Amazon.Lambda.TestTool version to 0.10.3"
+      ]
+    }
+  ]
+}
