@@ -2,6 +2,7 @@
 using Amazon.Lambda;
 using Aspire.Hosting;
 using Aspire.Hosting.AWS.Lambda;
+using Lambda.AppHost;
 
 #pragma warning disable CA2252 // This API requires opting into preview features
 
@@ -9,7 +10,8 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.USWest2);
 
-var cdkStackResource = builder.AddAWSCDKStack("AWSLambdaPlaygroundResources");
+var cdkStackResource = builder.AddAWSCDKStack<LambdaPlaygroundStack>("AWSLambdaPlaygroundResources", 
+    scope => new LambdaPlaygroundStack(scope, "AWSLambdaPlaygroundResources"));
 var sqsDemoQueue1 = cdkStackResource.AddSQSQueue("DemoQueue1");
 var sqsDemoQueue2 = cdkStackResource.AddSQSQueue("DemoQueue2");
 
@@ -44,4 +46,3 @@ builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunctio
 
 
 builder.Build().Run();
- 
