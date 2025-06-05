@@ -24,9 +24,10 @@ public interface IProcessCommandService
     /// <param name="logger"></param>
     /// <param name="path"></param>
     /// <param name="arguments"></param>
+    /// <param name="workingDirectory"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    Task<RunProcessAndCaptureStdOutResult> RunProcessAndCaptureOuputAsync(ILogger logger, string path, string arguments, CancellationToken cancellationToken);
+    Task<RunProcessAndCaptureStdOutResult> RunProcessAndCaptureOuputAsync(ILogger logger, string path, string arguments, string? workingDirectory, CancellationToken cancellationToken);
 
 
     /// <summary>
@@ -49,15 +50,16 @@ internal class ProcessCommandService : IProcessCommandService
     /// <param name="logger"></param>
     /// <param name="path"></param>
     /// <param name="arguments"></param>
+    /// <param name="workingDirectory"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task<IProcessCommandService.RunProcessAndCaptureStdOutResult> RunProcessAndCaptureOuputAsync(ILogger logger, string path, string arguments, CancellationToken cancellationToken)
+    public async Task<IProcessCommandService.RunProcessAndCaptureStdOutResult> RunProcessAndCaptureOuputAsync(ILogger logger, string path, string arguments, string? workingDirectory, CancellationToken cancellationToken)
     {
         using var process = new Process
         {
             StartInfo = new ProcessStartInfo
             {
-                WorkingDirectory = Directory.GetCurrentDirectory(),
+                WorkingDirectory = workingDirectory == null ? Directory.GetCurrentDirectory() : workingDirectory,
                 FileName = path,
                 Arguments = arguments,
                 RedirectStandardOutput = true,
@@ -73,7 +75,7 @@ internal class ProcessCommandService : IProcessCommandService
         {
             if (e.Data != null)
             {
-                output.Append(e.Data);
+                output.AppendLine(e.Data);
             }
         };
 
@@ -81,7 +83,7 @@ internal class ProcessCommandService : IProcessCommandService
         {
             if (e.Data != null)
             {
-                output.Append(e.Data);
+                output.AppendLine(e.Data);
             }
         };
 

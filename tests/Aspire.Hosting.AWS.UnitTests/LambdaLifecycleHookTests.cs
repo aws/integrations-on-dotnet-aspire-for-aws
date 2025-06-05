@@ -26,10 +26,11 @@ public class LambdaLifecycleHookTests
                 _logger.Object,
                 "dotnet",
                 "lambda-test-tool info --format json",
+                null,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new IProcessCommandService.RunProcessAndCaptureStdOutResult(0, jsonOutput));
 
-        var hook = new LambdaLifecycleHook(_logger.Object, _processCommandService.Object);
+        var hook = new LambdaLifecycleHook(_logger.Object, _processCommandService.Object, new DistributedApplicationExecutionContext(DistributedApplicationOperation.Run));
 
         // Act
         string result = await hook.GetCurrentInstallPathAsync(CancellationToken.None);
@@ -47,10 +48,11 @@ public class LambdaLifecycleHookTests
                 It.IsAny<ILogger>(),
                 "dotnet",
                 "lambda-test-tool info --format json",
+                null,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new IProcessCommandService.RunProcessAndCaptureStdOutResult(1, "Error"));
 
-        var hook = new LambdaLifecycleHook(_logger.Object, _processCommandService.Object);
+        var hook = new LambdaLifecycleHook(_logger.Object, _processCommandService.Object, new DistributedApplicationExecutionContext(DistributedApplicationOperation.Run));
 
         // Act
         string result = await hook.GetCurrentInstallPathAsync(CancellationToken.None);
@@ -68,10 +70,11 @@ public class LambdaLifecycleHookTests
                 It.IsAny<ILogger>(),
                 "dotnet",
                 "lambda-test-tool info --format json",
+                null,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new IProcessCommandService.RunProcessAndCaptureStdOutResult(0, "Not a JSON"));
 
-        var hook = new LambdaLifecycleHook(_logger.Object, _processCommandService.Object);
+        var hook = new LambdaLifecycleHook(_logger.Object, _processCommandService.Object, new DistributedApplicationExecutionContext(DistributedApplicationOperation.Run));
 
         // Act
         string result = await hook.GetCurrentInstallPathAsync(CancellationToken.None);
@@ -90,10 +93,11 @@ public class LambdaLifecycleHookTests
                 It.IsAny<ILogger>(),
                 "dotnet",
                 It.Is<string>(args => args.Contains("-getProperty:AssemblyName")),
+                null,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new IProcessCommandService.RunProcessAndCaptureStdOutResult(0, expectedAssemblyName));
 
-        var hook = new LambdaLifecycleHook(_logger.Object, _processCommandService.Object);
+        var hook = new LambdaLifecycleHook(_logger.Object, _processCommandService.Object, new DistributedApplicationExecutionContext(DistributedApplicationOperation.Run));
         string dummyProjectPath = "dummy.csproj";
 
         // Act
@@ -112,10 +116,11 @@ public class LambdaLifecycleHookTests
                 It.IsAny<ILogger>(),
                 "dotnet",
                 It.Is<string>(args => args.Contains("-getProperty:AssemblyName")),
+                null,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new IProcessCommandService.RunProcessAndCaptureStdOutResult(1, "Error"));
 
-        var hook = new LambdaLifecycleHook(_logger.Object, _processCommandService.Object);
+        var hook = new LambdaLifecycleHook(_logger.Object, _processCommandService.Object, new DistributedApplicationExecutionContext(DistributedApplicationOperation.Run));
         string dummyProjectPath = "dummy.csproj";
 
         // Act
@@ -135,10 +140,11 @@ public class LambdaLifecycleHookTests
                 It.IsAny<ILogger>(),
                 "dotnet",
                 It.Is<string>(args => args.Contains("-getProperty:TargetFramework")),
+                null,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new IProcessCommandService.RunProcessAndCaptureStdOutResult(0, expectedTargetFramework));
 
-        var hook = new LambdaLifecycleHook(_logger.Object, _processCommandService.Object);
+        var hook = new LambdaLifecycleHook(_logger.Object, _processCommandService.Object, new DistributedApplicationExecutionContext(DistributedApplicationOperation.Run));
         string dummyProjectPath = "dummy.csproj";
 
         // Act
@@ -157,10 +163,11 @@ public class LambdaLifecycleHookTests
                 It.IsAny<ILogger>(),
                 "dotnet",
                 It.Is<string>(args => args.Contains("-getProperty:TargetFramework")),
+                null,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new IProcessCommandService.RunProcessAndCaptureStdOutResult(1, "Error"));
 
-        var hook = new LambdaLifecycleHook(_logger.Object, _processCommandService.Object);
+        var hook = new LambdaLifecycleHook(_logger.Object, _processCommandService.Object, new DistributedApplicationExecutionContext(DistributedApplicationOperation.Run));
         string dummyProjectPath = "dummy.csproj";
 
         // Act

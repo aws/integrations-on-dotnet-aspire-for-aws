@@ -15,10 +15,15 @@ namespace Aspire.Hosting.AWS.Lambda;
 /// a Lambda service emulator added to the resources.
 /// </summary>
 /// <param name="logger"></param>
-internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProcessCommandService processCommandService) : IDistributedApplicationLifecycleHook
+internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProcessCommandService processCommandService, DistributedApplicationExecutionContext executionContext) : IDistributedApplicationLifecycleHook
 {
     public async Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
     {
+        if (!executionContext.IsRunMode)
+        {
+            return;
+        }
+
         SdkUtilities.BackgroundSDKDefaultConfigValidation(logger);
 
         // The Lambda function handler for a Class Library contains "::".
@@ -147,7 +152,7 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
                 commandLineArgument += " --allow-downgrade";
             }
 
-            var result = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", commandLineArgument, cancellationToken);
+            var result = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", commandLineArgument, null, cancellationToken);
             if (result.ExitCode == 0)
             {
                 if (!string.IsNullOrEmpty(installedVersion))
@@ -192,7 +197,7 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
 
     private async Task<string> GetCurrentInstalledVersionAsync(CancellationToken cancellationToken)
     {
-        var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", "lambda-test-tool info --format json", cancellationToken);
+        var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", "lambda-test-tool info --format json", null, cancellationToken);
         if (results.ExitCode != 0)
         {
             return string.Empty;
@@ -220,7 +225,7 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
 
     internal async Task<string> GetCurrentInstallPathAsync(CancellationToken cancellationToken)
     {
-        var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", "lambda-test-tool info --format json", cancellationToken);
+        var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", "lambda-test-tool info --format json", null, cancellationToken);
         if (results.ExitCode != 0)
         {
             return string.Empty;
@@ -250,7 +255,7 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
     {
         try
         {
-            var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", $"msbuild \"{projectPath}\" -nologo -v:q -getProperty:AssemblyName", cancellationToken);
+            var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", $"msbuild \"{projectPath}\" -nologo -v:q -getProperty:AssemblyName", null, cancellationToken);
             if (results.ExitCode != 0)
             {
                 return string.Empty;
@@ -270,7 +275,7 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
     {
         try
         {
-            var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", $"msbuild \"{projectPath}\" -nologo -v:q -getProperty:TargetFramework", cancellationToken);
+            var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", $"msbuild \"{projectPath}\" -nologo -v:q -getProperty:TargetFramework", null, cancellationToken);
             if (results.ExitCode != 0)
             {
                 return string.Empty;

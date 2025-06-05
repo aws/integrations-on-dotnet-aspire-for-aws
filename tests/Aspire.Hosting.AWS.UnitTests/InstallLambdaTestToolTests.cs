@@ -22,7 +22,7 @@ public class InstallLambdaTestToolTests
                 new IProcessCommandService.RunProcessAndCaptureStdOutResult(0, "Installed successfully")
                 );
 
-        var lambdaHook = new LambdaLifecycleHook(loggerMock.Object, processCommandService);
+        var lambdaHook = new LambdaLifecycleHook(loggerMock.Object, processCommandService, new DistributedApplicationExecutionContext(DistributedApplicationOperation.Run));
         await lambdaHook.ApplyLambdaEmulatorAnnotationAsync(new LambdaEmulatorAnnotation(CreateFakeEndpointReference()));
 
         processCommandService.AssertCommands(
@@ -40,7 +40,7 @@ public class InstallLambdaTestToolTests
                 new IProcessCommandService.RunProcessAndCaptureStdOutResult(0, GenerateVersionJson(Constants.DefaultLambdaTestToolVersion))
                 );
 
-        var lambdaHook = new LambdaLifecycleHook(loggerMock.Object, processCommandService);
+        var lambdaHook = new LambdaLifecycleHook(loggerMock.Object, processCommandService, new DistributedApplicationExecutionContext(DistributedApplicationOperation.Run));
         await lambdaHook.ApplyLambdaEmulatorAnnotationAsync(new LambdaEmulatorAnnotation(CreateFakeEndpointReference()));
 
         processCommandService.AssertCommands(
@@ -58,7 +58,7 @@ public class InstallLambdaTestToolTests
                 new IProcessCommandService.RunProcessAndCaptureStdOutResult(0, "Installed successfully")
                 );
 
-        var lambdaHook = new LambdaLifecycleHook(loggerMock.Object, processCommandService);
+        var lambdaHook = new LambdaLifecycleHook(loggerMock.Object, processCommandService, new DistributedApplicationExecutionContext(DistributedApplicationOperation.Run));
         await lambdaHook.ApplyLambdaEmulatorAnnotationAsync(new LambdaEmulatorAnnotation(CreateFakeEndpointReference()));
 
         processCommandService.AssertCommands(
@@ -78,7 +78,7 @@ public class InstallLambdaTestToolTests
                 );
 
 
-        var lambdaHook = new LambdaLifecycleHook(loggerMock.Object, processCommandService);
+        var lambdaHook = new LambdaLifecycleHook(loggerMock.Object, processCommandService, new DistributedApplicationExecutionContext(DistributedApplicationOperation.Run));
         await lambdaHook.ApplyLambdaEmulatorAnnotationAsync(new LambdaEmulatorAnnotation(CreateFakeEndpointReference()));
 
         processCommandService.AssertCommands(
@@ -97,7 +97,7 @@ public class InstallLambdaTestToolTests
                 );
 
         const string overrideVersion = "99.99.99";
-        var lambdaHook = new LambdaLifecycleHook(loggerMock.Object, processCommandService);
+        var lambdaHook = new LambdaLifecycleHook(loggerMock.Object, processCommandService, new DistributedApplicationExecutionContext(DistributedApplicationOperation.Run));
         await lambdaHook.ApplyLambdaEmulatorAnnotationAsync(new LambdaEmulatorAnnotation(CreateFakeEndpointReference()) { OverrideMinimumInstallVersion = overrideVersion});
 
         processCommandService.AssertCommands(
@@ -113,7 +113,7 @@ public class InstallLambdaTestToolTests
 
         var processCommandService = new MockProcessCommandService();
 
-        var lambdaHook = new LambdaLifecycleHook(loggerMock.Object, processCommandService);
+        var lambdaHook = new LambdaLifecycleHook(loggerMock.Object, processCommandService, new DistributedApplicationExecutionContext(DistributedApplicationOperation.Run));
         await lambdaHook.ApplyLambdaEmulatorAnnotationAsync(new LambdaEmulatorAnnotation(CreateFakeEndpointReference()) { DisableAutoInstall = true });
 
         processCommandService.AssertCommands();
@@ -129,7 +129,7 @@ public class InstallLambdaTestToolTests
                 new IProcessCommandService.RunProcessAndCaptureStdOutResult(0, "Installed successfully")
                 );
 
-        var lambdaHook = new LambdaLifecycleHook(loggerMock.Object, processCommandService);
+        var lambdaHook = new LambdaLifecycleHook(loggerMock.Object, processCommandService, new DistributedApplicationExecutionContext(DistributedApplicationOperation.Run));
         await lambdaHook.ApplyLambdaEmulatorAnnotationAsync(new LambdaEmulatorAnnotation(CreateFakeEndpointReference()) { AllowDowngrade = true });
 
         processCommandService.AssertCommands(
@@ -149,7 +149,7 @@ public class InstallLambdaTestToolTests
 
         public IList<Tuple<string, string>> CommandsExecuted { get; } = new List<Tuple<string, string>>();
 
-        public Task<IProcessCommandService.RunProcessAndCaptureStdOutResult> RunProcessAndCaptureOuputAsync(ILogger logger, string path, string arguments, CancellationToken cancellationToken)
+        public Task<IProcessCommandService.RunProcessAndCaptureStdOutResult> RunProcessAndCaptureOuputAsync(ILogger logger, string path, string arguments, string? workingDirectory, CancellationToken cancellationToken)
         {
             if (CallCount == results.Length)
             {

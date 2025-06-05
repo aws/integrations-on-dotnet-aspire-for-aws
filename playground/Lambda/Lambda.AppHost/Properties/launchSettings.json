@@ -3,6 +3,7 @@
   "profiles": {
     "https": {
       "commandName": "Project",
+      "commandLineArgs": "--publisher default --output-path c:/temp/publish-out",
       "dotnetRunMessages": true,
       "launchBrowser": true,
       "applicationUrl": "https://localhost:17296;http://localhost:15137",
