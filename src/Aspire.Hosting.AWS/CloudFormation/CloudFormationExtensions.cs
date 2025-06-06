@@ -49,6 +49,19 @@ public static class CloudFormationExtensions
     }
 
     /// <summary>
+    /// Add a tag to be applied to the CloudFormation stack.
+    /// </summary>
+    /// <param name="builder"></param>
+    /// <param name="tagKey">Name of the CloudFormation stack tag.</param>
+    /// <param name="tagValue">Value of the CloudFormation stack tag.</param>
+    /// <returns></returns>
+    public static IResourceBuilder<ICloudFormationResource> WithTag(this IResourceBuilder<ICloudFormationResource> builder, string tagKey, string tagValue)
+    {
+        builder.Resource.Tags[tagKey] = tagValue;
+        return builder;
+    }
+
+    /// <summary>
     /// Add a CloudFormation stack for provisioning application resources.
     /// </summary>
     /// <param name="builder">The <see cref="IDistributedApplicationBuilder"/>.</param>
