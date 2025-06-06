@@ -76,7 +76,8 @@ internal class CloudFormationTemplateResourceProvisioner<T>(
             DisableDiffCheck = resource.DisableDiffCheck,
             StackPollingInterval = resource.StackPollingInterval,
             DisabledCapabilities = resource.DisabledCapabilities,
-            CloudFormationParameters = resource.CloudFormationParameters
+            CloudFormationParameters = resource.CloudFormationParameters,
+            Tags = resource.Tags
         };
     }
 

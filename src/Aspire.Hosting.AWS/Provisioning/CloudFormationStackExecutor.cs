@@ -62,20 +62,34 @@ internal sealed class CloudFormationStackExecutor(
     }
 
     /// <summary>
-    /// Setup the tags collection by coping the any tags for existing stacks and then updating/adding the tag recording
-    /// the SHA256 for template and parameters.
+    /// Setup the tags collection by copying any tags for existing stacks, adding user-specified tags, 
+    /// and then updating/adding the tag recording the SHA256 for template and parameters.
     /// </summary>
     /// <param name="existingStack"></param>
     /// <param name="changeSetType"></param>
     /// <param name="computedSha256"></param>
     /// <returns></returns>
-    private static (List<Tag> tags, string? existingSha256) SetupTags(Stack? existingStack, ChangeSetType changeSetType, string computedSha256)
+    private (List<Tag> tags, string? existingSha256) SetupTags(Stack? existingStack, ChangeSetType changeSetType, string computedSha256)
     {
         string? existingSha256 = null;
         var tags = new List<Tag>();
         if (changeSetType == ChangeSetType.UPDATE && existingStack != null)
         {
             tags = existingStack.Tags ?? new List<Tag>();
+        }
+
+        // Add user-specified tags from context
+        foreach (var kvp in context.Tags)
+        {
+            var existingTag = tags.FirstOrDefault(x => string.Equals(x.Key, kvp.Key));
+            if (existingTag != null)
+            {
+                existingTag.Value = kvp.Value;
+            }
+            else
+            {
+                tags.Add(new Tag { Key = kvp.Key, Value = kvp.Value });
+            }
         }
 
         var shaTag = tags.FirstOrDefault(x => string.Equals(x.Key, SHA256_TAG));

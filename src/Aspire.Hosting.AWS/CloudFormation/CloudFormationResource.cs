@@ -22,6 +22,9 @@ internal abstract class CloudFormationResource(string name, string stackName) : 
     public List<Output>? Outputs { get; set; }
 
     /// <inheritdoc/>
+    public IDictionary<string, string> Tags { get; } = new Dictionary<string, string>();
+
+    /// <inheritdoc/>
     public TaskCompletionSource? ProvisioningTaskCompletionSource { get; set; }
 
     internal abstract void WriteToManifest(ManifestPublishingContext context);
