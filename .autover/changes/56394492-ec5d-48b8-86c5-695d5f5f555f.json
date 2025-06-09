@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Fixed issue with determining the framework or assembly for Lambda functions causing Lambda functions to fail to start"
+      ]
+    }
+  ]
+}
