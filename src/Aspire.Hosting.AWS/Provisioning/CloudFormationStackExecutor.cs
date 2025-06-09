@@ -37,7 +37,8 @@ internal sealed class CloudFormationStackExecutor(
         var changeSetType = await DetermineChangeSetTypeAsync(existingStack, cancellationToken).ConfigureAwait(false);
 
         var templateBody = context.Template;
-        var computedSha256 = ComputeSHA256(templateBody, context.CloudFormationParameters);
+       
+        var computedSha256 = ComputeSHA256(templateBody, context.CloudFormationParameters, context.Tags);
 
         (var tags, var existingSha256) = SetupTags(existingStack, changeSetType, computedSha256);
 
@@ -62,7 +63,7 @@ internal sealed class CloudFormationStackExecutor(
     }
 
     /// <summary>
-    /// Setup the tags collection by copying any tags for existing stacks, adding user-specified tags, 
+    /// Setup the tags collection with only user-specified tags (starting with an empty collection)
     /// and then updating/adding the tag recording the SHA256 for template and parameters.
     /// </summary>
     /// <param name="existingStack"></param>
@@ -73,23 +74,21 @@ internal sealed class CloudFormationStackExecutor(
     {
         string? existingSha256 = null;
         var tags = new List<Tag>();
-        if (changeSetType == ChangeSetType.UPDATE && existingStack != null)
+        
+        // Check for existing SHA256 tag if there's an existing stack
+        if (changeSetType == ChangeSetType.UPDATE && existingStack != null && existingStack.Tags != null)
         {
-            tags = existingStack.Tags ?? new List<Tag>();
+            var existingSha256Tag = existingStack.Tags.FirstOrDefault(x => string.Equals(x.Key, SHA256_TAG));
+            if (existingSha256Tag != null)
+            {
+                existingSha256 = existingSha256Tag.Value;
+            }
         }
-
+        
         // Add user-specified tags from context
         foreach (var kvp in context.Tags)
         {
-            var existingTag = tags.FirstOrDefault(x => string.Equals(x.Key, kvp.Key));
-            if (existingTag != null)
-            {
-                existingTag.Value = kvp.Value;
-            }
-            else
-            {
-                tags.Add(new Tag { Key = kvp.Key, Value = kvp.Value });
-            }
+            tags.Add(new Tag { Key = kvp.Key, Value = kvp.Value });
         }
 
         var shaTag = tags.FirstOrDefault(x => string.Equals(x.Key, SHA256_TAG));
@@ -496,12 +495,23 @@ internal sealed class CloudFormationStackExecutor(
         return events;
     }
 
-    private static string ComputeSHA256(string templateBody, IDictionary<string, string> parameters)
+    private static string ComputeSHA256(string templateBody, IDictionary<string, string> parameters, IDictionary<string, string> tags)
     {
         var content = templateBody;
-        if (parameters != null)
+        
+        // Add parameters to content
+        if (parameters != null && parameters.Count > 0)
         {
-            content += string.Join(";", parameters.Select(x => x.Key + "=" + x.Value).ToArray());
+            content += string.Join(";", parameters.Select(x => x.Key + "=" + x.Value).OrderBy(x => x).ToArray());
+        }
+        
+        // Add tags to content (except the SHA256 tag itself)
+        if (tags != null && tags.Count > 0)
+        {
+            content += string.Join(";", tags.Where(x => !string.Equals(x.Key, SHA256_TAG))
+                                       .Select(x => "tag:" + x.Key + "=" + x.Value)
+                                       .OrderBy(x => x)
+                                       .ToArray());
         }
 
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(content));
