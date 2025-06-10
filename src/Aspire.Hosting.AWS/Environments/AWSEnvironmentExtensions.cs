@@ -21,11 +21,11 @@ public static class AWSEnvironmentExtensions
 //        builder.Services.TryAddLifecycleHook<CDKInfrastructureLifecycleHook>();
     }
 
-    public static IResourceBuilder<AWSCDKEnvironment<Stack>> AddAWSCDKEnvironment(this IDistributedApplicationBuilder builder, string name)
+    public static IResourceBuilder<AWSCDKEnvironmentResource<Stack>> AddAWSCDKEnvironment(this IDistributedApplicationBuilder builder, string name)
     {
         builder.AddEnvironmentServices();
 
-        var env = new AWSCDKEnvironment<Stack>(name, app => new Stack(app, name));
+        var env = new AWSCDKEnvironmentResource<Stack>(name, app => new Stack(app, name));
 
         if (builder.ExecutionContext.IsRunMode)
         {
@@ -35,12 +35,12 @@ public static class AWSEnvironmentExtensions
         return builder.AddResource(env);
     }
 
-    public static IResourceBuilder<AWSCDKEnvironment<T>> AddAWSCDKEnvironment<T>(this IDistributedApplicationBuilder builder, string name, Func<App, T> stackFactory)
+    public static IResourceBuilder<AWSCDKEnvironmentResource<T>> AddAWSCDKEnvironment<T>(this IDistributedApplicationBuilder builder, string name, Func<App, T> stackFactory)
         where T : Stack
     {
         builder.AddEnvironmentServices();
 
-        var env = new AWSCDKEnvironment<T>(name, stackFactory);
+        var env = new AWSCDKEnvironmentResource<T>(name, stackFactory);
 
         if (builder.ExecutionContext.IsRunMode)
         {

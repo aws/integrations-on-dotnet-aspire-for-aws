@@ -1,18 +1,18 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Publishing;
 using Microsoft.Extensions.DependencyInjection;
-
-using Stack = Amazon.CDK.Stack;
 using App = Amazon.CDK.App;
+using Stack = Amazon.CDK.Stack;
 
 namespace Aspire.Hosting.AWS.Environments;
 
 #pragma warning disable ASPIREPUBLISHERS001 
 
-public abstract class AWSCDKEnvironment : Resource
+public abstract class AWSCDKEnvironmentResource : Resource
 {
-    protected AWSCDKEnvironment(string name)
+    protected AWSCDKEnvironmentResource(string name)
     : base(name)
     {
         Annotations.Add(new PublishingCallbackAnnotation(PublishAsync));
@@ -24,20 +24,19 @@ public abstract class AWSCDKEnvironment : Resource
 
     private Task PublishAsync(PublishingContext context)
     {
-        ILambdaDeploymentPackager lambdaDeploymentPackager = context.Services.GetRequiredService<ILambdaDeploymentPackager>();
         var cdkCtx = new CDKPublishingContext(
             context.OutputPath,
-            lambdaDeploymentPackager,
+            context.Services.GetRequiredService<ILambdaDeploymentPackager>(),
             context.Logger);
 
         return cdkCtx.WriteModelAsync(context.Model, this);
     }
 }
 
-public class AWSCDKEnvironment<T> : AWSCDKEnvironment
+public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
     where T : Stack 
 {
-    public AWSCDKEnvironment(string name, Func<App, T> stackFactory)
+    public AWSCDKEnvironmentResource(string name, Func<App, T> stackFactory)
         : base(name)
     {
         EnvironmentStack = stackFactory(CDKApp);

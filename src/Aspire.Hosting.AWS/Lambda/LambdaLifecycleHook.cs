@@ -262,7 +262,7 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
             }
 
             logger.LogDebug("The assembly name of '{projectPath}' is {assemblyName}", projectPath, results.Output);
-            return results.Output;
+            return results.Output.Trim();
         }
         catch (JsonException ex)
         {
@@ -282,7 +282,7 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
             }
 
             logger.LogDebug("The target framework of '{projectPath}' is {targetFramework}", projectPath, results.Output);
-            return results.Output;
+            return results.Output.Trim();
         }
         catch (JsonException ex)
         {
