@@ -1,3 +1,9 @@
+## Release 2025-06-10
+
+### Aspire.Hosting.AWS (9.2.3)
+* Fixed issue with determining the framework or assembly for Lambda functions causing Lambda functions to fail to start
+* Add the option for users to customize cloudformation stack tags
+
 ## Release 2025-05-19
 
 ### Aspire.Hosting.AWS (9.2.2)
