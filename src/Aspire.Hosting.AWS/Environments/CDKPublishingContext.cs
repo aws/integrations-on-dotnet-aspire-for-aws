@@ -2,6 +2,7 @@
 
 using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.Ecr.Assets;
+using Amazon.CDK.AWS.ECR;
 using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.ECS.Patterns;
 using Amazon.CDK.AWS.Lambda;
@@ -19,6 +20,11 @@ public class CDKPublishingContext(string outputPath, ILambdaDeploymentPackager l
 {
     public async Task WriteModelAsync(DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken = default)
     {
+        if (new DirectoryInfo(outputPath).Name != "cdk.out")
+        {
+            outputPath = Path.Combine(outputPath, "cdk.out");
+        }
+
         logger.LogInformation("Publishing to {output}", outputPath);
         ClearOutputDirectory();
 
@@ -30,7 +36,6 @@ public class CDKPublishingContext(string outputPath, ILambdaDeploymentPackager l
 
         var dotnetProjects = model.Resources.OfType<ProjectResource>().ToArray();
 
-        
         foreach (var dotnetProject in dotnetProjects)
         {
             if (dotnetProject is LambdaProjectResource lambdaFunction)
@@ -78,6 +83,10 @@ public class CDKPublishingContext(string outputPath, ILambdaDeploymentPackager l
                     Vpc = vpc
                 });
 
+                var projectAbsolutePath = Directory.GetParent(dotnetProject.GetProjectMetadata().ProjectPath)!.FullName;
+                var solutionFolder = DetermineSolutionFolder(projectAbsolutePath) ?? projectAbsolutePath;
+                var relativeDockerPath = Path.GetRelativePath(solutionFolder!, Path.Combine(projectAbsolutePath, "Dockerfile"));
+
                 var fargateServiceProps = new ApplicationLoadBalancedFargateServiceProps
                 {
                     Cluster = cluster,
@@ -86,27 +95,42 @@ public class CDKPublishingContext(string outputPath, ILambdaDeploymentPackager l
                     DesiredCount = 2,
                     ListenerPort = 80,
                     PublicLoadBalancer = true,
-                    MinHealthyPercent = 50,
+                    MinHealthyPercent = 100,
                     TaskImageOptions = new ApplicationLoadBalancedTaskImageOptions
                     {
-                        Image = ContainerImage.FromAsset(@"C:\codebase\integrations-on-dotnet-aspire-for-aws", new AssetImageProps
+                        Image = ContainerImage.FromAsset(solutionFolder, new AssetImageProps
                         {
-                            
-                            File = "./playground/Publishing/Frontend/Dockerfile",
+
+                            File = relativeDockerPath,
                         }),
                         ContainerPort = 80,
                     }
                 };
 
                 var fargateService = new ApplicationLoadBalancedFargateService(environment.CDKStack, $"Project-{dotnetProject.Name}", fargateServiceProps);
-            }
+            } 
 
         }
 
         var assembly = environment.CDKApp.Synth();
+
+        // TODO: Make sure Dockerfiles are copied over to the asset folder even if they are in the .dockeringore file
         MoveTempContentToOutput(assembly);
     }
 
+    private string? DetermineSolutionFolder(string projectFolder)
+    {
+        if (Directory.GetFiles(projectFolder, "*.sln").Any())
+        {
+            return projectFolder;
+        }
+
+        var parent = Directory.GetParent(projectFolder)?.FullName;
+        if (parent == null)
+            return null;
+
+        return DetermineSolutionFolder(parent);
+    }
 
     private void ClearOutputDirectory()
     {
@@ -128,22 +152,13 @@ public class CDKPublishingContext(string outputPath, ILambdaDeploymentPackager l
 
     private void MoveTempContentToOutput(CloudAssembly cloudAssembly)
     {
+        if (!Directory.Exists(outputPath))
+        {
+            Directory.CreateDirectory(outputPath);
+        }
         foreach(var stack in cloudAssembly.Stacks)
         {
-            var stackName = stack.StackName;
-            var stackOutputPath = Path.Combine(outputPath, stackName);
-            if (!Directory.Exists(stackOutputPath))
-            {
-                Directory.CreateDirectory(stackOutputPath);
-            }
-
-            Directory.CreateDirectory(stackOutputPath);
-            foreach (var filePath in Directory.GetFiles(Directory.GetParent(stack.TemplateFullPath)!.FullName))
-            {
-                var fileName = Path.GetFileName(filePath);
-                var destinationPath = Path.Combine(stackOutputPath, fileName);
-                File.Move(filePath, destinationPath);
-            }
+            Directory.Move(Directory.GetParent(stack.TemplateFullPath)!.FullName, Path.Combine(outputPath, stack.StackName));
         }
     }
 }
