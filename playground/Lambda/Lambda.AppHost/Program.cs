@@ -10,7 +10,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.USWest2);
 
 var cdkStackResource = builder.AddAWSCDKStack("AWSLambdaPlaygroundResources");
-cdkStackResource.WithTag("aws-tests", "integrations-on-dotnet-aspire-for-aws");
+cdkStackResource.WithTag("aws-repo", "integrations-on-dotnet-aspire-for-aws");
 
 var sqsDemoQueue1 = cdkStackResource.AddSQSQueue("DemoQueue1");
 var sqsDemoQueue2 = cdkStackResource.AddSQSQueue("DemoQueue2");

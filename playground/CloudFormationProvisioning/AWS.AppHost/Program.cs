@@ -14,7 +14,7 @@ var awsResources = builder.AddAWSCloudFormationTemplate("AspireSampleDevResource
                         // Add the SDK configuration so the AppHost knows what account/region to provision the resources.
                         .WithReference(awsConfig);
 
-awsResources.WithTag("aws-tests", "integrations-on-dotnet-aspire-for-aws");
+awsResources.WithTag("aws-repo", "integrations-on-dotnet-aspire-for-aws");
 
 // Add a DynamoDB Local instance
 var localDynamoDB = builder.AddAWSDynamoDBLocal("DynamoDBLocal");
