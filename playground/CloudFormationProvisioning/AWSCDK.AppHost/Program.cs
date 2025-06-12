@@ -11,7 +11,7 @@ var awsConfig = builder.AddAWSSDKConfig()
 var stack = builder.AddAWSCDKStack("stack", "Aspire-stack").WithReference(awsConfig);
 var customStack = builder.AddAWSCDKStack("custom", scope => new CustomStack(scope, "Aspire-custom"));
 customStack.AddOutput("BucketName", stack => stack.Bucket.BucketName).WithReference(awsConfig);
-customStack.WithTag("Environment", "Test");
+customStack.WithTag("aws-tests", "integrations-on-dotnet-aspire-for-aws");
 
 var topic = stack.AddSNSTopic("topic");
 var queue = stack.AddSQSQueue("queue");
