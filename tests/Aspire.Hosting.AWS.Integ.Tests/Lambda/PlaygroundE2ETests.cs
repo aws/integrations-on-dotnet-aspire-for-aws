@@ -1,6 +1,8 @@
 ﻿using Aspire.Hosting.AWS.CDK;
 using Aspire.Hosting.AWS.Lambda;
 using Amazon;
+using Amazon.CloudFormation;
+using Amazon.CloudFormation.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 
@@ -11,6 +13,8 @@ public class PlaygroundE2ETests
     [Fact]
     public async Task RunAWSAppHostProject()
     {
+        string? stackName = null;
+        IAmazonCloudFormation? cfClient = null;
         var cancellationToken = new CancellationTokenSource();
         cancellationToken.CancelAfter(TimeSpan.FromMinutes(5));
         try
@@ -56,6 +60,9 @@ public class PlaygroundE2ETests
 
             var stackResource = (IStackResource)appHost.Resources
                                 .Single(static r => r.Name == "AWSLambdaPlaygroundResources");
+                                
+            cfClient = new AmazonCloudFormationClient(RegionEndpoint.USWest2);
+            stackName = stackResource.StackName;
 
             var queueUrl = stackResource.Outputs?.FirstOrDefault(x =>
             {
@@ -77,6 +84,12 @@ public class PlaygroundE2ETests
         finally
         {
             await cancellationToken.CancelAsync();
+            
+            // Tear down the CloudFormation stack
+            if (cfClient != null && stackName != null)
+            {
+                await cfClient.DeleteStackAsync(new DeleteStackRequest { StackName = stackName });
+            }
         }
     }
     
