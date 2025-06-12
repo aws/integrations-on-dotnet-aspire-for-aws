@@ -77,7 +77,7 @@ public class PlaygroundE2ETests
             await sqsClient.SendMessageAsync(queueUrl, "themessage", cancellationToken.Token);
 
             // Wait for the Lambda function to consume the message it gets deleted.
-            await Task.Delay(20000);
+            await Task.Delay(5000);
             var queueAttributesRepsonse = await sqsClient.GetQueueAttributesAsync(new GetQueueAttributesRequest { QueueUrl = queueUrl, AttributeNames = new List<string> { "All" } });
             Assert.Equal(0, queueAttributesRepsonse.ApproximateNumberOfMessages + queueAttributesRepsonse.ApproximateNumberOfMessagesNotVisible);
         }
