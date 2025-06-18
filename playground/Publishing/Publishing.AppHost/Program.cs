@@ -5,6 +5,18 @@ using Amazon.CDK.AWS.Lambda.EventSources;
 using Amazon.CDK;
 using Aspire.Hosting.AWS.Environments;
 
+// TODOs:
+// Add experimental attributes to publishing APIs
+// Handle the AWS application resources provisioned by the AddAWSCDKStack so they are included in the deployment
+// WithReferences to other projects for service discovery
+// Provisioning RDS databases and connecting via WithReference
+// Projects deployed to ECS Fargate without load balancer (Console Service Application)
+// Projects deployed to Beanstalk
+// Parameter hints, Having the AddParameter hint that the parameter is something like a VPC
+// Enabling OTEL collection to CloudWatch
+// Create API Gateway via the emulator's configuration
+// Look into Serverless ElastiCache cluster
+
 #pragma warning disable CA2252 // This API requires opting into preview features
 
 var builder = DistributedApplication.CreateBuilder(args);
