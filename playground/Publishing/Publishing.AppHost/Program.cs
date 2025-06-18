@@ -2,35 +2,67 @@
 
 using Lambda.AppHost;
 using Amazon.CDK.AWS.Lambda.EventSources;
+using Amazon.CDK;
+using Aspire.Hosting.AWS.Environments;
 
 #pragma warning disable CA2252 // This API requires opting into preview features
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-var awsDeployment = builder.AddAWSCDKEnvironment("aws", app => new DeploymentStack(app, "DeploymentInfrastructure"));
+var deploymentStack = (builder.AddAWSCDKEnvironment("aws", app => new DeploymentStack(app, "DeploymentInfrastructure"))).Resource.EnvironmentStack;
 
 var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.USWest2);
 
 var cdkStackResource = builder.AddAWSCDKStack("AWSLambdaPlaygroundResources");
 var localDevQueue = cdkStackResource.AddSQSQueue("LocalDevQueue");
 
-builder.AddProject<Projects.Frontend>("Frontend");
+var cache = builder.AddRedis("cache")
+                   .PublishAsElasticCacheCluster(new PublishCDKElasticCacheRedisConfig
+                   {
+                       Engine = PublishCDKElasticCacheRedisConfig.EngineType.Redis,
+                       EngineVersion = "7.1",
+                       CacheNodeType = "cache.t3.micro",
+                       CacheParameterGroupName = deploymentStack.ElastiCacheParameterGroup.Ref,
+                       CacheSubnetGroupName = deploymentStack.ElastiCacheSubnetGroup.Ref,
+                       SecurityGroupIds = new[] {deploymentStack.DefaultSecurityGroup.SecurityGroupId } 
+                   });
 
+builder.AddProject<Projects.Frontend>("Frontend")
+        .WithReference(cache)
+        .WaitFor(cache)
+        .PublishAsECSFargateServiceWithALB(new PublishCDKECSFargateWithALBConfig
+         {
+             ECSCluster = deploymentStack.ECSCluster,
+             PropsCallback = props =>
+             {
+                 props.MemoryLimitMiB = 512;
+                 props.SecurityGroups = new[] { deploymentStack.DefaultSecurityGroup };
+             },
+             ConstructCallback = construct =>
+             {
+                 construct.TargetGroup.EnableCookieStickiness(Duration.Seconds(86400)); // 24 hours
+             }
+         });
 
 builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
-        .WithPublishingCDKPropsCallback(props =>
+        .PublishAsLambdaFunction(new PublishCDKLambdaConfig
         {
-            props.Vpc = awsDeployment.Resource.EnvironmentStack.MainVpc;
-            props.MemorySize = 512;
-        })
-        .WithPublishingCDKConstructCallback(construct =>
-        {
-            construct.AddEventSource(new SqsEventSource(awsDeployment.Resource.EnvironmentStack.LambdaQueue, new SqsEventSourceProps
+            PropsCallback = props =>
             {
-                BatchSize = 5,
-                Enabled = true
-            }));
+                props.Vpc = deploymentStack.MainVpc;
+                props.SecurityGroups = new[] { deploymentStack.DefaultSecurityGroup };
+                props.MemorySize = 512;
+            },
+            ConstructCallback = construct =>
+            {
+                construct.AddEventSource(new SqsEventSource(deploymentStack.LambdaQueue, new SqsEventSourceProps
+                {
+                    BatchSize = 5,
+                    Enabled = true
+                }));
+            }
         })
+        .WithReference(cache)
         .WithReference(awsSdkConfig)
         .WithSQSEventSource(localDevQueue);
 

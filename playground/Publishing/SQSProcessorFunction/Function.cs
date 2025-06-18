@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenTelemetry.Instrumentation.AWSLambda;
 using OpenTelemetry.Trace;
+using StackExchange.Redis;
 
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
@@ -15,15 +16,18 @@ public class Function
 {
     IHost _host;
     TracerProvider _traceProvider;
+    IDatabase _db;
 
     public Function()
     {
         var builder = new HostApplicationBuilder();
-
+        builder.AddRedisClient("cache");
         builder.AddServiceDefaults();
         _host = builder.Build();
 
         _traceProvider = _host.Services.GetRequiredService<TracerProvider>();
+
+        _db = _host.Services.GetRequiredService<IConnectionMultiplexer>().GetDatabase();
     }
 
     public Task FunctionHandler(SQSEvent evnt, ILambdaContext context)
@@ -31,8 +35,12 @@ public class Function
         {
             foreach (var message in evnt.Records)
             {
+                
                 await ProcessMessageAsync(message, context);
             }
+            var processedMessages = await _db.StringIncrementAsync("messagesProcessed", evnt.Records.Count);
+            context.Logger.LogInformation("Total messages processed: {count}", processedMessages);
+
         }, evnt, context);
 
     private async Task ProcessMessageAsync(SQSEvent.SQSMessage message, ILambdaContext context)

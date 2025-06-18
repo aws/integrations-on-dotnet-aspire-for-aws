@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting" />
+    <PackageReference Include="Aspire.Hosting.Redis" />
     <PackageReference Include="Amazon.CDK.Lib" />
     <PackageReference Include="AWSSDK.Core" />
     <PackageReference Include="AWSSDK.CloudFormation" />

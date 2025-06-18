@@ -14,6 +14,7 @@
     <PackageReference Include="Amazon.Lambda.Core" />
     <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" />
     <PackageReference Include="Amazon.Lambda.SQSEvents" />
+    <PackageReference Include="Aspire.StackExchange.Redis" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Publishing.ServiceDefaults\Publishing.ServiceDefaults.csproj" />

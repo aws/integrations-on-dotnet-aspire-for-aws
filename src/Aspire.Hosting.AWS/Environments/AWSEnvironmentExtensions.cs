@@ -1,14 +1,16 @@
-﻿using Aspire.Hosting.ApplicationModel;
+﻿using Amazon.CDK.AWS.ECS;
+using Amazon.CDK.AWS.ECS.Patterns;
+using Amazon.CDK.AWS.ElastiCache;
+using Amazon.CDK.AWS.Lambda;
+using Aspire.Hosting.ApplicationModel;
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Aspire.Hosting.AWS.Environments;
+using Aspire.Hosting.AWS.Lambda;
 using Aspire.Hosting.AWS.Utils.Internal;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-
-using Stack = Amazon.CDK.Stack;
 using App = Amazon.CDK.App;
-using Aspire.Hosting.AWS.Lambda;
-using Amazon.CDK.AWS.Lambda;
+using Stack = Amazon.CDK.Stack;
 
 namespace Aspire.Hosting;
 
@@ -50,18 +52,26 @@ public static class AWSEnvironmentExtensions
         return builder.AddResource(env);
     }
 
-    public static IResourceBuilder<LambdaProjectResource> WithPublishingCDKPropsCallback(this IResourceBuilder<LambdaProjectResource> builder, Action<FunctionProps> callback)
+    public static IResourceBuilder<LambdaProjectResource> PublishAsLambdaFunction(this IResourceBuilder<LambdaProjectResource> builder, PublishCDKLambdaConfig config)
     {
-        var annotations = new PublishingCDKConfigureCallbackAnnotation { LambdaFunctionPropsCallback = callback };
-        builder.Resource.Annotations.Add(annotations);
+        var annotation = new PublishCDKLambdaAnnotation { Config = config };
+        builder.Resource.Annotations.Add(annotation);
 
         return builder;
     }
 
-    public static IResourceBuilder<LambdaProjectResource> WithPublishingCDKConstructCallback(this IResourceBuilder<LambdaProjectResource> builder, Action<Function> callback)
+    public static IResourceBuilder<ProjectResource> PublishAsECSFargateServiceWithALB(this IResourceBuilder<ProjectResource> builder, PublishCDKECSFargateWithALBConfig config)
     {
-        var annotations = new PublishingCDKConfigureCallbackAnnotation { LambdaFunctionConstructCallback = callback };
-        builder.Resource.Annotations.Add(annotations);
+        var annotation = new PublishCDKECSFargateWithALBAnnotation { Config = config };
+        builder.Resource.Annotations.Add(annotation);
+
+        return builder;
+    }
+
+    public static IResourceBuilder<RedisResource> PublishAsElasticCacheCluster(this IResourceBuilder<RedisResource> builder, PublishCDKElasticCacheRedisConfig config)
+    {
+        var annotation = new PublishCDKElasticCacheRedisAnnotation { Config = config };
+        builder.Resource.Annotations.Add(annotation);
 
         return builder;
     }

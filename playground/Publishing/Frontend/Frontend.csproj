@@ -11,6 +11,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
+    <PackageReference Include="Aspire.StackExchange.Redis.OutputCaching" />
+    <PackageReference Include="Aspire.StackExchange.Redis" />
   </ItemGroup>
 
   <ItemGroup>
