@@ -1,7 +1,6 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Aspire.Hosting.ApplicationModel;
-using Aspire.Hosting.Publishing;
 using Microsoft.Extensions.DependencyInjection;
 using App = Amazon.CDK.App;
 using Stack = Amazon.CDK.Stack;

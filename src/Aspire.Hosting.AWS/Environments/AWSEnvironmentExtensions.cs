@@ -1,14 +1,11 @@
-﻿using Amazon.CDK.AWS.ECS;
-using Amazon.CDK.AWS.ECS.Patterns;
-using Amazon.CDK.AWS.ElastiCache;
-using Amazon.CDK.AWS.Lambda;
-using Aspire.Hosting.ApplicationModel;
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
+using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Environments;
 using Aspire.Hosting.AWS.Lambda;
 using Aspire.Hosting.AWS.Utils.Internal;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+
 using App = Amazon.CDK.App;
 using Stack = Amazon.CDK.Stack;
 
@@ -20,10 +17,9 @@ public static class AWSEnvironmentExtensions
     {
         builder.Services.TryAddSingleton<IProcessCommandService, ProcessCommandService>();
         builder.Services.TryAddSingleton<ILambdaDeploymentPackager, LambdaDeploymentPackager>();
-//        builder.Services.TryAddLifecycleHook<CDKInfrastructureLifecycleHook>();
     }
 
-    public static IResourceBuilder<AWSCDKEnvironmentResource<Stack>> AddAWSCDKEnvironment(this IDistributedApplicationBuilder builder, string name)
+    public static IResourceBuilder<AWSCDKEnvironmentResource<Stack>> AddAWSCDKEnvironment(this IDistributedApplicationBuilder builder, [ResourceName] string name)
     {
         builder.AddEnvironmentServices();
 
@@ -37,7 +33,7 @@ public static class AWSEnvironmentExtensions
         return builder.AddResource(env);
     }
 
-    public static IResourceBuilder<AWSCDKEnvironmentResource<T>> AddAWSCDKEnvironment<T>(this IDistributedApplicationBuilder builder, string name, Func<App, T> stackFactory)
+    public static IResourceBuilder<AWSCDKEnvironmentResource<T>> AddAWSCDKEnvironment<T>(this IDistributedApplicationBuilder builder, [ResourceName] string name, Func<App, T> stackFactory)
         where T : Stack
     {
         builder.AddEnvironmentServices();

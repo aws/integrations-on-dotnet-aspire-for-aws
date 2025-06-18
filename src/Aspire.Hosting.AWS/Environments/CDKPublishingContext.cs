@@ -10,7 +10,6 @@ using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Lambda;
 using Microsoft.Extensions.Logging;
 
-using Construct = Constructs.Construct;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
 namespace Aspire.Hosting.AWS.Environments;

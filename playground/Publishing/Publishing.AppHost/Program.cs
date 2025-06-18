@@ -9,6 +9,8 @@ using Aspire.Hosting.AWS.Environments;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
+builder.AddParameter("foo");
+
 var deploymentStack = (builder.AddAWSCDKEnvironment("aws", app => new DeploymentStack(app, "DeploymentInfrastructure"))).Resource.EnvironmentStack;
 
 var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.USWest2);
