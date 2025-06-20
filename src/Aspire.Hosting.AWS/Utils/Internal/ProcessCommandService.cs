@@ -1,6 +1,7 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 
@@ -67,13 +68,13 @@ internal class ProcessCommandService : IProcessCommandService
             }
         };
 
-        var output = new StringBuilder();
+        var queue = new ConcurrentQueue<string>();
 
         process.OutputDataReceived += (sender, e) =>
         {
             if (e.Data != null)
             {
-                output.Append(e.Data);
+                queue.Enqueue(e.Data);
             }
         };
 
@@ -81,7 +82,7 @@ internal class ProcessCommandService : IProcessCommandService
         {
             if (e.Data != null)
             {
-                output.Append(e.Data);
+                queue.Enqueue(e.Data);
             }
         };
 
@@ -93,12 +94,22 @@ internal class ProcessCommandService : IProcessCommandService
         }
         catch (Exception ex)
         {
-            // If this fails then it most likey means the executable being invoked does not exist.
+            // If this fails then it most likely means the executable being invoked does not exist.
             logger.LogDebug(ex, "Failed to start process {process}.", path);
             return new IProcessCommandService.RunProcessAndCaptureStdOutResult(-404, string.Empty);
         }
 
         await process.WaitForExitAsync(cancellationToken);
+
+        var output = new StringBuilder();
+
+        while (!queue.IsEmpty)
+        {
+            while (queue.TryDequeue(out var data))
+            {
+                output.Append(data);
+            }
+        }
 
         if (process.ExitCode != 0)
         {
