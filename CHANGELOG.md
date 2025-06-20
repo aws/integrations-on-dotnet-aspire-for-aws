@@ -1,3 +1,8 @@
+## Release 2025-06-20
+
+### Aspire.Hosting.AWS (9.2.4)
+* Fix concurrency issue when reading output from external processes
+
 ## Release 2025-06-10
 
 ### Aspire.Hosting.AWS (9.2.3)
