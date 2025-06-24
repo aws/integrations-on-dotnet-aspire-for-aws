@@ -23,7 +23,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 builder.AddParameter("foo");
 
-var deploymentStack = (builder.AddAWSCDKEnvironment("aws", app => new DeploymentStack(app, "DeploymentInfrastructure"))).Resource.EnvironmentStack;
+var deploymentStack = (builder.AddAWSCDKEnvironment("aws", app => new DeploymentStack(app, "DeploymentInfrastructure7"))).Resource.EnvironmentStack;
 
 var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.USWest2);
 
@@ -41,33 +41,42 @@ var cache = builder.AddRedis("cache")
                        SecurityGroupIds = new[] {deploymentStack.DefaultSecurityGroup.SecurityGroupId } 
                    });
 
-builder.AddProject<Projects.Frontend>("Frontend")
+//builder.AddProject<Projects.Frontend>("Frontend")
+//        .WithReference(cache)
+//        .WaitFor(cache)
+//        .PublishAsECSFargateServiceWithALB(new PublishCDKECSFargateWithALBConfig
+//         {
+//             ECSCluster = deploymentStack.ECSCluster,
+//             PropsApplicationLoadBalancedFargateServiceCallback = props =>
+//             {
+//                 props.MemoryLimitMiB = 512;
+//                 props.SecurityGroups = new[] { deploymentStack.DefaultSecurityGroup };
+//             },
+//             ConstructApplicationLoadBalancedFargateServiceCallback = construct =>
+//             {
+//                 construct.TargetGroup.EnableCookieStickiness(Duration.Seconds(86400)); // 24 hours
+//             }
+//         });
+
+builder.AddProject<Projects.Backend>("backend")
+        .PublishAsECSFargateService(new PublishCDKECSFargateConfig
+        {
+            ECSCluster = deploymentStack.ECSCluster,
+            DesiredCount = 2
+        })
         .WithReference(cache)
-        .WaitFor(cache)
-        .PublishAsECSFargateServiceWithALB(new PublishCDKECSFargateWithALBConfig
-         {
-             ECSCluster = deploymentStack.ECSCluster,
-             PropsCallback = props =>
-             {
-                 props.MemoryLimitMiB = 512;
-                 props.SecurityGroups = new[] { deploymentStack.DefaultSecurityGroup };
-             },
-             ConstructCallback = construct =>
-             {
-                 construct.TargetGroup.EnableCookieStickiness(Duration.Seconds(86400)); // 24 hours
-             }
-         });
+        .WaitFor(cache);
 
 builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
         .PublishAsLambdaFunction(new PublishCDKLambdaConfig
         {
-            PropsCallback = props =>
+            PropsFunctionCallback = props =>
             {
                 props.Vpc = deploymentStack.MainVpc;
                 props.SecurityGroups = new[] { deploymentStack.DefaultSecurityGroup };
                 props.MemorySize = 512;
             },
-            ConstructCallback = construct =>
+            ConstructFunctionCallback = construct =>
             {
                 construct.AddEventSource(new SqsEventSource(deploymentStack.LambdaQueue, new SqsEventSourceProps
                 {

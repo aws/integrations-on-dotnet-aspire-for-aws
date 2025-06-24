@@ -64,6 +64,14 @@ public static class AWSEnvironmentExtensions
         return builder;
     }
 
+    public static IResourceBuilder<ProjectResource> PublishAsECSFargateService(this IResourceBuilder<ProjectResource> builder, PublishCDKECSFargateConfig config)
+    {
+        var annotation = new PublishCDKECSFargateAnnotation { Config = config };
+        builder.Resource.Annotations.Add(annotation);
+
+        return builder;
+    }
+
     public static IResourceBuilder<RedisResource> PublishAsElasticCacheCluster(this IResourceBuilder<RedisResource> builder, PublishCDKElasticCacheRedisConfig config)
     {
         var annotation = new PublishCDKElasticCacheRedisAnnotation { Config = config };

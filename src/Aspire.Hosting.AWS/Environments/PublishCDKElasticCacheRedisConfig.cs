@@ -20,9 +20,9 @@ public class PublishCDKElasticCacheRedisConfig
 
     public required string CacheParameterGroupName { get; init; }
 
-    public Action<CfnReplicationGroupProps>? PropsCallback { get; set; }
+    public Action<CfnReplicationGroupProps>? PropsCfnReplicationGroupCallback { get; set; }
 
-    public Action<CfnReplicationGroup>? ConstructCallback { get; set; }
+    public Action<CfnReplicationGroup>? ConstructCfnReplicationGroupCallback { get; set; }
 }
 
 internal class PublishCDKElasticCacheRedisAnnotation : Aspire.Hosting.ApplicationModel.IResourceAnnotation

@@ -9,9 +9,9 @@ public class PublishCDKECSFargateWithALBConfig
 {
     public required Cluster ECSCluster { get; init; }
 
-    public Action<ApplicationLoadBalancedFargateServiceProps>? PropsCallback { get; set; }
+    public Action<ApplicationLoadBalancedFargateServiceProps>? PropsApplicationLoadBalancedFargateServiceCallback { get; set; }
 
-    public Action<ApplicationLoadBalancedFargateService>? ConstructCallback { get; set; }
+    public Action<ApplicationLoadBalancedFargateService>? ConstructApplicationLoadBalancedFargateServiceCallback { get; set; }
 
 }
 
