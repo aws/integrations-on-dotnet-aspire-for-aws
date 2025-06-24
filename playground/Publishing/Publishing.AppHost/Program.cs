@@ -1,16 +1,16 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-using Lambda.AppHost;
-using Amazon.CDK.AWS.Lambda.EventSources;
 using Amazon.CDK;
+using Amazon.CDK.AWS.Lambda.EventSources;
+using Amazon.CDK.AWS.ServiceDiscovery;
 using Aspire.Hosting.AWS.Environments;
+using Lambda.AppHost;
 
 // TODOs:
 // Add experimental attributes to publishing APIs
 // Handle the AWS application resources provisioned by the AddAWSCDKStack so they are included in the deployment
 // WithReferences to other projects for service discovery
 // Provisioning RDS databases and connecting via WithReference
-// Projects deployed to ECS Fargate without load balancer (Console Service Application)
 // Projects deployed to Beanstalk
 // Parameter hints, Having the AddParameter hint that the parameter is something like a VPC
 // Enabling OTEL collection to CloudWatch
@@ -41,22 +41,23 @@ var cache = builder.AddRedis("cache")
                        SecurityGroupIds = new[] {deploymentStack.DefaultSecurityGroup.SecurityGroupId } 
                    });
 
-//builder.AddProject<Projects.Frontend>("Frontend")
-//        .WithReference(cache)
-//        .WaitFor(cache)
-//        .PublishAsECSFargateServiceWithALB(new PublishCDKECSFargateWithALBConfig
-//         {
-//             ECSCluster = deploymentStack.ECSCluster,
-//             PropsApplicationLoadBalancedFargateServiceCallback = props =>
-//             {
-//                 props.MemoryLimitMiB = 512;
-//                 props.SecurityGroups = new[] { deploymentStack.DefaultSecurityGroup };
-//             },
-//             ConstructApplicationLoadBalancedFargateServiceCallback = construct =>
-//             {
-//                 construct.TargetGroup.EnableCookieStickiness(Duration.Seconds(86400)); // 24 hours
-//             }
-//         });
+builder.AddProject<Projects.Frontend>("Frontend")
+        .WithReference(cache)
+        .WaitFor(cache)
+        .PublishAsECSFargateServiceWithALB(new PublishCDKECSFargateWithALBConfig
+        {
+            ECSCluster = deploymentStack.ECSCluster,
+            PropsApplicationLoadBalancedFargateServiceCallback = props =>
+            {
+                props.MemoryLimitMiB = 512;
+                props.SecurityGroups = new[] { deploymentStack.DefaultSecurityGroup };
+            },
+            ConstructApplicationLoadBalancedFargateServiceCallback = construct =>
+            {
+                construct.TargetGroup.SetAttribute("deregistration_delay.timeout_seconds", "10");
+                construct.TargetGroup.EnableCookieStickiness(Duration.Seconds(86400)); // 24 hours
+            }
+        });
 
 builder.AddProject<Projects.Backend>("backend")
         .PublishAsECSFargateService(new PublishCDKECSFargateConfig

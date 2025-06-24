@@ -169,7 +169,7 @@ public class CDKPublishingContext(IPublishingActivityProgressReporter activityRe
                         // Image = ContainerImage.FromTarball(@"C:\codebase\integrations-on-dotnet-aspire-for-aws\frontend.tar"),
                         Image = ContainerImage.FromAsset(solutionFolder, new AssetImageProps
                         {
-                            File = relativeDockerPath,
+                            File = relativeDockerPath
                         }),
                         ContainerPort = 8080,
                         Environment = new Dictionary<string, string>()
@@ -229,7 +229,7 @@ public class CDKPublishingContext(IPublishingActivityProgressReporter activityRe
                     // TODO: Figure out how to better handle docker build
                     Image = ContainerImage.FromAsset(solutionFolder, new AssetImageProps
                     {
-                        File = relativeDockerPath,
+                        File = relativeDockerPath
                     }),
                     Environment = new Dictionary<string, string>(),
                     Logging = new AwsLogDriver(new AwsLogDriverProps
