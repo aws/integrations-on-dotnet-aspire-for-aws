@@ -408,3 +408,6 @@ FodyWeavers.xsd
 
 # CDK temp files
 **/cdk.out/**
+
+# Amazon.Lambda.TestTool default local storage
+**/.aws-lambda-testool/**

@@ -41,10 +41,15 @@ internal static class Constants
     /// <summary>
     /// The version of RuntimeSupport used in the executable wrapper project
     /// </summary>
-    internal const string RuntimeSupportPackageVersion = "1.13.0";
+    internal const string RuntimeSupportPackageVersion = "1.13.1";
     
     /// <summary>
     /// The default version of Amazon.Lambda.TestTool that will be automatically installed
     /// </summary>
-    internal const string DefaultLambdaTestToolVersion = "0.10.3";
+    internal const string DefaultLambdaTestToolVersion = "0.11.0";
+
+    /// <summary>
+    /// The default directory the Lambda Test Tool will be configured for storing configuration information like saved requests.
+    /// </summary>
+    internal const string DefaultLambdaConfigStorage = ".aws-lambda-testool";
 }
