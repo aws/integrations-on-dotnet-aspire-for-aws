@@ -1,9 +1,11 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Amazon.CDK.AWS.ECS;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Aspire.Hosting.AWS.Environments;
 
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 public class PublishCDKECSFargateConfig
 {
     public required Cluster ECSCluster { get; init; }
@@ -25,6 +27,7 @@ public class PublishCDKECSFargateConfig
     public Action<FargateService>? ConstructFargateServiceCallback { get; set; }
 }
 
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 internal class PublishCDKECSFargateAnnotation : Aspire.Hosting.ApplicationModel.IResourceAnnotation
 {
     public required PublishCDKECSFargateConfig Config { get; init; }

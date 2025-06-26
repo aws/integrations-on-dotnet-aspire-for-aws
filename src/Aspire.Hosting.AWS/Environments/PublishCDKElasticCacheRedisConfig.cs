@@ -1,9 +1,11 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Amazon.CDK.AWS.ElastiCache;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Aspire.Hosting.AWS.Environments;
 
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 public class PublishCDKElasticCacheRedisConfig
 {
     public enum EngineType { Redis, Valkey }
@@ -25,6 +27,7 @@ public class PublishCDKElasticCacheRedisConfig
     public Action<CfnReplicationGroup>? ConstructCfnReplicationGroupCallback { get; set; }
 }
 
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 internal class PublishCDKElasticCacheRedisAnnotation : Aspire.Hosting.ApplicationModel.IResourceAnnotation
 {
     public required PublishCDKElasticCacheRedisConfig Config { get; init; }

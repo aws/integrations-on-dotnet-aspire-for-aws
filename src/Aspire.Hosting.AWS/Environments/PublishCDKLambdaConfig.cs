@@ -2,9 +2,11 @@
 
 using Amazon.CDK.AWS.Lambda;
 using Aspire.Hosting.ApplicationModel;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Aspire.Hosting.AWS.Environments;
 
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 public class PublishCDKLambdaConfig
 {
     public Action<FunctionProps>? PropsFunctionCallback { get; set; }
@@ -12,6 +14,7 @@ public class PublishCDKLambdaConfig
     public Action<Function>? ConstructFunctionCallback { get; set; }
 }
 
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 internal class PublishCDKLambdaAnnotation : IResourceAnnotation
 {
     public required PublishCDKLambdaConfig Config { get; init; }

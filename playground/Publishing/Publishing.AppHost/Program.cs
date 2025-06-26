@@ -2,14 +2,13 @@
 
 using Amazon.CDK;
 using Amazon.CDK.AWS.Lambda.EventSources;
-using Amazon.CDK.AWS.ServiceDiscovery;
 using Aspire.Hosting.AWS.Environments;
 using Lambda.AppHost;
 
 // TODOs:
-// Add experimental attributes to publishing APIs
-// Handle the AWS application resources provisioned by the AddAWSCDKStack so they are included in the deployment
 // WithReferences to other projects for service discovery
+// Support Publish methods from AddContainer
+// Handle the AWS application resources provisioned by the AddAWSCDKStack so they are included in the deployment
 // Provisioning RDS databases and connecting via WithReference
 // Projects deployed to Beanstalk
 // Parameter hints, Having the AddParameter hint that the parameter is something like a VPC
@@ -18,10 +17,9 @@ using Lambda.AppHost;
 // Look into Serverless ElastiCache cluster
 
 #pragma warning disable CA2252 // This API requires opting into preview features
+#pragma warning disable ASPIREAWSPUBLISHERS001
 
 var builder = DistributedApplication.CreateBuilder(args);
-
-builder.AddParameter("foo");
 
 var deploymentStack = (builder.AddAWSCDKEnvironment("aws", app => new DeploymentStack(app, "DeploymentInfrastructure7"))).Resource.EnvironmentStack;
 
@@ -54,6 +52,7 @@ builder.AddProject<Projects.Frontend>("Frontend")
             },
             ConstructApplicationLoadBalancedFargateServiceCallback = construct =>
             {
+                // For faster dev turn around set deregistration to a short time
                 construct.TargetGroup.SetAttribute("deregistration_delay.timeout_seconds", "10");
                 construct.TargetGroup.EnableCookieStickiness(Duration.Seconds(86400)); // 24 hours
             }

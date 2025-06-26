@@ -3,6 +3,7 @@
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Publishing;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics.CodeAnalysis;
 using App = Amazon.CDK.App;
 using AppProps = Amazon.CDK.AppProps;
 using Stack = Amazon.CDK.Stack;
@@ -11,6 +12,7 @@ namespace Aspire.Hosting.AWS.Environments;
 
 #pragma warning disable ASPIREPUBLISHERS001 
 
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 public abstract class AWSCDKEnvironmentResource : Resource
 {
     protected AWSCDKEnvironmentResource(string name)
@@ -30,12 +32,7 @@ public abstract class AWSCDKEnvironmentResource : Resource
 
     private Task PublishAsync(PublishingContext context)
     {
-        var cdkCtx = new CDKPublishingContext(
-            context.Services.GetRequiredService<IPublishingActivityProgressReporter>(),
-            context.Services.GetRequiredService<ILambdaDeploymentPackager>(),
-            context.Services.GetRequiredService<ITarballContainerImageBuilder>(),
-            context.Logger);
-
+        var cdkCtx = context.Services.GetRequiredService<CDKPublishingContext>();
         return cdkCtx.WriteModelAsync(context.Model, this);
     }
 
@@ -73,6 +70,7 @@ public abstract class AWSCDKEnvironmentResource : Resource
     }
 }
 
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
     where T : Stack 
 {

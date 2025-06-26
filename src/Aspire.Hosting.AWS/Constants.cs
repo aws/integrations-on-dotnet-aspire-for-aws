@@ -47,4 +47,9 @@ internal static class Constants
     /// The default version of Amazon.Lambda.TestTool that will be automatically installed
     /// </summary>
     internal const string DefaultLambdaTestToolVersion = "0.10.3";
+
+    /// <summary>
+    /// Diagnostic ID for Aspire publishing with AWS indicating the feature is experimental.
+    /// </summary>
+    internal const string ASPIREAWSPUBLISHERS001 = "ASPIREAWSPUBLISHERS001";
 }

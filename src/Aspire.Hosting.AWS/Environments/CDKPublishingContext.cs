@@ -9,6 +9,7 @@ using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Lambda;
 using Aspire.Hosting.Publishing;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -18,7 +19,8 @@ namespace Aspire.Hosting.AWS.Environments;
 
 #pragma warning disable ASPIREPUBLISHERS001
 
-public class CDKPublishingContext(IPublishingActivityProgressReporter activityReporter, ILambdaDeploymentPackager lambdaDeploymentPackager, ITarballContainerImageBuilder imageBuilder, ILogger logger)
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+internal class CDKPublishingContext(IPublishingActivityProgressReporter activityReporter, ILambdaDeploymentPackager lambdaDeploymentPackager, ITarballContainerImageBuilder imageBuilder, ILogger<CDKPublishingContext> logger)
 {
     public async Task WriteModelAsync(DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken = default)
     {
