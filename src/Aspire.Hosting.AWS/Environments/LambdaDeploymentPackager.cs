@@ -16,6 +16,8 @@ internal class LambdaDeploymentPackager(IProcessCommandService processCommandSer
 {
     public async Task<LambdaDeploymentPackagerOutput> CreateDeploymentPackageAsync(LambdaProjectResource lambdaFunction, string outputDirectory, CancellationToken cancellationToken)
     {
+        processCommandService.RunProcess(logger, "dotnet", "tool install --global Amazon.Lambda.Tools", Environment.CurrentDirectory);
+
         var zipFilePath = Path.Combine(outputDirectory,  $"{lambdaFunction.Name}.zip");
         var results = await processCommandService.RunProcessAndCaptureOuputAsync(
                 logger, 
