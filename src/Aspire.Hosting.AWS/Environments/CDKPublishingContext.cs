@@ -4,21 +4,21 @@ using Amazon.CDK;
 using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.ECS.Patterns;
 using Amazon.CDK.AWS.ElastiCache;
-using Amazon.CDK.AWS.Events.Targets;
 using Amazon.CDK.AWS.Lambda;
-using Amazon.CDK.CXAPI;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Lambda;
 using Aspire.Hosting.Publishing;
 using Microsoft.Extensions.Logging;
-
+using System.Runtime.InteropServices;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
 namespace Aspire.Hosting.AWS.Environments;
 
 #pragma warning disable ASPIREPUBLISHERS001
 
-public class CDKPublishingContext(IPublishingActivityProgressReporter activityReporter, ILambdaDeploymentPackager lambdaDeploymentPackager, ILogger logger)
+public class CDKPublishingContext(IPublishingActivityProgressReporter activityReporter, ILambdaDeploymentPackager lambdaDeploymentPackager, ITarballContainerImageBuilder imageBuilder, ILogger logger)
 {
     public async Task WriteModelAsync(DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken = default)
     {
@@ -37,6 +37,11 @@ public class CDKPublishingContext(IPublishingActivityProgressReporter activityRe
             await ProcessECSFargateServiceAsync(model, environment, cancellationToken);
 
             var assembly = environment.CDKApp.Synth();
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                FixCDKAssetsFileForWindows(outputPath);
+            }
 
             await activityReporter.UpdateActivityStatusAsync(publishingActivity, (status) => status with { IsComplete = true }, cancellationToken);
         }
@@ -79,7 +84,6 @@ public class CDKPublishingContext(IPublishingActivityProgressReporter activityRe
             publishAnnotation.Config.ConstructCfnReplicationGroupCallback?.Invoke(cluster);
             resource.Annotations.Add(new LinkedConstructAnnotations { LinkedConstruct = cluster });
         }
-
     }
 
     private async Task ProcessLambdaFunctionsAsync(DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken)
@@ -150,9 +154,7 @@ public class CDKPublishingContext(IPublishingActivityProgressReporter activityRe
             var publishingActivity = await activityReporter.CreateActivityAsync($"ecs-{project.Name}", $"Packaging {project.Name} for ECS Fargate", false, cancellationToken);
             try
             {
-                var projectAbsolutePath = Directory.GetParent(project.GetProjectMetadata().ProjectPath)!.FullName;
-                var solutionFolder = DetermineSolutionFolder(projectAbsolutePath) ?? projectAbsolutePath;
-                var relativeDockerPath = Path.GetRelativePath(solutionFolder!, Path.Combine(projectAbsolutePath, "Dockerfile"));
+                var imageTarballPath = await imageBuilder.BuildTarballImageAsync(project, cancellationToken);
 
                 var fargateServiceProps = new ApplicationLoadBalancedFargateServiceProps
                 {
@@ -165,12 +167,7 @@ public class CDKPublishingContext(IPublishingActivityProgressReporter activityRe
                     MinHealthyPercent = 100,
                     TaskImageOptions = new ApplicationLoadBalancedTaskImageOptions
                     {
-                        // TODO: Figure out how to better handle docker build
-                        // Image = ContainerImage.FromTarball(@"C:\codebase\integrations-on-dotnet-aspire-for-aws\frontend.tar"),
-                        Image = ContainerImage.FromAsset(solutionFolder, new AssetImageProps
-                        {
-                            File = relativeDockerPath
-                        }),
+                        Image = ContainerImage.FromTarball(imageTarballPath),
                         ContainerPort = 8080,
                         Environment = new Dictionary<string, string>()
                     }
@@ -208,9 +205,7 @@ public class CDKPublishingContext(IPublishingActivityProgressReporter activityRe
             var publishingActivity = await activityReporter.CreateActivityAsync($"ecs-{project.Name}", $"Packaging {project.Name} for ECS Fargate", false, cancellationToken);
             try
             {
-                var projectAbsolutePath = Directory.GetParent(project.GetProjectMetadata().ProjectPath)!.FullName;
-                var solutionFolder = DetermineSolutionFolder(projectAbsolutePath) ?? projectAbsolutePath;
-                var relativeDockerPath = Path.GetRelativePath(solutionFolder!, Path.Combine(projectAbsolutePath, "Dockerfile"));
+                var imageTarballPath = await imageBuilder.BuildTarballImageAsync(project, cancellationToken);
 
                 // Create Task Definition
                 var fargateTaskDefinitionProps = new FargateTaskDefinitionProps
@@ -226,11 +221,7 @@ public class CDKPublishingContext(IPublishingActivityProgressReporter activityRe
                 // Create Container Definition
                 var containerDefinitionProps = new ContainerDefinitionProps
                 {
-                    // TODO: Figure out how to better handle docker build
-                    Image = ContainerImage.FromAsset(solutionFolder, new AssetImageProps
-                    {
-                        File = relativeDockerPath
-                    }),
+                    Image = ContainerImage.FromTarball(imageTarballPath),
                     Environment = new Dictionary<string, string>(),
                     Logging = new AwsLogDriver(new AwsLogDriverProps
                     {
@@ -332,6 +323,44 @@ public class CDKPublishingContext(IPublishingActivityProgressReporter activityRe
             {
                 logger.LogTrace("Deleting directory '{directory}'...", directory);
                 Directory.Delete(directory, recursive: true);
+            }
+        }
+    }
+
+    private void FixCDKAssetsFileForWindows(string outputPath)
+    {
+        foreach (var file in Directory.EnumerateFiles(outputPath, "*.assets.json", SearchOption.AllDirectories))
+        {
+            try
+            {
+                string json = File.ReadAllText(file);
+                JsonNode root = JsonNode.Parse(json)!;
+                bool changed = false;
+
+                if (root["dockerImages"] is JsonObject dockerImages)
+                {
+                    foreach (var image in dockerImages)
+                    {
+                        JsonObject imageObject = image.Value!.AsObject();
+
+                        if (imageObject["source"]?["executable"] is JsonArray)
+                        {
+                            // Replace the executable array
+                            imageObject["source"]!["executable"] = new JsonArray("powershell", "-Command", $"docker load -i asset.{image.Key}.tar | ForEach-Object {{ ($_ -replace '^Loaded image: ', '') }}");
+                            changed = true;
+                        }
+                    }
+                }
+
+                if (changed)
+                {
+                    var updatedJson = root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+                    File.WriteAllText(file, updatedJson);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Error switching CDK assets file {file} to use PowerShell for restoring tarball", file);
             }
         }
     }

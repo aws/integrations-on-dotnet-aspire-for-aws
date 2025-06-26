@@ -33,6 +33,7 @@ public abstract class AWSCDKEnvironmentResource : Resource
         var cdkCtx = new CDKPublishingContext(
             context.Services.GetRequiredService<IPublishingActivityProgressReporter>(),
             context.Services.GetRequiredService<ILambdaDeploymentPackager>(),
+            context.Services.GetRequiredService<ITarballContainerImageBuilder>(),
             context.Logger);
 
         return cdkCtx.WriteModelAsync(context.Model, this);
