@@ -410,4 +410,4 @@ FodyWeavers.xsd
 **/cdk.out/**
 
 # Amazon.Lambda.TestTool default local storage
-**/.aws-lambda-testool/**
+**/.aws-lambda-testtool/**
