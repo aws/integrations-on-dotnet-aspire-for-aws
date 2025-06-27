@@ -31,4 +31,10 @@ public class LambdaEmulatorOptions
     /// The port that the Lambda emulator will listen on. If not set, a random port will be used.
     /// </summary>
     public int? Port { get; set; } = null;
+
+    /// <summary>
+    /// Directory for the Lambda Test Tool to save configuration information like saved requests. The default is ".aws-lambda-testtool" sub directory in the current directory.
+    /// To disable the ability to save configuration set ConfigStoragePath to an empty string (i.e. string.Empty).
+    /// </summary>
+    public string? ConfigStoragePath { get; set; }
 }

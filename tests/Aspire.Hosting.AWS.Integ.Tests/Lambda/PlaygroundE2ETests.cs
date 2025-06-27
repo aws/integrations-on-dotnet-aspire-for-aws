@@ -1,10 +1,12 @@
-﻿using Aspire.Hosting.AWS.CDK;
-using Aspire.Hosting.AWS.Lambda;
-using Amazon;
+﻿using Amazon;
 using Amazon.CloudFormation;
 using Amazon.CloudFormation.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
+using Aspire.Hosting.AWS.CDK;
+using Aspire.Hosting.AWS.Lambda;
+
+#pragma warning disable CA2252
 
 namespace Aspire.Hosting.AWS.Integ.Tests.Lambda;
 
@@ -92,7 +94,86 @@ public class PlaygroundE2ETests
             }
         }
     }
-    
+
+    [Fact]
+    public async Task LambdaConfigStorageDefault()
+    {
+        CancellationTokenSource cancellationSource = new CancellationTokenSource();
+        try
+        {
+            var builder = DistributedApplication.CreateBuilder();
+
+            var lambdaServiceEmulator = (builder.AddAWSLambdaServiceEmulator()).Resource;
+
+            var daTask = builder.Build().RunAsync(cancellationSource.Token);
+
+            var lambdaServiceEmulatorCommandlineAnnotation = lambdaServiceEmulator.Annotations.OfType<CommandLineArgsCallbackAnnotation>().Single();
+
+            var lambdaServiceEmulatorCommandlineArguments = new List<object>();
+            var context = new CommandLineArgsCallbackContext(lambdaServiceEmulatorCommandlineArguments);
+            await lambdaServiceEmulatorCommandlineAnnotation.Callback(context);
+            Assert.Contains("--config-storage-path", lambdaServiceEmulatorCommandlineArguments);
+            Assert.Contains(Path.Combine(Environment.CurrentDirectory, Constants.DefaultLambdaConfigStorage), lambdaServiceEmulatorCommandlineArguments);
+        }
+        finally
+        {
+            cancellationSource.Cancel();
+        }
+    }
+
+    [Fact]
+    public async Task LambdaConfigStorageExplicit()
+    {
+        CancellationTokenSource cancellationSource = new CancellationTokenSource();
+        try
+        {
+            var builder = DistributedApplication.CreateBuilder();
+
+            var lambdaServiceEmulatorOptions = new LambdaEmulatorOptions { ConfigStoragePath = Path.GetTempPath() };
+            var lambdaServiceEmulator = (builder.AddAWSLambdaServiceEmulator(lambdaServiceEmulatorOptions)).Resource;
+
+            var daTask = builder.Build().RunAsync(cancellationSource.Token);
+
+            var lambdaServiceEmulatorCommandlineAnnotation = lambdaServiceEmulator.Annotations.OfType<CommandLineArgsCallbackAnnotation>().Single();
+
+            var lambdaServiceEmulatorCommandlineArguments = new List<object>();
+            var context = new CommandLineArgsCallbackContext(lambdaServiceEmulatorCommandlineArguments);
+            await lambdaServiceEmulatorCommandlineAnnotation.Callback(context);
+            Assert.Contains("--config-storage-path", lambdaServiceEmulatorCommandlineArguments);
+            Assert.Contains(Path.Combine(Environment.CurrentDirectory, lambdaServiceEmulatorOptions.ConfigStoragePath), lambdaServiceEmulatorCommandlineArguments);
+        }
+        finally
+        {
+            cancellationSource.Cancel();
+        }
+    }
+
+    [Fact]
+    public async Task LambdaConfigStorageDisabled()
+    {
+        CancellationTokenSource cancellationSource = new CancellationTokenSource();
+        try
+        {
+            var builder = DistributedApplication.CreateBuilder();
+
+            var lambdaServiceEmulatorOptions = new LambdaEmulatorOptions { ConfigStoragePath = string.Empty };
+            var lambdaServiceEmulator = (builder.AddAWSLambdaServiceEmulator(lambdaServiceEmulatorOptions)).Resource;
+
+            var daTask = builder.Build().RunAsync(cancellationSource.Token);
+
+            var lambdaServiceEmulatorCommandlineAnnotation = lambdaServiceEmulator.Annotations.OfType<CommandLineArgsCallbackAnnotation>().Single();
+
+            var lambdaServiceEmulatorCommandlineArguments = new List<object>();
+            var context = new CommandLineArgsCallbackContext(lambdaServiceEmulatorCommandlineArguments);
+            await lambdaServiceEmulatorCommandlineAnnotation.Callback(context);
+            Assert.DoesNotContain("--config-storage-path", lambdaServiceEmulatorCommandlineArguments);
+        }
+        finally
+        {
+            cancellationSource.Cancel();
+        }
+    }
+
     private async Task<string> TestEndpoint(string routeName, DistributedApplication app, string resourceName, int requestTimeout = 30, int totalTimeout = 200)
     {
         using (var client = app.CreateHttpClient(resourceName))

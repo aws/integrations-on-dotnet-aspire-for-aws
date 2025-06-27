@@ -135,7 +135,7 @@ public static class LambdaExtensions
         var lambdaEmulator = builder.AddResource(new LambdaEmulatorResource("LambdaServiceEmulator")).ExcludeFromManifest();
         lambdaEmulator.WithArgs(context =>
         {
-            lambdaEmulator.Resource.AddCommandLineArguments(context.Args);
+            lambdaEmulator.Resource.AddCommandLineArguments(context.Args, options);
         });
 
         var annotation = new EndpointAnnotation(
