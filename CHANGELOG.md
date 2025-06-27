@@ -1,3 +1,9 @@
+## Release 2025-06-27
+
+### Aspire.Hosting.AWS (9.2.5)
+* Integrate Lambda Test Tool's feature for allowing saving requests
+* Fixed NullReferenceException thrown when provisioning a Cloud Foundation template without any outputs
+
 ## Release 2025-06-20
 
 ### Aspire.Hosting.AWS (9.2.4)
