@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Fixed NullReferenceException thrown when provisioning a Cloud Foundation Tempalte without outputs"
+      ]
+    }
+  ]
+}

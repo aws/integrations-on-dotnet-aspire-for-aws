@@ -42,9 +42,12 @@ internal abstract partial class CloudFormationResourceProvisioner<T>(ResourceLog
             list.Add(new("aws.cloudformation.template", templateFile));
         }
 
-        foreach (var output in stack.Outputs)
+        if (stack.Outputs != null)
         {
-            list.Add(new ResourcePropertySnapshot("aws.cloudformation.output." + output.OutputKey, output.OutputValue));
+            foreach (var output in stack.Outputs)
+            {
+                list.Add(new ResourcePropertySnapshot("aws.cloudformation.output." + output.OutputKey, output.OutputValue));
+            }
         }
 
         return list.ToImmutableArray();
