@@ -24,7 +24,7 @@ internal class LambdaEmulatorAnnotation(EndpointReference endpoint) : IResourceA
     public bool DisableAutoInstall { get; set; }
 
     /// <summary>
-    /// Override the minimum version of Amazon.Lambda.TestTool that will be installed. If a newer vesion is already installed
+    /// Override the minimum version of Amazon.Lambda.TestTool that will be installed. If a newer version is already installed
     /// it will be used unless AllowDowngrade is set to true.
     /// </summary>
     public string? OverrideMinimumInstallVersion { get; set; }
