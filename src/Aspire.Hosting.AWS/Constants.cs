@@ -51,5 +51,5 @@ internal static class Constants
     /// <summary>
     /// The default directory the Lambda Test Tool will be configured for storing configuration information like saved requests.
     /// </summary>
-    internal const string DefaultLambdaConfigStorage = ".aws-lambda-testool";
+    internal const string DefaultLambdaConfigStorage = ".aws-lambda-testtool";
 }
