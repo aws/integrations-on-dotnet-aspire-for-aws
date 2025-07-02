@@ -1,3 +1,8 @@
+## Release 2025-07-02
+
+### Aspire.Hosting.AWS (9.2.6)
+* Fixed NullReferenceException thrown when provisioning a Cloud Foundation Tempalte without outputs
+
 ## Release 2025-06-27
 
 ### Aspire.Hosting.AWS (9.2.5)
