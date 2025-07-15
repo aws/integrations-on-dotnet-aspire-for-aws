@@ -19,6 +19,11 @@ internal sealed class AWSLifecycleHook(
 {
     public Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
     {
+        if (executionContext.IsPublishMode)
+        {
+            return Task.CompletedTask;
+        }
+
         SdkUtilities.BackgroundSDKDefaultConfigValidation(logger);
 
         var awsResources = appModel.Resources.OfType<IAWSResource>().ToList();
