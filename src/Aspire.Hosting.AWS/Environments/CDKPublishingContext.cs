@@ -5,6 +5,8 @@ using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.ECS.Patterns;
 using Amazon.CDK.AWS.ElastiCache;
 using Amazon.CDK.AWS.Lambda;
+using Amazon.CDK.AWS.SES.Actions;
+using Amazon.CDK.Pipelines;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Lambda;
 using Aspire.Hosting.Publishing;
@@ -20,11 +22,11 @@ namespace Aspire.Hosting.AWS.Environments;
 #pragma warning disable ASPIREPUBLISHERS001
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-internal class CDKPublishingContext(IPublishingActivityProgressReporter activityReporter, ILambdaDeploymentPackager lambdaDeploymentPackager, ITarballContainerImageBuilder imageBuilder, ILogger<CDKPublishingContext> logger)
+internal class CDKPublishingContext(IPublishingActivityReporter activityReporter, ILambdaDeploymentPackager lambdaDeploymentPackager, ITarballContainerImageBuilder imageBuilder, ILogger<CDKPublishingContext> logger)
 {
     public async Task WriteModelAsync(DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken = default)
     {
-        var publishingActivity = await activityReporter.CreateActivityAsync($"cdk-synth", $"Synthesizing CDK Application", false, cancellationToken);
+        var step = await activityReporter.CreateStepAsync($"Synthesizing CDK Application", cancellationToken);
         try
         {
             var outputPath = environment.CDKApp.Outdir;
@@ -34,9 +36,9 @@ internal class CDKPublishingContext(IPublishingActivityProgressReporter activity
 
             ProcessElastiCacheRedisCluster(model, environment);
 
-            await ProcessLambdaFunctionsAsync(model, environment, cancellationToken);
-            await ProcessECSFargateServiceWithALBAsync(model, environment, cancellationToken);
-            await ProcessECSFargateServiceAsync(model, environment, cancellationToken);
+            await ProcessLambdaFunctionsAsync(step, model, environment, cancellationToken);
+            await ProcessECSFargateServiceWithALBAsync(step, model, environment, cancellationToken);
+            await ProcessECSFargateServiceAsync(step, model, environment, cancellationToken);
 
             var assembly = environment.CDKApp.Synth();
 
@@ -45,15 +47,12 @@ internal class CDKPublishingContext(IPublishingActivityProgressReporter activity
                 FixCDKAssetsFileForWindows(outputPath);
             }
 
-            await activityReporter.UpdateActivityStatusAsync(publishingActivity, (status) => status with { IsComplete = true }, cancellationToken);
+            await step.SucceedAsync(cancellationToken: cancellationToken);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to package synthesize CDK application");
-            await activityReporter.UpdateActivityStatusAsync(
-                publishingActivity,
-                (status) => status with { IsError = true },
-                cancellationToken).ConfigureAwait(false);
+            await step.FailAsync($"Failed to package synthesize CDK application: {ex}", cancellationToken);
         }
     }
 
@@ -88,7 +87,7 @@ internal class CDKPublishingContext(IPublishingActivityProgressReporter activity
         }
     }
 
-    private async Task ProcessLambdaFunctionsAsync(DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken)
+    private async Task ProcessLambdaFunctionsAsync(IPublishingStep step, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken)
     {
         var tempFolder = Path.Combine(Path.GetTempPath(), Path.GetTempFileName());
         if (File.Exists(tempFolder))
@@ -100,7 +99,7 @@ internal class CDKPublishingContext(IPublishingActivityProgressReporter activity
 
         foreach (var lambdaFunction in lambdaProjects)
         {
-            var publishingActivity = await activityReporter.CreateActivityAsync($"packaging-lambda-{lambdaFunction.Name}", $"Packaging Lambda function {lambdaFunction.Name}", false, cancellationToken);
+            var activityTask = await step.CreateTaskAsync($"Packaging Lambda function {lambdaFunction.Name}", cancellationToken);
             try
             {
                 if (!lambdaFunction.TryGetLastAnnotation<LambdaFunctionAnnotation>(out var lambdaFunctionAnnotation))
@@ -130,20 +129,18 @@ internal class CDKPublishingContext(IPublishingActivityProgressReporter activity
                 publishAnnotation.Config.ConstructFunctionCallback?.Invoke(function);
                 lambdaFunction.Annotations.Add(new LinkedConstructAnnotations { LinkedConstruct = function });
 
-                await activityReporter.UpdateActivityStatusAsync(publishingActivity, (status) => status with { IsComplete = true }, cancellationToken);
+                await activityTask.SucceedAsync(cancellationToken: cancellationToken);
             }
             catch(Exception ex)
             {
                 logger.LogError(ex, "Failed to package the Lambda function {LambdaFunctionName}.", lambdaFunction.Name);
-                await activityReporter.UpdateActivityStatusAsync(
-                    publishingActivity,
-                    (status) => status with { IsError = true },
-                    cancellationToken).ConfigureAwait(false);
+                await activityTask.FailAsync($"Failed to package the Lambda function {lambdaFunction.Name}.: { ex}", cancellationToken);
+                throw;
             }
         }
     }
 
-    private async Task ProcessECSFargateServiceWithALBAsync(DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken)
+    private async Task ProcessECSFargateServiceWithALBAsync(IPublishingStep step, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken)
     {
         var ecsFargateWithALBProjects = model.Resources.OfType<ProjectResource>().Where(r => r.HasAnnotationOfType<PublishCDKECSFargateWithALBAnnotation>()).ToArray();
         foreach (var project in ecsFargateWithALBProjects)
@@ -153,7 +150,7 @@ internal class CDKPublishingContext(IPublishingActivityProgressReporter activity
                 throw new InvalidOperationException($"Missing {nameof(PublishCDKECSFargateWithALBAnnotation)} annotation");
             }
 
-            var publishingActivity = await activityReporter.CreateActivityAsync($"ecs-{project.Name}", $"Packaging {project.Name} for ECS Fargate", false, cancellationToken);
+            var activityTask = await step.CreateTaskAsync($"Packaging {project.Name} for ECS Fargate", cancellationToken);
             try
             {
                 var imageTarballPath = await imageBuilder.BuildTarballImageAsync(project, cancellationToken);
@@ -181,20 +178,18 @@ internal class CDKPublishingContext(IPublishingActivityProgressReporter activity
                 annotation.Config.ConstructApplicationLoadBalancedFargateServiceCallback?.Invoke(fargateService);
                 project.Annotations.Add(new LinkedConstructAnnotations { LinkedConstruct = fargateService });
 
-                await activityReporter.UpdateActivityStatusAsync(publishingActivity, (status) => status with { IsComplete = true }, cancellationToken);
+                await activityTask.SucceedAsync(cancellationToken: cancellationToken);
             }
             catch(Exception ex)
             {
                 logger.LogError(ex, "Failed to package {ProjectName} for ECS Fargate.", project.Name);
-                await activityReporter.UpdateActivityStatusAsync(
-                    publishingActivity,
-                    (status) => status with { IsError = true },
-                    cancellationToken).ConfigureAwait(false);
+                await activityTask.FailAsync($"Failed to package {project.Name} for ECS Fargate: { ex}", cancellationToken);
+                throw;
             }
         }
     }
 
-    private async Task ProcessECSFargateServiceAsync(DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken)
+    private async Task ProcessECSFargateServiceAsync(IPublishingStep step, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken)
     {
         var ecsFargateServiceProjects = model.Resources.OfType<ProjectResource>().Where(r => r.HasAnnotationOfType<PublishCDKECSFargateAnnotation>()).ToArray();
         foreach (var project in ecsFargateServiceProjects)
@@ -204,7 +199,7 @@ internal class CDKPublishingContext(IPublishingActivityProgressReporter activity
                 throw new InvalidOperationException($"Missing {nameof(PublishCDKECSFargateAnnotation)} annotation");
             }
 
-            var publishingActivity = await activityReporter.CreateActivityAsync($"ecs-{project.Name}", $"Packaging {project.Name} for ECS Fargate", false, cancellationToken);
+            var activityTask = await step.CreateTaskAsync($"Packaging {project.Name} for ECS Fargate", cancellationToken);
             try
             {
                 var imageTarballPath = await imageBuilder.BuildTarballImageAsync(project, cancellationToken);
@@ -250,15 +245,13 @@ internal class CDKPublishingContext(IPublishingActivityProgressReporter activity
                 annotation.Config.ConstructFargateServiceCallback?.Invoke(fargateService);
                 project.Annotations.Add(new LinkedConstructAnnotations { LinkedConstruct = fargateService });
 
-                await activityReporter.UpdateActivityStatusAsync(publishingActivity, (status) => status with { IsComplete = true }, cancellationToken);
+                await activityTask.SucceedAsync(cancellationToken: cancellationToken);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to package {ProjectName} for ECS Fargate.", project.Name);
-                await activityReporter.UpdateActivityStatusAsync(
-                    publishingActivity,
-                    (status) => status with { IsError = true },
-                    cancellationToken).ConfigureAwait(false);
+                await activityTask.FailAsync($"Failed to package {project.Name} for ECS Fargate: { ex}", cancellationToken);
+                throw;
             }
         }
     }

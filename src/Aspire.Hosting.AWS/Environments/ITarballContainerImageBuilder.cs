@@ -19,7 +19,7 @@ internal class DefaultTarballContainerImageBuilder(ILogger<DefaultTarballContain
 {
     public async Task<string> BuildTarballImageAsync(ProjectResource resource, CancellationToken cancellationToken)
     {
-        await containerImageBuilder.BuildImageAsync(resource, cancellationToken);
+        await containerImageBuilder.BuildImageAsync(resource, cancellationToken: cancellationToken);
         var tarballFilePath = Path.GetTempFileName() + ".tar";
 
         var imageTag = resource.Name.ToLower() + ":latest";
