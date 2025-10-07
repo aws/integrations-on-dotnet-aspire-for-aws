@@ -5,45 +5,45 @@
     <AspireVersion>9.2.0</AspireVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Aspire.Hosting" Version="$(AspireVersion)" />
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="$(AspireVersion)" />
-    <PackageVersion Include="Aspire.Hosting.Testing" Version="$(AspireVersion)" />
-    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="$(AspireVersion)" />
-    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery.Dns" Version="$(AspireVersion)" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.4.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.13.0" />
+    <PackageVersion Include="Aspire.Hosting" Version="9.5.0" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.5.0" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="9.5.0" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.5.0" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery.Dns" Version="9.5.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.9.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
     <!-- AWS SDK for .NET dependencies -->
-    <PackageVersion Include="AWSSDK.CloudFormation" Version="4.0.0.0" />
-    <PackageVersion Include="AWSSDK.Core" Version="4.0.0.0" />
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.0.0.0" />
-    <PackageVersion Include="AWSSDK.Lambda" Version="4.0.0.0" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.0.0" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.0.0.0" />
-    <PackageVersion Include="AWSSDK.SQS" Version="4.0.0.0" />
-    <PackageVersion Include="AWSSDK.SSO" Version="4.0.0.0" />
-    <PackageVersion Include="AWSSDK.SSOOIDC" Version="4.0.0.0" />
-    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.0.0" />
-    <PackageVersion Include="AWS.Messaging" Version="1.0.0" />
-    <PackageVersion Include="Amazon.Lambda.RuntimeSupport" Version="1.13.0" />
-    <PackageVersion Include="Amazon.Lambda.Core" Version="2.5.1" />
+    <PackageVersion Include="AWSSDK.CloudFormation" Version="4.0.3.5" />
+    <PackageVersion Include="AWSSDK.Core" Version="4.0.0.32" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.0.6.6" />
+    <PackageVersion Include="AWSSDK.Lambda" Version="4.0.2.13" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.2.6" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.0.1.6" />
+    <PackageVersion Include="AWSSDK.SQS" Version="4.0.1.8" />
+    <PackageVersion Include="AWSSDK.SSO" Version="4.0.1.6" />
+    <PackageVersion Include="AWSSDK.SSOOIDC" Version="4.0.2.3" />
+    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.4" />
+    <PackageVersion Include="AWS.Messaging" Version="1.0.1" />
+    <PackageVersion Include="Amazon.Lambda.RuntimeSupport" Version="1.13.4" />
+    <PackageVersion Include="Amazon.Lambda.Core" Version="2.7.1" />
     <PackageVersion Include="Amazon.Lambda.Serialization.SystemTextJson" Version="2.4.4" />
     <PackageVersion Include="Amazon.Lambda.APIGatewayEvents" Version="2.7.1" />
     <PackageVersion Include="Amazon.Lambda.SQSEvents" Version="2.2.0" />
     <!-- AWS CDK dependencies -->
-    <PackageVersion Include="Amazon.CDK.Lib" Version="2.194.0" />
+    <PackageVersion Include="Amazon.CDK.Lib" Version="2.219.0" />
     <!-- Open Telemetry -->
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.13.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.13.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.12.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AWS" Version="1.12.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AWSLambda" Version="1.12.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AWS" Version="1.12.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AWSLambda" Version="1.12.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.12.0" />
     <!-- Test dependencies -->
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.2" />
-    <PackageVersion Include="JsonSchema.Net" Version="7.3.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="JsonSchema.Net" Version="7.4.0" />
     <PackageVersion Include="Moq" Version="4.20.72" />
   </ItemGroup>
 </Project>
