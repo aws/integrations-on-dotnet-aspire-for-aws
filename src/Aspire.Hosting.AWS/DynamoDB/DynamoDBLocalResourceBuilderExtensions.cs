@@ -16,7 +16,7 @@ public static class DynamoDBLocalResourceBuilderExtensions
     /// <param name="options">Optional: Options that can be set for configuring the instance of DynamoDB Local.</param>
     /// <returns></returns>
     /// <exception cref="DistributedApplicationException"></exception>
-    public static IResourceBuilder<IDynamoDBLocalResource> AddAWSDynamoDBLocal(this IDistributedApplicationBuilder builder,
+    public static IResourceBuilder<DynamoDBLocalResource> AddAWSDynamoDBLocal(this IDistributedApplicationBuilder builder,
         string name, DynamoDBLocalOptions? options = null)
     {
         var container = new DynamoDBLocalResource(name, options ?? new DynamoDBLocalOptions());
@@ -41,8 +41,8 @@ public static class DynamoDBLocalResourceBuilderExtensions
     /// <typeparam name="T">The resource type.</typeparam>
     /// <param name="builder">Builder for the container resource.</param>
     /// <param name="pullPolicy">The pull policy behavior for the container resource.</param>
-    /// <returns>The <see cref="IResourceBuilder{IDynamoDBLocalResource}"/>.</returns>
-    public static IResourceBuilder<IDynamoDBLocalResource> WithImagePullPolicy(this IResourceBuilder<IDynamoDBLocalResource> builder, ImagePullPolicy imagePullPolicy)
+    /// <returns>The <see cref="IResourceBuilder{DynamoDBLocalResource}"/>.</returns>
+    public static IResourceBuilder<DynamoDBLocalResource> WithImagePullPolicy(this IResourceBuilder<DynamoDBLocalResource> builder, ImagePullPolicy imagePullPolicy)
     {
         if (builder is IResourceBuilder<ContainerResource> containerBuilder)
         {
@@ -65,7 +65,7 @@ public static class DynamoDBLocalResourceBuilderExtensions
     /// <param name="dynamoDBLocalResourceBuilder"></param>
     /// <returns></returns>
     /// <exception cref="DistributedApplicationException"></exception>
-    public static IResourceBuilder<TDestination> WithReference<TDestination>(this IResourceBuilder<TDestination> builder, IResourceBuilder<IDynamoDBLocalResource> dynamoDBLocalResourceBuilder)
+    public static IResourceBuilder<TDestination> WithReference<TDestination>(this IResourceBuilder<TDestination> builder, IResourceBuilder<DynamoDBLocalResource> dynamoDBLocalResourceBuilder)
         where TDestination : IResourceWithEnvironment
     {      
         if (builder is IResourceBuilder<IResourceWithWaitSupport> waitSupport)
