@@ -4,24 +4,24 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Aspire.Hosting" Version="9.5.0" />
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.5.0" />
-    <PackageVersion Include="Aspire.Hosting.Testing" Version="9.5.0" />
-    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.5.0" />
-    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery.Dns" Version="9.5.0" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.9.0" />
+    <PackageVersion Include="Aspire.Hosting" Version="9.5.1" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.5.1" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="9.5.1" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.5.1" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery.Dns" Version="9.5.1" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.10.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
     <!-- AWS SDK for .NET dependencies -->
-    <PackageVersion Include="AWSSDK.CloudFormation" Version="4.0.3.5" />
-    <PackageVersion Include="AWSSDK.Core" Version="4.0.0.32" />
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.0.6.6" />
-    <PackageVersion Include="AWSSDK.Lambda" Version="4.0.2.13" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.2.6" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.0.1.6" />
-    <PackageVersion Include="AWSSDK.SQS" Version="4.0.1.8" />
-    <PackageVersion Include="AWSSDK.SSO" Version="4.0.1.6" />
-    <PackageVersion Include="AWSSDK.SSOOIDC" Version="4.0.2.3" />
-    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.4" />
+    <PackageVersion Include="AWSSDK.CloudFormation" Version="4.0.4.3" />
+    <PackageVersion Include="AWSSDK.Core" Version="4.0.1.1" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.0.8.1" />
+    <PackageVersion Include="AWSSDK.Lambda" Version="4.0.3.1" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.2.9" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.0.1.9" />
+    <PackageVersion Include="AWSSDK.SQS" Version="4.0.1.11" />
+    <PackageVersion Include="AWSSDK.SSO" Version="4.0.1.9" />
+    <PackageVersion Include="AWSSDK.SSOOIDC" Version="4.0.2.6" />
+    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.7" />
     <PackageVersion Include="AWS.Messaging" Version="1.0.1" />
     <PackageVersion Include="Amazon.Lambda.RuntimeSupport" Version="1.13.4" />
     <PackageVersion Include="Amazon.Lambda.Core" Version="2.7.1" />
@@ -29,10 +29,10 @@
     <PackageVersion Include="Amazon.Lambda.APIGatewayEvents" Version="2.7.1" />
     <PackageVersion Include="Amazon.Lambda.SQSEvents" Version="2.2.0" />
     <!-- AWS CDK dependencies -->
-    <PackageVersion Include="Amazon.CDK.Lib" Version="2.219.0" />
+    <PackageVersion Include="Amazon.CDK.Lib" Version="2.220.0" />
     <!-- Open Telemetry -->
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.13.0" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.13.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.13.1" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.13.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AWS" Version="1.12.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AWSLambda" Version="1.12.1" />
