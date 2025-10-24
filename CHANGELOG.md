@@ -1,3 +1,9 @@
+## Release 2025-10-24
+
+### Aspire.Hosting.AWS (9.3.0)
+* Update dependency versions
+* [Breaking Change] Changed return type for AddAWSDynamoDBLocal to return IResourceBuilder<DynamoDBLocalResource> from IResourceBuilder<IDynamoDBLocalResource>. This allows access to the inherited APIs from DynamoDBLocalResource's parent ContainerResource type.
+
 ## Release 2025-07-02
 
 ### Aspire.Hosting.AWS (9.2.6)
