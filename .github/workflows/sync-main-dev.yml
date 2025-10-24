@@ -26,7 +26,7 @@ jobs:
     steps:
       # Assume an AWS Role that provides access to the Access Token
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df #v4
+        uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 #v4
         with:
           role-to-assume: ${{ secrets.RELEASE_WORKFLOW_ACCESS_TOKEN_ROLE_ARN }}
           aws-region: us-west-2
@@ -39,14 +39,14 @@ jobs:
           parse-json-secrets: true
       # Checkout a full clone of the repo
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: dev
           fetch-depth: 0
           token: ${{ env.AWS_SECRET_TOKEN }}
       # Install .NET8 which is needed for AutoVer
       - name: Setup .NET 9.0
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 9.0.x
       # Install AutoVer which is needed to retrieve information about the current release.
@@ -106,13 +106,13 @@ jobs:
     steps:
       # Checkout a full clone of the repo
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: releases/next-release
           fetch-depth: 0
       # Install .NET8 which is needed for AutoVer
       - name: Setup .NET 9.0
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 9.0.x
       # Install AutoVer which is needed to retrieve information about the current release.

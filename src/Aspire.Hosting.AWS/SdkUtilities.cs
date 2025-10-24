@@ -32,15 +32,14 @@ internal static class SdkUtilities
         return attribute != null ? attribute.InformationalVersion.Split('+')[0] : "Unknown";
     }
 
-    internal static void ConfigureUserAgentString(object sender, RequestEventArgs e)
+    internal static void ConfigureUserAgentString(object sender, RequestEventArgs args)
     {
-        var suffix = GetUserAgentStringSuffix();
-        if (e is not WebServiceRequestEventArgs args || !args.Headers.TryGetValue(UserAgentHeader, out var currentValue) || currentValue.Contains(suffix))
+        WebServiceRequestEventArgs? wsArgs = args as WebServiceRequestEventArgs;
+        if (wsArgs != null)
         {
-            return;
+            var suffix = GetUserAgentStringSuffix();
+            ((Amazon.Runtime.Internal.IAmazonWebServiceRequest)wsArgs.Request).UserAgentDetails.AddUserAgentComponent(suffix);
         }
-
-        args.Headers[UserAgentHeader] = currentValue + " " + suffix;
     }
 
     internal static void ApplySDKConfig(EnvironmentCallbackContext context, IAWSSDKConfig awsSdkConfig, bool force)
