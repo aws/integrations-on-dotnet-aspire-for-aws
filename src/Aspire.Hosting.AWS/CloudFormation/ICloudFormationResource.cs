@@ -26,4 +26,9 @@ public interface ICloudFormationResource : IAWSResource, IResourceWithWaitSuppor
     /// The output parameters of the CloudFormation stack.
     /// </summary>
     List<Output>? Outputs { get; }
-}
+
+    /// <summary>
+    /// Custom tags to apply to the CloudFormation stack.
+    /// </summary>
+    IDictionary<string, string> Tags { get; }
+    }

@@ -95,6 +95,17 @@ var awsResources = builder.AddAWSCloudFormationTemplate("AspireSampleDevResource
                           .WithReference(awsConfig);
 ```
 
+You can also add custom tags to the CloudFormation stack using the `WithTag` method:
+
+```csharp
+var awsResources = builder.AddAWSCloudFormationTemplate("AspireSampleDevResources", "app-resources.template")
+                          .WithParameter("DefaultVisibilityTimeout", "30")
+                          .WithReference(awsConfig)
+                          .WithTag("Environment", "Development")
+                          .WithTag("Project", "AspireSample")
+                          .WithTag("Owner", "DotNetTeam");
+```
+
 The outputs of a CloudFormation stack can be associated to a project using the `WithReference` method.
 
 ```csharp

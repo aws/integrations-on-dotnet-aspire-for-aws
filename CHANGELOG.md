@@ -1,3 +1,31 @@
+## Release 2025-10-24
+
+### Aspire.Hosting.AWS (9.3.0)
+* Update dependency versions
+* [Breaking Change] Changed return type for AddAWSDynamoDBLocal to return IResourceBuilder<DynamoDBLocalResource> from IResourceBuilder<IDynamoDBLocalResource>. This allows access to the inherited APIs from DynamoDBLocalResource's parent ContainerResource type.
+
+## Release 2025-07-02
+
+### Aspire.Hosting.AWS (9.2.6)
+* Fixed NullReferenceException thrown when provisioning a Cloud Foundation Tempalte without outputs
+
+## Release 2025-06-27
+
+### Aspire.Hosting.AWS (9.2.5)
+* Integrate Lambda Test Tool's feature for allowing saving requests
+* Fixed NullReferenceException thrown when provisioning a Cloud Foundation template without any outputs
+
+## Release 2025-06-20
+
+### Aspire.Hosting.AWS (9.2.4)
+* Fix concurrency issue when reading output from external processes
+
+## Release 2025-06-10
+
+### Aspire.Hosting.AWS (9.2.3)
+* Fixed issue with determining the framework or assembly for Lambda functions causing Lambda functions to fail to start
+* Add the option for users to customize cloudformation stack tags
+
 ## Release 2025-05-19
 
 ### Aspire.Hosting.AWS (9.2.2)

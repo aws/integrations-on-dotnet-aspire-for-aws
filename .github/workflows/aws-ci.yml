@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@f24d7193d98baebaeacc7e2227925dd47cc267f5 #v4
+        uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 #v4
         with:
           role-to-assume: ${{ secrets.CI_MAIN_TESTING_ACCOUNT_ROLE_ARN }}
           role-duration-seconds: 7200
@@ -29,7 +29,7 @@ jobs:
           $roleArn=$(cat ./response.json)
           "roleArn=$($roleArn -replace '"', '')" >> $env:GITHUB_OUTPUT
       - name: Configure Test Runner Credentials
-        uses: aws-actions/configure-aws-credentials@f24d7193d98baebaeacc7e2227925dd47cc267f5 #v4
+        uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 #v4
         with:
           role-to-assume: ${{ steps.lambda.outputs.roleArn }}
           role-duration-seconds: 7200
@@ -39,6 +39,23 @@ jobs:
         uses: aws-actions/aws-codebuild-run-build@4d15a47425739ac2296ba5e7eee3bdd4bfbdd767 #v1.0.18
         with:
           project-name: ${{ secrets.CI_TESTING_CODE_BUILD_PROJECT_NAME }}
+      - name: CodeBuild Link
+        shell: pwsh
+        run: |
+          $buildId = "${{ steps.codebuild.outputs.aws-build-id }}"
+          echo $buildId
+      - name: Configure Test Sweeper Lambda Credentials
+        if: always()
+        uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 #v4
+        with:
+          role-to-assume: ${{ steps.lambda.outputs.roleArn }}
+          role-duration-seconds: 7200
+          aws-region: us-west-2
+      - name: Invoke Test Sweeper Lambda
+        if: always()
+        shell: pwsh
+        run: |
+          aws lambda invoke response.json --function-name "${{ secrets.CI_TESTING_TEST_SWEEPER_LAMBDA_NAME }}" --cli-binary-format raw-in-base64-out --payload '{"Tags": "aws-repo=${{ secrets.CI_TESTING_CODE_BUILD_PROJECT_NAME }}"}'
       - name: CodeBuild Link
         shell: pwsh
         run: |

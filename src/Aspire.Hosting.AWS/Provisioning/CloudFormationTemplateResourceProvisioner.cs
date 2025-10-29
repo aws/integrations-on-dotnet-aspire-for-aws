@@ -33,7 +33,7 @@ internal class CloudFormationTemplateResourceProvisioner<T>(
 
             if (stack != null)
             {
-                logger.LogInformation("CloudFormation stack has {Count} output parameters", stack.Outputs.Count);
+                logger.LogInformation("CloudFormation stack has {Count} output parameters", stack.Outputs?.Count ?? 0);
                 if (stack.Outputs != null && logger.IsEnabled(LogLevel.Information))
                 {
                     foreach (var output in stack.Outputs)
@@ -76,7 +76,8 @@ internal class CloudFormationTemplateResourceProvisioner<T>(
             DisableDiffCheck = resource.DisableDiffCheck,
             StackPollingInterval = resource.StackPollingInterval,
             DisabledCapabilities = resource.DisabledCapabilities,
-            CloudFormationParameters = resource.CloudFormationParameters
+            CloudFormationParameters = resource.CloudFormationParameters,
+            Tags = resource.Tags
         };
     }
 

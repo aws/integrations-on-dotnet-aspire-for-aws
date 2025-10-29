@@ -12,6 +12,8 @@ internal sealed class CloudFormationStackExecutionContext(
 
     public IDictionary<string, string> CloudFormationParameters { get; set; } = new Dictionary<string, string>();
 
+    public IDictionary<string, string> Tags { get; set; } = new Dictionary<string, string>();
+
     public string? RoleArn { get; set; }
 
     public int StackPollingInterval { get; set; } = 3;
