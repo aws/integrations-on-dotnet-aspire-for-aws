@@ -34,6 +34,7 @@
     <PackageVersion Include="Amazon.Lambda.Serialization.SystemTextJson" Version="2.4.4" />
     <PackageVersion Include="Amazon.Lambda.APIGatewayEvents" Version="2.7.1" />
     <PackageVersion Include="Amazon.Lambda.SQSEvents" Version="2.2.0" />
+    <PackageVersion Include="Amazon.AspNetCore.DataProtection.SSM" Version="4.0.0" /> 
     <!-- AWS CDK dependencies -->
     <PackageVersion Include="Amazon.CDK.Lib" Version="2.221.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />

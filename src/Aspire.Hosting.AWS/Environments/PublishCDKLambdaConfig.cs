@@ -17,5 +17,5 @@ public class PublishCDKLambdaConfig
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 internal class PublishCDKLambdaAnnotation : IResourceAnnotation
 {
-    public required PublishCDKLambdaConfig Config { get; init; }
+    public PublishCDKLambdaConfig Config { get; init; } = new PublishCDKLambdaConfig();
 }

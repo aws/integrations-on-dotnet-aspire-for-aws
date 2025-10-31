@@ -21,49 +21,36 @@ using Lambda.AppHost;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-var deploymentStack = (builder.AddAWSCDKEnvironment("aws", app => new DeploymentStack(app, "DeploymentInfrastructure7"))).Resource.EnvironmentStack;
+var awsEnvironment = builder.AddAWSCDKEnvironment("aws", DeploymentComputeService.ECSFargate, DefaultValuesProvider.V1, app => new DeploymentStack(app, "DeploymentInfrastructure2"));
+var deploymentStack = awsEnvironment.Resource.EnvironmentStack;
 
 var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.USWest2);
 
 var cdkStackResource = builder.AddAWSCDKStack("AWSLambdaPlaygroundResources");
 var localDevQueue = cdkStackResource.AddSQSQueue("LocalDevQueue");
 
-var cache = builder.AddRedis("cache")
-                   .PublishAsElasticCacheCluster(new PublishCDKElasticCacheRedisConfig
-                   {
-                       Engine = PublishCDKElasticCacheRedisConfig.EngineType.Redis,
-                       EngineVersion = "7.1",
-                       CacheNodeType = "cache.t3.micro",
-                       CacheParameterGroupName = deploymentStack.ElastiCacheParameterGroup.Ref,
-                       CacheSubnetGroupName = deploymentStack.ElastiCacheSubnetGroup.Ref,
-                       SecurityGroupIds = new[] {deploymentStack.DefaultSecurityGroup.SecurityGroupId } 
-                   });
+var cache = builder.AddRedis("cache");
 
 builder.AddProject<Projects.Frontend>("Frontend")
         .WithReference(cache)
         .WaitFor(cache)
+        // Add callback to customize the default settings of the CDK construct created for this project.
         .PublishAsECSFargateServiceWithALB(new PublishCDKECSFargateWithALBConfig
         {
-            ECSCluster = deploymentStack.ECSCluster,
             PropsApplicationLoadBalancedFargateServiceCallback = props =>
             {
-                props.MemoryLimitMiB = 512;
-                props.SecurityGroups = new[] { deploymentStack.DefaultSecurityGroup };
+                props.DesiredCount = 1;
             },
             ConstructApplicationLoadBalancedFargateServiceCallback = construct =>
             {
                 // For faster dev turn around set deregistration to a short time
                 construct.TargetGroup.SetAttribute("deregistration_delay.timeout_seconds", "10");
-                construct.TargetGroup.EnableCookieStickiness(Duration.Seconds(86400)); // 24 hours
+                // Enable cookie stickiness for session affinity for 24 hours
+                construct.TargetGroup.EnableCookieStickiness(Duration.Seconds(86400));
             }
         });
 
 builder.AddProject<Projects.Backend>("backend")
-        .PublishAsECSFargateService(new PublishCDKECSFargateConfig
-        {
-            ECSCluster = deploymentStack.ECSCluster,
-            DesiredCount = 2
-        })
         .WithReference(cache)
         .WaitFor(cache);
 
@@ -72,9 +59,8 @@ builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunctio
         {
             PropsFunctionCallback = props =>
             {
-                props.Vpc = deploymentStack.MainVpc;
-                props.SecurityGroups = new[] { deploymentStack.DefaultSecurityGroup };
-                props.MemorySize = 512;
+                props.Vpc = awsEnvironment.Resource.DeploymentConstructProvider.GetDefaultVpc();
+                props.SecurityGroups = new[] { awsEnvironment.Resource.DeploymentConstructProvider.GetDefaultElastiCacheSecurityGroup() };
             },
             ConstructFunctionCallback = construct =>
             {

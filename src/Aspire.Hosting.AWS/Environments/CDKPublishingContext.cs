@@ -5,8 +5,6 @@ using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.ECS.Patterns;
 using Amazon.CDK.AWS.ElastiCache;
 using Amazon.CDK.AWS.Lambda;
-using Amazon.CDK.AWS.SES.Actions;
-using Amazon.CDK.Pipelines;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Lambda;
 using Aspire.Hosting.Publishing;
@@ -36,9 +34,35 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
 
             ProcessElastiCacheRedisCluster(model, environment);
 
-            await ProcessLambdaFunctionsAsync(step, model, environment, cancellationToken);
-            await ProcessECSFargateServiceWithALBAsync(step, model, environment, cancellationToken);
-            await ProcessECSFargateServiceAsync(step, model, environment, cancellationToken);
+            foreach(var project in model.Resources.OfType<ProjectResource>())
+            {
+                if (project.IsExcludedFromPublish())
+                    continue;
+
+                IResourceAnnotation? annotation = null;
+                if (project.TryGetLastAnnotation<PublishCDKECSFargateWithALBAnnotation>(out var fargateWebAnnotation))
+                {
+                    annotation = fargateWebAnnotation;
+                }
+                else if (project.TryGetLastAnnotation<PublishCDKECSFargateAnnotation>(out var fargateServiceAnnotation))
+                {
+                    annotation = fargateServiceAnnotation;
+                }
+                else if (project.TryGetLastAnnotation<PublishCDKLambdaAnnotation>(out var lambdaFunctionAnnotation))
+                {
+                    annotation = lambdaFunctionAnnotation;
+                }
+                
+                if (annotation == null)
+                {
+                    annotation = DetermineDefaultPublishAnnotation(environment, project);
+                }
+
+                if (annotation == null)
+                    continue;
+
+                await ProcessPublishAnnotation(step, model, environment, project, annotation!, cancellationToken);
+            }
 
             var assembly = environment.CDKApp.Synth();
 
@@ -56,30 +80,68 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
         }
     }
 
+    private IResourceAnnotation? DetermineDefaultPublishAnnotation(AWSCDKEnvironmentResource environment, ProjectResource projectResource)
+    {
+        if (projectResource is LambdaProjectResource)
+        {
+            var annotation = new PublishCDKLambdaAnnotation();
+            return annotation;
+        }
+        if (environment.DefaultComputeService == DeploymentComputeService.ECSFargate)
+        {
+            if(projectResource.GetEndpoints().Any())
+            {
+                var annotation = new PublishCDKECSFargateWithALBAnnotation();
+                return annotation;
+            }
+            else
+            {
+                var annotation = new PublishCDKECSFargateAnnotation();
+                return annotation;
+            }
+        }
+
+        return null;
+    }
+
+    private async Task ProcessPublishAnnotation(IPublishingStep step, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, ProjectResource projectResource, IResourceAnnotation annotation, CancellationToken cancellationToken)
+    {
+        switch(annotation)
+        {
+            case PublishCDKLambdaAnnotation lambdaAnnotation:
+                if (!(projectResource is LambdaProjectResource))
+                {
+                    throw new InvalidOperationException($"Project resource {projectResource.Name} is not a {nameof(LambdaProjectResource)}");
+                }
+                await ProcessLambdaFunctionAsync(step, model, environment, (LambdaProjectResource)projectResource, lambdaAnnotation, cancellationToken);
+                break;
+            case PublishCDKECSFargateWithALBAnnotation fargateWithALBAnnotation:
+                await ProcessECSFargateServiceWithALBAsync(step, model, environment, projectResource, fargateWithALBAnnotation, cancellationToken);
+                break;
+            case PublishCDKECSFargateAnnotation fargateAnnotation:
+                await ProcessECSFargateServiceAsync(step, model, environment, projectResource, fargateAnnotation, cancellationToken);
+                break;
+            default:
+                throw new InvalidOperationException($"Unsupported publish annotation type: {annotation.GetType().FullName}");
+        }
+    }
+
     private void ProcessElastiCacheRedisCluster(DistributedApplicationModel model, AWSCDKEnvironmentResource environment)
     {
-        var resources = model.Resources.Where(r => r.HasAnnotationOfType<PublishCDKElasticCacheRedisAnnotation>()).ToArray();
+        var resources = model.Resources.Where(r => r is RedisResource).ToArray();
         foreach(var resource in resources)
         {
+            if (resource.IsExcludedFromPublish())
+                continue;
+
             if (!resource.TryGetLastAnnotation<PublishCDKElasticCacheRedisAnnotation>(out var publishAnnotation))
             {
-                throw new InvalidOperationException($"Missing {nameof(PublishCDKElasticCacheRedisAnnotation)} annotation");
+                publishAnnotation = new PublishCDKElasticCacheRedisAnnotation();
             }
 
-            var clusterProps = new CfnReplicationGroupProps
-            {
-                ReplicationGroupDescription = "Cache for Aspire Application",
-                CacheNodeType = publishAnnotation.Config.CacheNodeType,
-                Engine = publishAnnotation.Config.Engine.ToString().ToLowerInvariant(),
-                EngineVersion = publishAnnotation.Config.EngineVersion,
-                NumCacheClusters = 2,
-                AutomaticFailoverEnabled = true,
-                CacheSubnetGroupName = publishAnnotation.Config.CacheSubnetGroupName,
-                SecurityGroupIds = publishAnnotation.Config.SecurityGroupIds,
-                CacheParameterGroupName = publishAnnotation.Config.CacheParameterGroupName,
-                Port = 6379
-            };
+            var clusterProps = new CfnReplicationGroupProps();
             publishAnnotation.Config.PropsCfnReplicationGroupCallback?.Invoke(clusterProps);
+            environment.DefaultValuesProvider.ApplyCfnReplicationGroupPropsDefaults(environment, clusterProps);
 
             var cluster = new CfnReplicationGroup(environment.CDKStack, $"ElastiCache-{resource.Name}", clusterProps);
             publishAnnotation.Config.ConstructCfnReplicationGroupCallback?.Invoke(cluster);
@@ -87,7 +149,7 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
         }
     }
 
-    private async Task ProcessLambdaFunctionsAsync(IPublishingStep step, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken)
+    private async Task ProcessLambdaFunctionAsync(IPublishingStep step, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, LambdaProjectResource lambdaFunction, PublishCDKLambdaAnnotation publishAnnotation, CancellationToken cancellationToken)
     {
         var tempFolder = Path.Combine(Path.GetTempPath(), Path.GetTempFileName());
         if (File.Exists(tempFolder))
@@ -95,164 +157,126 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
             File.Delete(tempFolder);
         }
 
-        var lambdaProjects = model.Resources.OfType<LambdaProjectResource>().Where(r => r.HasAnnotationOfType<PublishCDKLambdaAnnotation>()).ToArray();
-
-        foreach (var lambdaFunction in lambdaProjects)
+        var activityTask = await step.CreateTaskAsync($"Packaging Lambda function {lambdaFunction.Name}", cancellationToken);
+        try
         {
-            var activityTask = await step.CreateTaskAsync($"Packaging Lambda function {lambdaFunction.Name}", cancellationToken);
-            try
+            if (!lambdaFunction.TryGetLastAnnotation<LambdaFunctionAnnotation>(out var lambdaFunctionAnnotation))
             {
-                if (!lambdaFunction.TryGetLastAnnotation<LambdaFunctionAnnotation>(out var lambdaFunctionAnnotation))
-                {
-                    throw new InvalidOperationException($"Missing {nameof(LambdaFunctionAnnotation)} annotation");
-                }
-                if (!lambdaFunction.TryGetLastAnnotation<PublishCDKLambdaAnnotation>(out var publishAnnotation))
-                {
-                    throw new InvalidOperationException($"Missing {nameof(PublishCDKLambdaAnnotation)} annotation");
-                }
-
-                logger.LogInformation("Creating deployment package for Lambda function '{LambdaFunctionName}'...", lambdaFunction.Name);
-                var results = await lambdaDeploymentPackager.CreateDeploymentPackageAsync(lambdaFunction, tempFolder, cancellationToken);
-
-                var functionProps = new FunctionProps
-                {
-                    Code = Code.FromAsset(results.LocalLocation!),
-                    Handler = lambdaFunctionAnnotation!.Handler,
-                    Runtime = Runtime.DOTNET_8, // TODO: Determine runtime based to TFM of project.
-                    MemorySize = 256,
-                };
-                ProcessRelationShips(functionProps, lambdaFunction);
-                publishAnnotation.Config.PropsFunctionCallback?.Invoke(functionProps);
-
-
-                var function = new Function(environment.CDKStack, $"Function-{lambdaFunction.Name}", functionProps);
-                publishAnnotation.Config.ConstructFunctionCallback?.Invoke(function);
-                lambdaFunction.Annotations.Add(new LinkedConstructAnnotations { LinkedConstruct = function });
-
-                await activityTask.SucceedAsync(cancellationToken: cancellationToken);
+                throw new InvalidOperationException($"Missing {nameof(LambdaFunctionAnnotation)} annotation");
             }
-            catch(Exception ex)
+
+            logger.LogInformation("Creating deployment package for Lambda function '{LambdaFunctionName}'...", lambdaFunction.Name);
+            var results = await lambdaDeploymentPackager.CreateDeploymentPackageAsync(lambdaFunction, tempFolder, cancellationToken);
+
+            var functionProps = new FunctionProps
             {
-                logger.LogError(ex, "Failed to package the Lambda function {LambdaFunctionName}.", lambdaFunction.Name);
-                await activityTask.FailAsync($"Failed to package the Lambda function {lambdaFunction.Name}.: { ex}", cancellationToken);
-                throw;
-            }
+                Code = Code.FromAsset(results.LocalLocation!),
+                Handler = lambdaFunctionAnnotation!.Handler
+            };
+            ProcessRelationShips(functionProps, lambdaFunction);
+            publishAnnotation.Config.PropsFunctionCallback?.Invoke(functionProps);
+            environment.DefaultValuesProvider.ApplyLambdaFunctionDefaults(lambdaFunction.GetProjectMetadata().ProjectPath, functionProps);
+
+            var function = new Function(environment.CDKStack, $"Function-{lambdaFunction.Name}", functionProps);
+            publishAnnotation.Config.ConstructFunctionCallback?.Invoke(function);
+            lambdaFunction.Annotations.Add(new LinkedConstructAnnotations { LinkedConstruct = function });
+
+            await activityTask.SucceedAsync(cancellationToken: cancellationToken);
+        }
+        catch(Exception ex)
+        {
+            logger.LogError(ex, "Failed to package the Lambda function {LambdaFunctionName}.", lambdaFunction.Name);
+            await activityTask.FailAsync($"Failed to package the Lambda function {lambdaFunction.Name}.: { ex}", cancellationToken);
+            throw;
         }
     }
 
-    private async Task ProcessECSFargateServiceWithALBAsync(IPublishingStep step, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken)
+
+    private async Task ProcessECSFargateServiceWithALBAsync(IPublishingStep step, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, ProjectResource projectResource, PublishCDKECSFargateWithALBAnnotation publishAnnotation, CancellationToken cancellationToken)
     {
-        var ecsFargateWithALBProjects = model.Resources.OfType<ProjectResource>().Where(r => r.HasAnnotationOfType<PublishCDKECSFargateWithALBAnnotation>()).ToArray();
-        foreach (var project in ecsFargateWithALBProjects)
+        var activityTask = await step.CreateTaskAsync($"Packaging {projectResource.Name} for ECS Fargate", cancellationToken);
+        try
         {
-            if (!project.TryGetLastAnnotation<PublishCDKECSFargateWithALBAnnotation>(out var annotation))
+            var imageTarballPath = await imageBuilder.BuildTarballImageAsync(projectResource, cancellationToken);
+
+            var taskImageOptions = new ApplicationLoadBalancedTaskImageOptions
             {
-                throw new InvalidOperationException($"Missing {nameof(PublishCDKECSFargateWithALBAnnotation)} annotation");
-            }
+                Image = ContainerImage.FromTarball(imageTarballPath),
+                Environment = new Dictionary<string, string>()
+            };
 
-            var activityTask = await step.CreateTaskAsync($"Packaging {project.Name} for ECS Fargate", cancellationToken);
-            try
+            publishAnnotation.Config.PropsApplicationLoadBalancedTaskImageOptionsCallback?.Invoke(taskImageOptions);
+            environment.DefaultValuesProvider.ApplyECSFargateServiceWithALBDefaults(taskImageOptions);
+
+            var fargateServiceProps = new ApplicationLoadBalancedFargateServiceProps
             {
-                var imageTarballPath = await imageBuilder.BuildTarballImageAsync(project, cancellationToken);
+                TaskImageOptions = taskImageOptions
+            };
+            ProcessRelationShips(fargateServiceProps, projectResource);
+            publishAnnotation.Config.PropsApplicationLoadBalancedFargateServiceCallback?.Invoke(fargateServiceProps);
+            environment.DefaultValuesProvider.ApplyECSFargateServiceWithALBDefaults(environment, fargateServiceProps);
 
-                var fargateServiceProps = new ApplicationLoadBalancedFargateServiceProps
-                {
-                    Cluster = annotation.Config.ECSCluster,
-                    Cpu = 256,
-                    MemoryLimitMiB = 512,
-                    DesiredCount = 2,
-                    ListenerPort = 80,
-                    PublicLoadBalancer = true,
-                    MinHealthyPercent = 100,
-                    TaskImageOptions = new ApplicationLoadBalancedTaskImageOptions
-                    {
-                        Image = ContainerImage.FromTarball(imageTarballPath),
-                        ContainerPort = 8080,
-                        Environment = new Dictionary<string, string>()
-                    }
-                };
-                ProcessRelationShips(fargateServiceProps, project);
-                annotation.Config.PropsApplicationLoadBalancedFargateServiceCallback?.Invoke(fargateServiceProps);
+            var fargateService = new ApplicationLoadBalancedFargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
+            publishAnnotation.Config.ConstructApplicationLoadBalancedFargateServiceCallback?.Invoke(fargateService);
+            projectResource.Annotations.Add(new LinkedConstructAnnotations { LinkedConstruct = fargateService });
 
-                var fargateService = new ApplicationLoadBalancedFargateService(environment.CDKStack, $"Project-{project.Name}", fargateServiceProps);
-                annotation.Config.ConstructApplicationLoadBalancedFargateServiceCallback?.Invoke(fargateService);
-                project.Annotations.Add(new LinkedConstructAnnotations { LinkedConstruct = fargateService });
-
-                await activityTask.SucceedAsync(cancellationToken: cancellationToken);
-            }
-            catch(Exception ex)
-            {
-                logger.LogError(ex, "Failed to package {ProjectName} for ECS Fargate.", project.Name);
-                await activityTask.FailAsync($"Failed to package {project.Name} for ECS Fargate: { ex}", cancellationToken);
-                throw;
-            }
+            await activityTask.SucceedAsync(cancellationToken: cancellationToken);
+        }
+        catch(Exception ex)
+        {
+            logger.LogError(ex, "Failed to package {ProjectName} for ECS Fargate.", projectResource.Name);
+            await activityTask.FailAsync($"Failed to package {projectResource.Name} for ECS Fargate: { ex}", cancellationToken);
+            throw;
         }
     }
 
-    private async Task ProcessECSFargateServiceAsync(IPublishingStep step, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken)
+    private async Task ProcessECSFargateServiceAsync(IPublishingStep step, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, ProjectResource projectResource, PublishCDKECSFargateAnnotation publishAnnotation, CancellationToken cancellationToken)
     {
-        var ecsFargateServiceProjects = model.Resources.OfType<ProjectResource>().Where(r => r.HasAnnotationOfType<PublishCDKECSFargateAnnotation>()).ToArray();
-        foreach (var project in ecsFargateServiceProjects)
+        var activityTask = await step.CreateTaskAsync($"Packaging {projectResource.Name} for ECS Fargate", cancellationToken);
+        try
         {
-            if (!project.TryGetLastAnnotation<PublishCDKECSFargateAnnotation>(out var annotation))
+            var imageTarballPath = await imageBuilder.BuildTarballImageAsync(projectResource, cancellationToken);
+
+            // Create Task Definition
+            var fargateTaskDefinitionProps = new FargateTaskDefinitionProps();
+            publishAnnotation.Config.PropsFargateTaskDefinitionCallback?.Invoke(fargateTaskDefinitionProps);
+            environment.DefaultValuesProvider.ApplyECSFargateServiceDefaults(fargateTaskDefinitionProps);
+
+            var taskDef = new FargateTaskDefinition(environment.CDKStack, $"TaskDefinition-{projectResource.Name}", fargateTaskDefinitionProps);
+            publishAnnotation.Config.ConstructFargateTaskDefinitionCallback?.Invoke(taskDef);
+
+            // Create Container Definition
+            var containerDefinitionProps = new ContainerDefinitionProps
             {
-                throw new InvalidOperationException($"Missing {nameof(PublishCDKECSFargateAnnotation)} annotation");
-            }
+                Image = ContainerImage.FromTarball(imageTarballPath),
+                Environment = new Dictionary<string, string>()
+            };
+            ApplyRelationshipEnvironmentVariable(containerDefinitionProps.Environment, projectResource);
+            publishAnnotation.Config.PropsContainerDefinitionCallback?.Invoke(containerDefinitionProps);
+            environment.DefaultValuesProvider.ApplyECSFargateServiceDefaults(environment, projectResource.Name, containerDefinitionProps);
 
-            var activityTask = await step.CreateTaskAsync($"Packaging {project.Name} for ECS Fargate", cancellationToken);
-            try
+            var containerDefinition = taskDef.AddContainer($"Container-{projectResource.Name}", containerDefinitionProps);
+            publishAnnotation.Config.ConstructContainerDefinitionCallback?.Invoke(containerDefinition);
+
+            // Create Fargate Service
+            var fargateServiceProps = new FargateServiceProps
             {
-                var imageTarballPath = await imageBuilder.BuildTarballImageAsync(project, cancellationToken);
+                TaskDefinition = taskDef,
+            };
+            publishAnnotation.Config.PropsFargateServiceCallback?.Invoke(fargateServiceProps);
+            environment.DefaultValuesProvider.ApplyECSFargateServiceDefaults(environment, fargateServiceProps);
 
-                // Create Task Definition
-                var fargateTaskDefinitionProps = new FargateTaskDefinitionProps
-                {
-                    MemoryLimitMiB = 512,
-                    Cpu = 256
-                };
-                annotation.Config.PropsFargateTaskDefinitionCallback?.Invoke(fargateTaskDefinitionProps);
+            var fargateService = new FargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
+            publishAnnotation.Config.ConstructFargateServiceCallback?.Invoke(fargateService);
+            projectResource.Annotations.Add(new LinkedConstructAnnotations { LinkedConstruct = fargateService });
 
-                var taskDef = new FargateTaskDefinition(environment.CDKStack, $"TaskDefinition-{project.Name}", fargateTaskDefinitionProps);
-                annotation.Config.ConstructFargateTaskDefinitionCallback?.Invoke(taskDef);
-
-                // Create Container Definition
-                var containerDefinitionProps = new ContainerDefinitionProps
-                {
-                    Image = ContainerImage.FromTarball(imageTarballPath),
-                    Environment = new Dictionary<string, string>(),
-                    Logging = new AwsLogDriver(new AwsLogDriverProps
-                    {
-                        StreamPrefix = environment.CDKStack.StackName
-                    })
-                };
-                ApplyRelationshipEnvironmentVariable(containerDefinitionProps.Environment, project);
-                annotation.Config.PropsContainerDefinitionCallback?.Invoke(containerDefinitionProps);
-
-                var containerDefinition = taskDef.AddContainer($"Container-{project.Name}", containerDefinitionProps);
-                annotation.Config.ConstructContainerDefinitionCallback?.Invoke(containerDefinition);
-
-                // Create Fargate Service
-                var fargateServiceProps = new FargateServiceProps
-                {
-                    Cluster = annotation.Config.ECSCluster,
-                    DesiredCount = annotation.Config.DesiredCount,
-                    MinHealthyPercent = annotation.Config.MinHealthyPercent,
-                    TaskDefinition = taskDef,
-                };
-                annotation.Config.PropsFargateServiceCallback?.Invoke(fargateServiceProps);
-
-                var fargateService = new FargateService(environment.CDKStack, $"Project-{project.Name}", fargateServiceProps);
-                annotation.Config.ConstructFargateServiceCallback?.Invoke(fargateService);
-                project.Annotations.Add(new LinkedConstructAnnotations { LinkedConstruct = fargateService });
-
-                await activityTask.SucceedAsync(cancellationToken: cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to package {ProjectName} for ECS Fargate.", project.Name);
-                await activityTask.FailAsync($"Failed to package {project.Name} for ECS Fargate: { ex}", cancellationToken);
-                throw;
-            }
+            await activityTask.SucceedAsync(cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to package {ProjectName} for ECS Fargate.", projectResource.Name);
+            await activityTask.FailAsync($"Failed to package {projectResource.Name} for ECS Fargate: { ex}", cancellationToken);
+            throw;
         }
     }
 

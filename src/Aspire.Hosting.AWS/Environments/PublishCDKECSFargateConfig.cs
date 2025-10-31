@@ -8,12 +8,6 @@ namespace Aspire.Hosting.AWS.Environments;
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 public class PublishCDKECSFargateConfig
 {
-    public required Cluster ECSCluster { get; init; }
-
-    public int DesiredCount { get; init; } = 1;
-
-    public double MinHealthyPercent { get; init; } = 100;
-
     public Action<ContainerDefinitionProps>? PropsContainerDefinitionCallback { get; set; }
 
     public Action<ContainerDefinition>? ConstructContainerDefinitionCallback { get; set; }
@@ -30,5 +24,5 @@ public class PublishCDKECSFargateConfig
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 internal class PublishCDKECSFargateAnnotation : Aspire.Hosting.ApplicationModel.IResourceAnnotation
 {
-    public required PublishCDKECSFargateConfig Config { get; init; }
+    public PublishCDKECSFargateConfig Config { get; init; } = new PublishCDKECSFargateConfig();
 }

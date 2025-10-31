@@ -24,11 +24,11 @@ public static class AWSEnvironmentExtensions
     }
 
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    public static IResourceBuilder<AWSCDKEnvironmentResource<Stack>> AddAWSCDKEnvironment(this IDistributedApplicationBuilder builder, [ResourceName] string name)
+    public static IResourceBuilder<AWSCDKEnvironmentResource<Stack>> AddAWSCDKEnvironment(this IDistributedApplicationBuilder builder, [ResourceName] string name, DeploymentComputeService defaultComputeService, DefaultValuesProvider defaultProvider)
     {
         builder.AddEnvironmentServices();
 
-        var env = new AWSCDKEnvironmentResource<Stack>(name, app => new Stack(app, name));
+        var env = new AWSCDKEnvironmentResource<Stack>(name, defaultComputeService, defaultProvider, app => new Stack(app, name));
 
         if (builder.ExecutionContext.IsRunMode)
         {
@@ -39,12 +39,12 @@ public static class AWSEnvironmentExtensions
     }
 
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    public static IResourceBuilder<AWSCDKEnvironmentResource<T>> AddAWSCDKEnvironment<T>(this IDistributedApplicationBuilder builder, [ResourceName] string name, Func<App, T> stackFactory)
+    public static IResourceBuilder<AWSCDKEnvironmentResource<T>> AddAWSCDKEnvironment<T>(this IDistributedApplicationBuilder builder, [ResourceName] string name, DeploymentComputeService defaultComputeService, DefaultValuesProvider defaultProvider, Func<App, T> stackFactory)
         where T : Stack
     {
         builder.AddEnvironmentServices();
 
-        var env = new AWSCDKEnvironmentResource<T>(name, stackFactory);
+        var env = new AWSCDKEnvironmentResource<T>(name, defaultComputeService, defaultProvider, stackFactory);
 
         if (builder.ExecutionContext.IsRunMode)
         {
@@ -82,7 +82,7 @@ public static class AWSEnvironmentExtensions
     }
 
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    public static IResourceBuilder<RedisResource> PublishAsElasticCacheCluster(this IResourceBuilder<RedisResource> builder, PublishCDKElasticCacheRedisConfig config)
+    public static IResourceBuilder<RedisResource> PublishAsElasticCacheCluster(this IResourceBuilder<RedisResource> builder, PublishCDKElastiCacheRedisConfig config)
     {
         var annotation = new PublishCDKElasticCacheRedisAnnotation { Config = config };
         builder.Resource.Annotations.Add(annotation);
