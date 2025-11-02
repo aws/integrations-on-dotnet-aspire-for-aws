@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Backend
 {
-    internal class BackgroundProcessor : BackgroundService
+    internal class BackgroundProcessor(FrontendApiClient frontendApiClient) : BackgroundService
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -20,6 +20,9 @@ namespace Backend
                     printLine = 0;
 
                 Console.WriteLine($"Print line: {printLine}");
+
+                var data = await frontendApiClient.GetFrontendDataAsync(cancellationToken: stoppingToken);
+                Console.WriteLine($"Data from frontend: {data}");
             }
         }
     }

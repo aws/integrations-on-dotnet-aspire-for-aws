@@ -27,6 +27,11 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAntiforgery();
 
+app.MapGet("/backend/data", () =>
+{
+    return Results.Json(new { Message = "Hello from the frontend!" });
+});
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

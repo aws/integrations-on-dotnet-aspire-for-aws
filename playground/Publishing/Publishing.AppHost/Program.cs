@@ -18,11 +18,13 @@ using Lambda.AppHost;
 
 #pragma warning disable CA2252 // This API requires opting into preview features
 #pragma warning disable ASPIREAWSPUBLISHERS001
+#pragma warning disable ASPIRECOMPUTE001
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-var awsEnvironment = builder.AddAWSCDKEnvironment("aws", DeploymentComputeService.ECSFargate, DefaultValuesProvider.V1, app => new DeploymentStack(app, "DeploymentInfrastructure2"));
+var awsEnvironment = builder.AddAWSCDKEnvironment("aws", DeploymentComputeService.ECSFargate, DefaultProvider.V1, app => new DeploymentStack(app, "DeploymentInfrastructure2"));
 var deploymentStack = awsEnvironment.Resource.EnvironmentStack;
+var deploymentTag = "v" + DateTime.UtcNow.ToString("yyyyMMddHHmmss");
 
 var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.USWest2);
 
@@ -31,7 +33,8 @@ var localDevQueue = cdkStackResource.AddSQSQueue("LocalDevQueue");
 
 var cache = builder.AddRedis("cache");
 
-builder.AddProject<Projects.Frontend>("Frontend")
+var frontend = builder.AddProject<Projects.Frontend>("Frontend")
+        .WithDeploymentImageTag(context => deploymentTag)
         .WithReference(cache)
         .WaitFor(cache)
         // Add callback to customize the default settings of the CDK construct created for this project.
@@ -51,10 +54,13 @@ builder.AddProject<Projects.Frontend>("Frontend")
         });
 
 builder.AddProject<Projects.Backend>("backend")
+        .WithDeploymentImageTag(context => deploymentTag)
+        .WithReference(frontend)
         .WithReference(cache)
         .WaitFor(cache);
 
 builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
+        .WithDeploymentImageTag(context => deploymentTag)
         .PublishAsLambdaFunction(new PublishCDKLambdaConfig
         {
             PropsFunctionCallback = props =>

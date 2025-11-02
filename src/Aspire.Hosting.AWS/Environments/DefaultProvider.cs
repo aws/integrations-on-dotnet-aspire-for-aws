@@ -10,18 +10,20 @@ using System.Diagnostics.CodeAnalysis;
 namespace Aspire.Hosting.AWS.Environments;
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-public class DefaultValuesProvider
+public class DefaultProvider
 {
-    public static readonly DefaultValuesProvider V1 = new V1DefaultProvider();
+    public static readonly DefaultProvider V1 = new V1DefaultProvider();
 
-    protected DefaultValuesProvider()
+    protected DefaultProvider()
     {
     }
+
+    public virtual string DeploymentTagName => "aspire:deployment-tag";
 
     #region LambdaFunction
     public virtual double? LambdaFunctionMemorySize => 512;
 
-    internal void ApplyLambdaFunctionDefaults(string projectPath, FunctionProps props)
+    internal protected virtual void ApplyLambdaFunctionDefaults(string projectPath, FunctionProps props)
     {
         if (!props.MemorySize.HasValue)
             props.MemorySize = LambdaFunctionMemorySize;
@@ -66,13 +68,13 @@ public class DefaultValuesProvider
 
     public virtual double? ECSFargateServiceWithALBMinHealthyPercent => 100;
 
-    internal void ApplyECSFargateServiceWithALBDefaults(ApplicationLoadBalancedTaskImageOptions props)
+    internal protected virtual void ApplyECSFargateServiceWithALBDefaults(ApplicationLoadBalancedTaskImageOptions props)
     {
         if (!props.ContainerPort.HasValue)
             props.ContainerPort = ECSFargateServiceWithALBContainerPort;
     }
 
-    internal void ApplyECSFargateServiceWithALBDefaults(AWSCDKEnvironmentResource environment, ApplicationLoadBalancedFargateServiceProps props)
+    internal protected virtual void ApplyECSFargateServiceWithALBDefaults(AWSCDKEnvironmentResource environment, ApplicationLoadBalancedFargateServiceProps props)
     {
         if (props.Cluster == null)
             props.Cluster = environment.DeploymentConstructProvider.GetDefaultECSCluster();
@@ -115,7 +117,7 @@ public class DefaultValuesProvider
         });
     }
 
-    internal void ApplyECSFargateServiceDefaults(FargateTaskDefinitionProps props)
+    internal protected virtual void ApplyECSFargateServiceDefaults(FargateTaskDefinitionProps props)
     {
         if (props.Cpu == null)
             props.Cpu = ECSFargateServiceCpu;
@@ -123,13 +125,13 @@ public class DefaultValuesProvider
             props.MemoryLimitMiB = ECSFargateServiceMemoryLimitMiB;
     }
 
-    internal void ApplyECSFargateServiceDefaults(AWSCDKEnvironmentResource environment, string projectName, ContainerDefinitionProps props)
+    internal protected virtual void ApplyECSFargateServiceDefaults(AWSCDKEnvironmentResource environment, string projectName, ContainerDefinitionProps props)
     {
         if (props.Logging == null)
             props.Logging = CreateECSFargateServiceLogDriver(environment, projectName);
     }
 
-    internal void ApplyECSFargateServiceDefaults(AWSCDKEnvironmentResource environment, FargateServiceProps props)
+    internal protected virtual void ApplyECSFargateServiceDefaults(AWSCDKEnvironmentResource environment, FargateServiceProps props)
     {
         if (props.Cluster == null)
             props.Cluster = environment.DeploymentConstructProvider.GetDefaultECSCluster();
@@ -172,7 +174,7 @@ public class DefaultValuesProvider
         { "maxmemory-policy", "volatile-lru" }
     };
 
-    internal void ApplyCfnReplicationGroupPropsDefaults(AWSCDKEnvironmentResource environment, CfnReplicationGroupProps props)
+    internal protected virtual void ApplyCfnReplicationGroupPropsDefaults(AWSCDKEnvironmentResource environment, CfnReplicationGroupProps props)
     {
         if (props.ReplicationGroupDescription == null)
             props.ReplicationGroupDescription = ElasticCacheClusterReplicationGroupDescription;

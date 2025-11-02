@@ -1,18 +1,24 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Amazon.CDK;
+using Amazon.CDK.AWS.APIGateway;
 using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.ECS.Patterns;
 using Amazon.CDK.AWS.ElastiCache;
+using Amazon.CDK.AWS.Events.Targets;
 using Amazon.CDK.AWS.Lambda;
+using Amazon.CDK.Pipelines;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Lambda;
 using Aspire.Hosting.Publishing;
+using Constructs;
+using Json.More;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
 namespace Aspire.Hosting.AWS.Environments;
@@ -33,36 +39,7 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
             ClearOutputDirectory(outputPath);
 
             ProcessElastiCacheRedisCluster(model, environment);
-
-            foreach(var project in model.Resources.OfType<ProjectResource>())
-            {
-                if (project.IsExcludedFromPublish())
-                    continue;
-
-                IResourceAnnotation? annotation = null;
-                if (project.TryGetLastAnnotation<PublishCDKECSFargateWithALBAnnotation>(out var fargateWebAnnotation))
-                {
-                    annotation = fargateWebAnnotation;
-                }
-                else if (project.TryGetLastAnnotation<PublishCDKECSFargateAnnotation>(out var fargateServiceAnnotation))
-                {
-                    annotation = fargateServiceAnnotation;
-                }
-                else if (project.TryGetLastAnnotation<PublishCDKLambdaAnnotation>(out var lambdaFunctionAnnotation))
-                {
-                    annotation = lambdaFunctionAnnotation;
-                }
-                
-                if (annotation == null)
-                {
-                    annotation = DetermineDefaultPublishAnnotation(environment, project);
-                }
-
-                if (annotation == null)
-                    continue;
-
-                await ProcessPublishAnnotation(step, model, environment, project, annotation!, cancellationToken);
-            }
+            await ProcessProjects(step, model, environment, cancellationToken);
 
             var assembly = environment.CDKApp.Synth();
 
@@ -80,6 +57,56 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
         }
     }
 
+    private async Task ProcessProjects(IPublishingStep step, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken)
+    {
+        foreach (var projectResource in model.Resources.OfType<ProjectResource>())
+        {
+            if (projectResource.IsExcludedFromPublish())
+                continue;
+
+            IResourceAnnotation? annotation = null;
+            if (projectResource.TryGetLastAnnotation<PublishCDKECSFargateWithALBAnnotation>(out var fargateWebAnnotation))
+            {
+                annotation = fargateWebAnnotation;
+            }
+            else if (projectResource.TryGetLastAnnotation<PublishCDKECSFargateAnnotation>(out var fargateServiceAnnotation))
+            {
+                annotation = fargateServiceAnnotation;
+            }
+            else if (projectResource.TryGetLastAnnotation<PublishCDKLambdaAnnotation>(out var lambdaFunctionAnnotation))
+            {
+                annotation = lambdaFunctionAnnotation;
+            }
+
+            if (annotation == null)
+            {
+                annotation = DetermineDefaultPublishAnnotation(environment, projectResource);
+            }
+
+            if (annotation == null)
+                continue;
+
+            switch (annotation)
+            {
+                case PublishCDKLambdaAnnotation lambdaAnnotation:
+                    if (!(projectResource is LambdaProjectResource))
+                    {
+                        throw new InvalidOperationException($"Project resource {projectResource.Name} is not a {nameof(LambdaProjectResource)}");
+                    }
+                    await ProcessLambdaFunctionAsync(step, model, environment, (LambdaProjectResource)projectResource, lambdaAnnotation, cancellationToken);
+                    break;
+                case PublishCDKECSFargateWithALBAnnotation fargateWithALBAnnotation:
+                    await ProcessECSFargateServiceWithALBAsync(step, model, environment, projectResource, fargateWithALBAnnotation, cancellationToken);
+                    break;
+                case PublishCDKECSFargateAnnotation fargateAnnotation:
+                    await ProcessECSFargateServiceAsync(step, model, environment, projectResource, fargateAnnotation, cancellationToken);
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unsupported publish annotation type: {annotation.GetType().FullName}");
+            }
+        }
+    }
+
     private IResourceAnnotation? DetermineDefaultPublishAnnotation(AWSCDKEnvironmentResource environment, ProjectResource projectResource)
     {
         if (projectResource is LambdaProjectResource)
@@ -87,7 +114,7 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
             var annotation = new PublishCDKLambdaAnnotation();
             return annotation;
         }
-        if (environment.DefaultComputeService == DeploymentComputeService.ECSFargate)
+        if (environment.PreferredComputeService == DeploymentComputeService.ECSFargate)
         {
             if(projectResource.GetEndpoints().Any())
             {
@@ -102,28 +129,6 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
         }
 
         return null;
-    }
-
-    private async Task ProcessPublishAnnotation(IPublishingStep step, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, ProjectResource projectResource, IResourceAnnotation annotation, CancellationToken cancellationToken)
-    {
-        switch(annotation)
-        {
-            case PublishCDKLambdaAnnotation lambdaAnnotation:
-                if (!(projectResource is LambdaProjectResource))
-                {
-                    throw new InvalidOperationException($"Project resource {projectResource.Name} is not a {nameof(LambdaProjectResource)}");
-                }
-                await ProcessLambdaFunctionAsync(step, model, environment, (LambdaProjectResource)projectResource, lambdaAnnotation, cancellationToken);
-                break;
-            case PublishCDKECSFargateWithALBAnnotation fargateWithALBAnnotation:
-                await ProcessECSFargateServiceWithALBAsync(step, model, environment, projectResource, fargateWithALBAnnotation, cancellationToken);
-                break;
-            case PublishCDKECSFargateAnnotation fargateAnnotation:
-                await ProcessECSFargateServiceAsync(step, model, environment, projectResource, fargateAnnotation, cancellationToken);
-                break;
-            default:
-                throw new InvalidOperationException($"Unsupported publish annotation type: {annotation.GetType().FullName}");
-        }
     }
 
     private void ProcessElastiCacheRedisCluster(DistributedApplicationModel model, AWSCDKEnvironmentResource environment)
@@ -145,7 +150,7 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
 
             var cluster = new CfnReplicationGroup(environment.CDKStack, $"ElastiCache-{resource.Name}", clusterProps);
             publishAnnotation.Config.ConstructCfnReplicationGroupCallback?.Invoke(cluster);
-            resource.Annotations.Add(new LinkedConstructAnnotations { LinkedConstruct = cluster });
+            ApplyLinkedConstructAnnotation(resource, cluster);
         }
     }
 
@@ -179,7 +184,9 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
 
             var function = new Function(environment.CDKStack, $"Function-{lambdaFunction.Name}", functionProps);
             publishAnnotation.Config.ConstructFunctionCallback?.Invoke(function);
-            lambdaFunction.Annotations.Add(new LinkedConstructAnnotations { LinkedConstruct = function });
+            ApplyLinkedConstructAnnotation(lambdaFunction, function);
+
+            await ApplyDeploymentTagAsync(environment, lambdaFunction, function, cancellationToken);
 
             await activityTask.SucceedAsync(cancellationToken: cancellationToken);
         }
@@ -212,13 +219,15 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
             {
                 TaskImageOptions = taskImageOptions
             };
-            ProcessRelationShips(fargateServiceProps, projectResource);
             publishAnnotation.Config.PropsApplicationLoadBalancedFargateServiceCallback?.Invoke(fargateServiceProps);
             environment.DefaultValuesProvider.ApplyECSFargateServiceWithALBDefaults(environment, fargateServiceProps);
+            ProcessRelationShips(fargateServiceProps, projectResource);
 
             var fargateService = new ApplicationLoadBalancedFargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
             publishAnnotation.Config.ConstructApplicationLoadBalancedFargateServiceCallback?.Invoke(fargateService);
-            projectResource.Annotations.Add(new LinkedConstructAnnotations { LinkedConstruct = fargateService });
+            ApplyLinkedConstructAnnotation(projectResource, fargateService);
+
+            await ApplyDeploymentTagAsync(environment, projectResource, fargateService.Service, cancellationToken);
 
             await activityTask.SucceedAsync(cancellationToken: cancellationToken);
         }
@@ -268,7 +277,9 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
 
             var fargateService = new FargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
             publishAnnotation.Config.ConstructFargateServiceCallback?.Invoke(fargateService);
-            projectResource.Annotations.Add(new LinkedConstructAnnotations { LinkedConstruct = fargateService });
+            ApplyLinkedConstructAnnotation(projectResource, fargateService);
+
+            await ApplyDeploymentTagAsync(environment, projectResource, fargateService, cancellationToken);
 
             await activityTask.SucceedAsync(cancellationToken: cancellationToken);
         }
@@ -301,16 +312,38 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
 
     private void ApplyRelationshipEnvironmentVariable(IDictionary<string, string> environmentVariables, IResource resource)
     {
-        var relatedAnnotations = resource.Annotations.OfType<ResourceRelationshipAnnotation>().Where(annotation => annotation.Resource is IResourceWithConnectionString);
+        var relatedAnnotations = resource.Annotations.OfType<ResourceRelationshipAnnotation>();
         foreach (var relatedAnnotation in relatedAnnotations)
         {
-            if (!relatedAnnotation.Resource.TryGetLastAnnotation<LinkedConstructAnnotations>(out var targetLinkedConstructAnnotation))
+            if (relatedAnnotation.Type != "Reference" || !relatedAnnotation.Resource.TryGetLastAnnotation<LinkedConstructAnnotations>(out var targetLinkedConstructAnnotation))
                 continue;
 
-            if (targetLinkedConstructAnnotation.LinkedConstruct is CfnReplicationGroup construct)
+            if (targetLinkedConstructAnnotation.LinkedConstruct is CfnReplicationGroup cacheConstruct)
             {
-                environmentVariables[$"ConnectionStrings__{relatedAnnotation.Resource.Name}"] = $"{Token.AsString(construct.AttrPrimaryEndPointAddress)}:{Token.AsString(construct.AttrPrimaryEndPointPort)}";
+                environmentVariables[$"ConnectionStrings__{relatedAnnotation.Resource.Name}"] = $"{Token.AsString(cacheConstruct.AttrPrimaryEndPointAddress)}:{Token.AsString(cacheConstruct.AttrPrimaryEndPointPort)}";
             }
+            else if (targetLinkedConstructAnnotation.LinkedConstruct is ApplicationLoadBalancedFargateService albFargateConstruct)
+            {
+                foreach(var listener in albFargateConstruct.LoadBalancer.Listeners)
+                {
+                    string protocol = listener.Port == 443 ? "https" : "http";
+                    environmentVariables[$"services__{relatedAnnotation.Resource.Name}__{protocol}__0"] = $"{protocol}://{Token.AsString(albFargateConstruct.LoadBalancer.LoadBalancerDnsName)}:{Token.AsString(listener.Port)}/";
+                }
+            }
+        }
+    }
+
+    private void ApplyLinkedConstructAnnotation(IResource resource, Construct sourceConstruct)
+    {
+        resource.Annotations.Add(new LinkedConstructAnnotations { LinkedConstruct = sourceConstruct });
+
+        var relatedAnnotations = resource.Annotations.OfType<ResourceRelationshipAnnotation>();
+        foreach (var relatedAnnotation in relatedAnnotations)
+        {
+            if (relatedAnnotation.Type != "Reference" || !relatedAnnotation.Resource.TryGetLastAnnotation<LinkedConstructAnnotations>(out var targetLinkedConstructAnnotation))
+                continue;
+
+            sourceConstruct.Node.AddDependency(targetLinkedConstructAnnotation.LinkedConstruct);
         }
     }
 
@@ -380,6 +413,23 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "Error switching CDK assets file {file} to use PowerShell for restoring tarball", file);
+            }
+        }
+    }
+
+    private async Task ApplyDeploymentTagAsync(AWSCDKEnvironmentResource environment, IResource aspireResource, IConstruct scope, CancellationToken cancellationToken)
+    {
+        if (aspireResource.TryGetLastAnnotation<DeploymentImageTagCallbackAnnotation>(out var deploymentTag))
+        {
+            var context = new DeploymentImageTagCallbackAnnotationContext
+            {
+                Resource = aspireResource,
+                CancellationToken = cancellationToken,
+            };
+            var tag = await deploymentTag.Callback(context).ConfigureAwait(false);
+            if (tag != null)
+            {
+                Tags.Of(scope).Add(environment.DefaultValuesProvider.DeploymentTagName, tag);
             }
         }
     }

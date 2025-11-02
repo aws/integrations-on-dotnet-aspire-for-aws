@@ -18,16 +18,16 @@ public enum DeploymentComputeService { ECSFargate }
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 public abstract class AWSCDKEnvironmentResource : Resource
 {
-    public DeploymentComputeService DefaultComputeService { get; private set; }
+    public DeploymentComputeService PreferredComputeService { get; private set; }
 
     public DeploymentConstructProvider DeploymentConstructProvider { get; }
 
-    public DefaultValuesProvider DefaultValuesProvider { get; }
+    public DefaultProvider DefaultValuesProvider { get; }
 
-    protected AWSCDKEnvironmentResource(string name, DeploymentComputeService defaultComputeService, DefaultValuesProvider defaultProvider)
+    protected AWSCDKEnvironmentResource(string name, DeploymentComputeService preferredComputeService, DefaultProvider defaultProvider)
     : base(name)
     {
-        DefaultComputeService = defaultComputeService;
+        PreferredComputeService = preferredComputeService;
         DefaultValuesProvider = defaultProvider;
 
         CDKApp = new App(new AppProps
@@ -87,8 +87,8 @@ public abstract class AWSCDKEnvironmentResource : Resource
 public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
     where T : Stack 
 {
-    public AWSCDKEnvironmentResource(string name, DeploymentComputeService defaultComputeService, DefaultValuesProvider defaultProvider, Func<App, T> stackFactory)
-        : base(name, defaultComputeService, defaultProvider)
+    public AWSCDKEnvironmentResource(string name, DeploymentComputeService preferredComputeService, DefaultProvider defaultProvider, Func<App, T> stackFactory)
+        : base(name, preferredComputeService, defaultProvider)
     {
         EnvironmentStack = stackFactory(CDKApp);
         var stacks = CDKApp.Node.Children
