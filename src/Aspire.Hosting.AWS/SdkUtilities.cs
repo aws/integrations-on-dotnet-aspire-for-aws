@@ -28,7 +28,7 @@ internal static class SdkUtilities
 
     internal static string GetAssemblyVersion()
     {
-        var attribute = typeof(AWSLifecycleHook).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        var attribute = typeof(SdkUtilities).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
         return attribute != null ? attribute.InformationalVersion.Split('+')[0] : "Unknown";
     }
 

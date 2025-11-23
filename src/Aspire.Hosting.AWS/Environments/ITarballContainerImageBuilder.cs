@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 namespace Aspire.Hosting.AWS.Environments;
 
 #pragma warning disable ASPIREPUBLISHERS001
+#pragma warning disable ASPIREPIPELINES003
 
 public interface ITarballContainerImageBuilder
 {

@@ -1,24 +1,19 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Amazon.CDK;
-using Amazon.CDK.AWS.APIGateway;
 using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.ECS.Patterns;
 using Amazon.CDK.AWS.ElastiCache;
-using Amazon.CDK.AWS.Events.Targets;
 using Amazon.CDK.AWS.Lambda;
-using Amazon.CDK.Pipelines;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Lambda;
-using Aspire.Hosting.Publishing;
+using Aspire.Hosting.Pipelines;
 using Constructs;
-using Json.More;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Threading;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
 namespace Aspire.Hosting.AWS.Environments;
@@ -26,11 +21,11 @@ namespace Aspire.Hosting.AWS.Environments;
 #pragma warning disable ASPIREPUBLISHERS001
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-internal class CDKPublishingContext(IPublishingActivityReporter activityReporter, ILambdaDeploymentPackager lambdaDeploymentPackager, ITarballContainerImageBuilder imageBuilder, ILogger<CDKPublishingContext> logger)
+internal class CDKPublishingContext(ILambdaDeploymentPackager lambdaDeploymentPackager, ITarballContainerImageBuilder imageBuilder, ILogger<CDKPublishingContext> logger)
 {
-    public async Task WriteModelAsync(DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken = default)
+    public async Task WriteModelAsync(PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken = default)
     {
-        var step = await activityReporter.CreateStepAsync($"Synthesizing CDK Application", cancellationToken);
+        var step = await context.ReportingStep.CreateTaskAsync($"Synthesizing CDK Application", cancellationToken);
         try
         {
             var outputPath = environment.CDKApp.Outdir;
@@ -38,8 +33,8 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
             logger.LogInformation("Publishing to {output}", outputPath);
             ClearOutputDirectory(outputPath);
 
-            ProcessElastiCacheRedisCluster(model, environment);
-            await ProcessProjects(step, model, environment, cancellationToken);
+            ProcessElastiCacheRedisCluster(context, model, environment);
+            await ProcessProjects(context, step, model, environment, cancellationToken);
 
             var assembly = environment.CDKApp.Synth();
 
@@ -57,7 +52,7 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
         }
     }
 
-    private async Task ProcessProjects(IPublishingStep step, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken)
+    private async Task ProcessProjects(PipelineStepContext context, IReportingTask step, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken)
     {
         foreach (var projectResource in model.Resources.OfType<ProjectResource>())
         {
@@ -93,13 +88,13 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
                     {
                         throw new InvalidOperationException($"Project resource {projectResource.Name} is not a {nameof(LambdaProjectResource)}");
                     }
-                    await ProcessLambdaFunctionAsync(step, model, environment, (LambdaProjectResource)projectResource, lambdaAnnotation, cancellationToken);
+                    await ProcessLambdaFunctionAsync(context, model, environment, (LambdaProjectResource)projectResource, lambdaAnnotation, cancellationToken);
                     break;
                 case PublishCDKECSFargateWithALBAnnotation fargateWithALBAnnotation:
-                    await ProcessECSFargateServiceWithALBAsync(step, model, environment, projectResource, fargateWithALBAnnotation, cancellationToken);
+                    await ProcessECSFargateServiceWithALBAsync(context, model, environment, projectResource, fargateWithALBAnnotation, cancellationToken);
                     break;
                 case PublishCDKECSFargateAnnotation fargateAnnotation:
-                    await ProcessECSFargateServiceAsync(step, model, environment, projectResource, fargateAnnotation, cancellationToken);
+                    await ProcessECSFargateServiceAsync(context, model, environment, projectResource, fargateAnnotation, cancellationToken);
                     break;
                 default:
                     throw new InvalidOperationException($"Unsupported publish annotation type: {annotation.GetType().FullName}");
@@ -131,7 +126,7 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
         return null;
     }
 
-    private void ProcessElastiCacheRedisCluster(DistributedApplicationModel model, AWSCDKEnvironmentResource environment)
+    private void ProcessElastiCacheRedisCluster(PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment)
     {
         var resources = model.Resources.Where(r => r is RedisResource).ToArray();
         foreach(var resource in resources)
@@ -154,7 +149,7 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
         }
     }
 
-    private async Task ProcessLambdaFunctionAsync(IPublishingStep step, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, LambdaProjectResource lambdaFunction, PublishCDKLambdaAnnotation publishAnnotation, CancellationToken cancellationToken)
+    private async Task ProcessLambdaFunctionAsync(PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, LambdaProjectResource lambdaFunction, PublishCDKLambdaAnnotation publishAnnotation, CancellationToken cancellationToken)
     {
         var tempFolder = Path.Combine(Path.GetTempPath(), Path.GetTempFileName());
         if (File.Exists(tempFolder))
@@ -162,7 +157,7 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
             File.Delete(tempFolder);
         }
 
-        var activityTask = await step.CreateTaskAsync($"Packaging Lambda function {lambdaFunction.Name}", cancellationToken);
+        var activityTask = await context.ReportingStep.CreateTaskAsync($"Packaging Lambda function {lambdaFunction.Name}", cancellationToken);
         try
         {
             if (!lambdaFunction.TryGetLastAnnotation<LambdaFunctionAnnotation>(out var lambdaFunctionAnnotation))
@@ -199,9 +194,9 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
     }
 
 
-    private async Task ProcessECSFargateServiceWithALBAsync(IPublishingStep step, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, ProjectResource projectResource, PublishCDKECSFargateWithALBAnnotation publishAnnotation, CancellationToken cancellationToken)
+    private async Task ProcessECSFargateServiceWithALBAsync(PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, ProjectResource projectResource, PublishCDKECSFargateWithALBAnnotation publishAnnotation, CancellationToken cancellationToken)
     {
-        var activityTask = await step.CreateTaskAsync($"Packaging {projectResource.Name} for ECS Fargate", cancellationToken);
+        var activityTask = await context.ReportingStep.CreateTaskAsync($"Packaging {projectResource.Name} for ECS Fargate", cancellationToken);
         try
         {
             var imageTarballPath = await imageBuilder.BuildTarballImageAsync(projectResource, cancellationToken);
@@ -239,9 +234,9 @@ internal class CDKPublishingContext(IPublishingActivityReporter activityReporter
         }
     }
 
-    private async Task ProcessECSFargateServiceAsync(IPublishingStep step, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, ProjectResource projectResource, PublishCDKECSFargateAnnotation publishAnnotation, CancellationToken cancellationToken)
+    private async Task ProcessECSFargateServiceAsync(PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, ProjectResource projectResource, PublishCDKECSFargateAnnotation publishAnnotation, CancellationToken cancellationToken)
     {
-        var activityTask = await step.CreateTaskAsync($"Packaging {projectResource.Name} for ECS Fargate", cancellationToken);
+        var activityTask = await context.ReportingStep.CreateTaskAsync($"Packaging {projectResource.Name} for ECS Fargate", cancellationToken);
         try
         {
             var imageTarballPath = await imageBuilder.BuildTarballImageAsync(projectResource, cancellationToken);

@@ -1,6 +1,7 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Pipelines;
 using Aspire.Hosting.Publishing;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics.CodeAnalysis;
@@ -36,17 +37,30 @@ public abstract class AWSCDKEnvironmentResource : Resource
         });
 
         DeploymentConstructProvider = new DeploymentConstructProvider(this);
-        Annotations.Add(new PublishingCallbackAnnotation(PublishAsync));
+        Annotations.Add(new PipelineStepAnnotation(ConfigurePipeline));
     }
 
     internal App CDKApp { get; private init; }
 
     internal abstract Stack CDKStack { get; }
 
-    private Task PublishAsync(PublishingContext context)
+    private PipelineStep ConfigurePipeline(PipelineStepFactoryContext factoryContext)
     {
-        var cdkCtx = context.Services.GetRequiredService<CDKPublishingContext>();
-        return cdkCtx.WriteModelAsync(context.Model, this);
+        var model = factoryContext.PipelineContext.Model;
+
+        var step = new PipelineStep
+        {
+            Name = "AWS CDK Publish",
+            Action = async (context) =>
+            {
+                var cdkCtx = context.Services.GetRequiredService<CDKPublishingContext>();
+                await cdkCtx.WriteModelAsync(context, model, this);
+            },
+            RequiredBySteps = [WellKnownPipelineSteps.Publish]
+        };
+
+        var cdkCtx = factoryContext.PipelineContext.Services.GetRequiredService<CDKPublishingContext>();
+        return step;
     }
 
     private string DetermineOuptutDirectory()
