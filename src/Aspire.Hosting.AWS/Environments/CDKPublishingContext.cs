@@ -21,7 +21,7 @@ namespace Aspire.Hosting.AWS.Environments;
 #pragma warning disable ASPIREPUBLISHERS001
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-internal class CDKPublishingContext(ILambdaDeploymentPackager lambdaDeploymentPackager, ITarballContainerImageBuilder imageBuilder, ILogger<CDKPublishingContext> logger)
+internal class CDKPublishingContext(ITarballContainerImageBuilder imageBuilder, ILogger<CDKPublishingContext> logger)
 {
     public async Task WriteModelAsync(PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken = default)
     {
@@ -47,8 +47,8 @@ internal class CDKPublishingContext(ILambdaDeploymentPackager lambdaDeploymentPa
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to package synthesize CDK application");
-            await step.FailAsync($"Failed to package synthesize CDK application: {ex}", cancellationToken);
+            logger.LogError(ex, "Failed to synthesize CDK application");
+            await step.FailAsync($"Failed to synthesize CDK application: {ex}", cancellationToken);
         }
     }
 
@@ -151,13 +151,7 @@ internal class CDKPublishingContext(ILambdaDeploymentPackager lambdaDeploymentPa
 
     private async Task ProcessLambdaFunctionAsync(PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, LambdaProjectResource lambdaFunction, PublishCDKLambdaAnnotation publishAnnotation, CancellationToken cancellationToken)
     {
-        var tempFolder = Path.Combine(Path.GetTempPath(), Path.GetTempFileName());
-        if (File.Exists(tempFolder))
-        {
-            File.Delete(tempFolder);
-        }
-
-        var activityTask = await context.ReportingStep.CreateTaskAsync($"Packaging Lambda function {lambdaFunction.Name}", cancellationToken);
+        var activityTask = await context.ReportingStep.CreateTaskAsync($"Preparing Lambda function {lambdaFunction.Name}", cancellationToken);
         try
         {
             if (!lambdaFunction.TryGetLastAnnotation<LambdaFunctionAnnotation>(out var lambdaFunctionAnnotation))
@@ -165,13 +159,10 @@ internal class CDKPublishingContext(ILambdaDeploymentPackager lambdaDeploymentPa
                 throw new InvalidOperationException($"Missing {nameof(LambdaFunctionAnnotation)} annotation");
             }
 
-            logger.LogInformation("Creating deployment package for Lambda function '{LambdaFunctionName}'...", lambdaFunction.Name);
-            var results = await lambdaDeploymentPackager.CreateDeploymentPackageAsync(lambdaFunction, tempFolder, cancellationToken);
-
             var functionProps = new FunctionProps
             {
-                Code = Code.FromAsset(results.LocalLocation!),
-                Handler = lambdaFunctionAnnotation!.Handler
+                Code = Code.FromAsset(lambdaFunctionAnnotation.DeploymentBundlePath!),
+                Handler = lambdaFunctionAnnotation.Handler
             };
             ProcessRelationShips(functionProps, lambdaFunction);
             publishAnnotation.Config.PropsFunctionCallback?.Invoke(functionProps);
@@ -196,7 +187,7 @@ internal class CDKPublishingContext(ILambdaDeploymentPackager lambdaDeploymentPa
 
     private async Task ProcessECSFargateServiceWithALBAsync(PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, ProjectResource projectResource, PublishCDKECSFargateWithALBAnnotation publishAnnotation, CancellationToken cancellationToken)
     {
-        var activityTask = await context.ReportingStep.CreateTaskAsync($"Packaging {projectResource.Name} for ECS Fargate", cancellationToken);
+        var activityTask = await context.ReportingStep.CreateTaskAsync($"Preparing {projectResource.Name} for ECS Fargate", cancellationToken);
         try
         {
             var imageTarballPath = await imageBuilder.BuildTarballImageAsync(projectResource, cancellationToken);
@@ -228,15 +219,15 @@ internal class CDKPublishingContext(ILambdaDeploymentPackager lambdaDeploymentPa
         }
         catch(Exception ex)
         {
-            logger.LogError(ex, "Failed to package {ProjectName} for ECS Fargate.", projectResource.Name);
-            await activityTask.FailAsync($"Failed to package {projectResource.Name} for ECS Fargate: { ex}", cancellationToken);
+            logger.LogError(ex, "Failed to prepare {ProjectName} for ECS Fargate.", projectResource.Name);
+            await activityTask.FailAsync($"Failed to prepare {projectResource.Name} for ECS Fargate: { ex}", cancellationToken);
             throw;
         }
     }
 
     private async Task ProcessECSFargateServiceAsync(PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, ProjectResource projectResource, PublishCDKECSFargateAnnotation publishAnnotation, CancellationToken cancellationToken)
     {
-        var activityTask = await context.ReportingStep.CreateTaskAsync($"Packaging {projectResource.Name} for ECS Fargate", cancellationToken);
+        var activityTask = await context.ReportingStep.CreateTaskAsync($"Preparing {projectResource.Name} for ECS Fargate", cancellationToken);
         try
         {
             var imageTarballPath = await imageBuilder.BuildTarballImageAsync(projectResource, cancellationToken);
@@ -280,8 +271,8 @@ internal class CDKPublishingContext(ILambdaDeploymentPackager lambdaDeploymentPa
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to package {ProjectName} for ECS Fargate.", projectResource.Name);
-            await activityTask.FailAsync($"Failed to package {projectResource.Name} for ECS Fargate: { ex}", cancellationToken);
+            logger.LogError(ex, "Failed to prepare {ProjectName} for ECS Fargate.", projectResource.Name);
+            await activityTask.FailAsync($"Failed to prepare {projectResource.Name} for ECS Fargate: { ex}", cancellationToken);
             throw;
         }
     }

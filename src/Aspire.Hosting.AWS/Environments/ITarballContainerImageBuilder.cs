@@ -16,11 +16,10 @@ public interface ITarballContainerImageBuilder
     Task<string> BuildTarballImageAsync(ProjectResource resource, CancellationToken cancellationToken = default(CancellationToken));
 }
 
-internal class DefaultTarballContainerImageBuilder(ILogger<DefaultTarballContainerImageBuilder> logger, IResourceContainerImageBuilder containerImageBuilder, IProcessCommandService processCommandService) : ITarballContainerImageBuilder
+internal class DefaultTarballContainerImageBuilder(ILogger<DefaultTarballContainerImageBuilder> logger, IProcessCommandService processCommandService) : ITarballContainerImageBuilder
 {
     public async Task<string> BuildTarballImageAsync(ProjectResource resource, CancellationToken cancellationToken)
     {
-        await containerImageBuilder.BuildImageAsync(resource, cancellationToken: cancellationToken);
         var tarballFilePath = Path.GetTempFileName() + ".tar";
 
         var imageTag = resource.Name.ToLower() + ":latest";
@@ -29,8 +28,8 @@ internal class DefaultTarballContainerImageBuilder(ILogger<DefaultTarballContain
         string arguments;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            shellCommand = "powershell";
-            arguments = $"-Command \"{dockerSaveCommand}\"";
+            shellCommand = "cmd";
+            arguments = $"/c \"{dockerSaveCommand}\"";
         }
         else
         {
@@ -38,8 +37,10 @@ internal class DefaultTarballContainerImageBuilder(ILogger<DefaultTarballContain
             arguments = $"-c \"{dockerSaveCommand}\"";
         }
 
-        if (processCommandService.RunProcess(logger, shellCommand, arguments, Environment.CurrentDirectory) != 0)
+        var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, shellCommand, arguments, Environment.CurrentDirectory, cancellationToken);
+        if (results.ExitCode != 0)
         {
+            logger.LogError("Failed to save container image {ImageTag} as tarball for publish assets. Exit Code: {ExitCode}, Output: {Output}", imageTag, results.ExitCode, results.Output);
             throw new InvalidOperationException($"Failed to save container image {resource.Name} as tarball for publish assets.");
         }
         

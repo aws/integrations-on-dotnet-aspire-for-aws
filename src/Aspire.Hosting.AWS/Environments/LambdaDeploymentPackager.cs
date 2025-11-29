@@ -26,7 +26,8 @@ internal class LambdaDeploymentPackager(IProcessCommandService processCommandSer
                 Directory.GetParent(lambdaFunction.GetProjectMetadata().ProjectPath)!.FullName, 
                 cancellationToken);
 
-        logger.LogInformation("Package output\n{output}", results.Output);
+        var logLevel = results.ExitCode == 0 ? LogLevel.Debug : LogLevel.Error;
+        logger.Log(logLevel, "Package output: {output}", results.Output);
 
         return await Task.FromResult(new LambdaDeploymentPackagerOutput { Success = results.ExitCode == 0, LocalLocation = results.ExitCode == 0 ? zipFilePath : null });
     }

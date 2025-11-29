@@ -50,14 +50,16 @@ public abstract class AWSCDKEnvironmentResource : Resource
 
         var step = new PipelineStep
         {
-            Name = "AWS CDK Publish",
+            Name = $"publish-{Name}",
             Action = async (context) =>
             {
                 var cdkCtx = context.Services.GetRequiredService<CDKPublishingContext>();
                 await cdkCtx.WriteModelAsync(context, model, this);
             },
-            RequiredBySteps = [WellKnownPipelineSteps.Publish]
+            RequiredBySteps = [WellKnownPipelineSteps.Publish],
+            DependsOnSteps = [WellKnownPipelineSteps.PublishPrereq]
         };
+        step.DependsOn(WellKnownPipelineSteps.Build);
 
         var cdkCtx = factoryContext.PipelineContext.Services.GetRequiredService<CDKPublishingContext>();
         return step;
