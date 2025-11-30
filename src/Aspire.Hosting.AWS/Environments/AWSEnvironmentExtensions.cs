@@ -18,6 +18,7 @@ public static class AWSEnvironmentExtensions
     private static void AddEnvironmentServices(this IDistributedApplicationBuilder builder)
     {
         builder.Services.TryAddSingleton<CDKPublishingContext, CDKPublishingContext>();
+        builder.Services.TryAddSingleton<CDKDeployContext, CDKDeployContext>();
         builder.Services.TryAddSingleton<ITarballContainerImageBuilder, DefaultTarballContainerImageBuilder>();
         builder.Services.TryAddSingleton<IProcessCommandService, ProcessCommandService>();
         builder.Services.TryAddSingleton<ILambdaDeploymentPackager, LambdaDeploymentPackager>();

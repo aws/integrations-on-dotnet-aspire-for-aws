@@ -37,18 +37,19 @@ public abstract class AWSCDKEnvironmentResource : Resource
         });
 
         DeploymentConstructProvider = new DeploymentConstructProvider(this);
-        Annotations.Add(new PipelineStepAnnotation(ConfigurePipeline));
+        Annotations.Add(new PipelineStepAnnotation(ConfigurePublishPipelineStep));
+        Annotations.Add(new PipelineStepAnnotation(ConfigureDeployPipelineStep));
     }
 
     internal App CDKApp { get; private init; }
 
     internal abstract Stack CDKStack { get; }
 
-    private PipelineStep ConfigurePipeline(PipelineStepFactoryContext factoryContext)
+    private PipelineStep ConfigurePublishPipelineStep(PipelineStepFactoryContext factoryContext)
     {
         var model = factoryContext.PipelineContext.Model;
 
-        var step = new PipelineStep
+        var publishStep = new PipelineStep
         {
             Name = $"publish-{Name}",
             Action = async (context) =>
@@ -59,10 +60,29 @@ public abstract class AWSCDKEnvironmentResource : Resource
             RequiredBySteps = [WellKnownPipelineSteps.Publish],
             DependsOnSteps = [WellKnownPipelineSteps.PublishPrereq]
         };
-        step.DependsOn(WellKnownPipelineSteps.Build);
+        publishStep.DependsOn(WellKnownPipelineSteps.Build);
 
-        var cdkCtx = factoryContext.PipelineContext.Services.GetRequiredService<CDKPublishingContext>();
-        return step;
+        return publishStep;
+    }
+
+    private PipelineStep ConfigureDeployPipelineStep(PipelineStepFactoryContext factoryContext)
+    {
+        var model = factoryContext.PipelineContext.Model;
+
+        var deployStep = new PipelineStep
+        {
+            Name = $"deploy-{Name}",
+            Action = async (context) =>
+            {
+                var cdkCtx = context.Services.GetRequiredService<CDKDeployContext>();
+                await cdkCtx.ExecuteCDKDeployAsync(context, model, this);
+            },
+            RequiredBySteps = [WellKnownPipelineSteps.Deploy],
+            DependsOnSteps = [WellKnownPipelineSteps.DeployPrereq]
+        };
+        deployStep.DependsOn(WellKnownPipelineSteps.Publish);
+
+        return deployStep;
     }
 
     private string DetermineOuptutDirectory()

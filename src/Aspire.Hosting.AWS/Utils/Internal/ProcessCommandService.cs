@@ -39,7 +39,7 @@ public interface IProcessCommandService
     /// <param name="arguments"></param>
     /// <param name="workingDirectory"></param>
     /// <returns>Exit code</returns>
-    int RunProcess(ILogger logger, string path, string arguments, string workingDirectory);
+    int RunProcess(ILogger logger, string path, string arguments, string workingDirectory, bool streamOutputToLogger);
 }
 
 internal class ProcessCommandService : IProcessCommandService
@@ -131,7 +131,7 @@ internal class ProcessCommandService : IProcessCommandService
     /// <param name="arguments"></param>
     /// <param name="workingDirectory"></param>
     /// <returns></returns>
-    public int RunProcess(ILogger logger, string path, string arguments, string workingDirectory)
+    public int RunProcess(ILogger logger, string path, string arguments, string workingDirectory, bool streamOutputToLogger)
     {
         using var process = new Process
         {
@@ -153,6 +153,8 @@ internal class ProcessCommandService : IProcessCommandService
         {
             if (e.Data != null)
             {
+                if (streamOutputToLogger)
+                    logger.LogInformation(e.Data);
                 output.Append(e.Data);
             }
         };
@@ -161,6 +163,8 @@ internal class ProcessCommandService : IProcessCommandService
         {
             if (e.Data != null)
             {
+                if (streamOutputToLogger)
+                    logger.LogInformation(e.Data);
                 output.Append(e.Data);
             }
         };

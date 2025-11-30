@@ -123,8 +123,8 @@ internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> log
 
                     var projectName = new FileInfo(projectPath).Name;
                     var workingDirectory = Directory.GetParent(projectPath)!.FullName;
-                    processCommandService.RunProcess(logger, "dotnet", $"build {projectName}", workingDirectory);
-                    processCommandService.RunProcess(logger, "dotnet", $"build -c Release {projectName}", workingDirectory);
+                    processCommandService.RunProcess(logger, "dotnet", $"build {projectName}", workingDirectory, streamOutputToLogger: false);
+                    processCommandService.RunProcess(logger, "dotnet", $"build -c Release {projectName}", workingDirectory, streamOutputToLogger: false);
                 }
             }
         }

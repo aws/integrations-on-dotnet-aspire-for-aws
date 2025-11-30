@@ -16,20 +16,17 @@ internal class LambdaDeploymentPackager(IProcessCommandService processCommandSer
 {
     public async Task<LambdaDeploymentPackagerOutput> CreateDeploymentPackageAsync(LambdaProjectResource lambdaFunction, string outputDirectory, CancellationToken cancellationToken)
     {
-        processCommandService.RunProcess(logger, "dotnet", "tool install --global Amazon.Lambda.Tools", Environment.CurrentDirectory);
+        processCommandService.RunProcess(logger, "dotnet", "tool install --global Amazon.Lambda.Tools", Environment.CurrentDirectory, streamOutputToLogger: false);
 
         var zipFilePath = Path.Combine(outputDirectory,  $"{lambdaFunction.Name}.zip");
-        var results = await processCommandService.RunProcessAndCaptureOuputAsync(
+        var exitCode = processCommandService.RunProcess(
                 logger, 
                 "dotnet", 
                 $"lambda package --output \"{zipFilePath}\"", 
                 Directory.GetParent(lambdaFunction.GetProjectMetadata().ProjectPath)!.FullName, 
-                cancellationToken);
+                streamOutputToLogger: true);
 
-        var logLevel = results.ExitCode == 0 ? LogLevel.Debug : LogLevel.Error;
-        logger.Log(logLevel, "Package output: {output}", results.Output);
-
-        return await Task.FromResult(new LambdaDeploymentPackagerOutput { Success = results.ExitCode == 0, LocalLocation = results.ExitCode == 0 ? zipFilePath : null });
+        return await Task.FromResult(new LambdaDeploymentPackagerOutput { Success = exitCode == 0, LocalLocation = exitCode == 0 ? zipFilePath : null });
     }
 }
 
