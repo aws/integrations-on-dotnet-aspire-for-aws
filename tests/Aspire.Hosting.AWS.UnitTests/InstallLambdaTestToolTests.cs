@@ -162,7 +162,7 @@ public class InstallLambdaTestToolTests
             return Task.FromResult(result);
         }
 
-        public int RunProcess(ILogger logger, string path, string arguments, string workingDirectory, bool streamOutputToLogger)
+        public int RunProcess(ILogger logger, string path, string arguments, string workingDirectory, bool streamOutputToLogger, IDictionary<string, string>? environmentVariables = null)
         {
             if (CallCount == results.Length)
             {

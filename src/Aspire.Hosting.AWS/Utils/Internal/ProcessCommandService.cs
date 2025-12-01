@@ -39,7 +39,7 @@ public interface IProcessCommandService
     /// <param name="arguments"></param>
     /// <param name="workingDirectory"></param>
     /// <returns>Exit code</returns>
-    int RunProcess(ILogger logger, string path, string arguments, string workingDirectory, bool streamOutputToLogger);
+    int RunProcess(ILogger logger, string path, string arguments, string workingDirectory, bool streamOutputToLogger, IDictionary<string, string>? environmentVariables = null);
 }
 
 internal class ProcessCommandService : IProcessCommandService
@@ -131,7 +131,7 @@ internal class ProcessCommandService : IProcessCommandService
     /// <param name="arguments"></param>
     /// <param name="workingDirectory"></param>
     /// <returns></returns>
-    public int RunProcess(ILogger logger, string path, string arguments, string workingDirectory, bool streamOutputToLogger)
+    public int RunProcess(ILogger logger, string path, string arguments, string workingDirectory, bool streamOutputToLogger, IDictionary<string, string>? environmentVariables)
     {
         using var process = new Process
         {
@@ -146,6 +146,14 @@ internal class ProcessCommandService : IProcessCommandService
                 WindowStyle = ProcessWindowStyle.Hidden
             }
         };
+
+        if (environmentVariables != null)
+        {
+            foreach (var kvp in environmentVariables)
+            {
+                process.StartInfo.EnvironmentVariables[kvp.Key] = kvp.Value;
+            }
+        }
 
         var output = new StringBuilder();
 

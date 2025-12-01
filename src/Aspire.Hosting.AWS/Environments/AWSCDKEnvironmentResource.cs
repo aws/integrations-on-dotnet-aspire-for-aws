@@ -19,6 +19,11 @@ public enum DeploymentComputeService { ECSFargate }
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 public abstract class AWSCDKEnvironmentResource : Resource
 {
+    /// <summary>
+    /// Configuration for creating service clients from the AWS .NET SDK.
+    /// </summary>
+    public IAWSSDKConfig? AWSSDKConfig { get; set; }
+
     public DeploymentComputeService PreferredComputeService { get; private set; }
 
     public DeploymentConstructProvider DeploymentConstructProvider { get; }
