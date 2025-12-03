@@ -1,6 +1,7 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Amazon.CDK;
+using Amazon.CDK.AWS.Ecr.Assets;
 using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.ECS.Patterns;
 using Amazon.CDK.AWS.ElastiCache;
@@ -14,6 +15,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using static Amazon.CDK.AWS.ECS.CfnExpressGatewayService;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
 namespace Aspire.Hosting.AWS.Environments;
@@ -64,6 +66,10 @@ internal class CDKPublishingContext(ITarballContainerImageBuilder imageBuilder, 
             {
                 annotation = fargateWebAnnotation;
             }
+            if (projectResource.TryGetLastAnnotation<PublishCDKECSFargateExpressAnnotation>(out var fargateExpressAnnotation))
+            {
+                annotation = fargateExpressAnnotation;
+            }
             else if (projectResource.TryGetLastAnnotation<PublishCDKECSFargateAnnotation>(out var fargateServiceAnnotation))
             {
                 annotation = fargateServiceAnnotation;
@@ -89,6 +95,9 @@ internal class CDKPublishingContext(ITarballContainerImageBuilder imageBuilder, 
                         throw new InvalidOperationException($"Project resource {projectResource.Name} is not a {nameof(LambdaProjectResource)}");
                     }
                     await ProcessLambdaFunctionAsync(context, model, environment, (LambdaProjectResource)projectResource, lambdaAnnotation, cancellationToken);
+                    break;
+                case PublishCDKECSFargateExpressAnnotation:
+                    await ProcessECSFargateExpressServiceAsync(context, model, environment, projectResource, (PublishCDKECSFargateExpressAnnotation)fargateExpressAnnotation!, cancellationToken);
                     break;
                 case PublishCDKECSFargateWithALBAnnotation fargateWithALBAnnotation:
                     await ProcessECSFargateServiceWithALBAsync(context, model, environment, projectResource, fargateWithALBAnnotation, cancellationToken);
@@ -184,6 +193,47 @@ internal class CDKPublishingContext(ITarballContainerImageBuilder imageBuilder, 
         }
     }
 
+    private async Task ProcessECSFargateExpressServiceAsync(PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, ProjectResource projectResource, PublishCDKECSFargateExpressAnnotation publishAnnotation, CancellationToken cancellationToken)
+    {
+        var activityTask = await context.ReportingStep.CreateTaskAsync($"Preparing {projectResource.Name} for ECS Fargate", cancellationToken);
+        try
+        {
+            var imageTarballPath = await imageBuilder.BuildTarballImageAsync(projectResource, cancellationToken);
+
+            var asset = new TarballImageAsset(environment.CDKStack, $"ContainerTarBall-{projectResource.Name}", new TarballImageAssetProps
+            {
+                TarballFile = imageTarballPath
+            });
+
+            var primaryContainer = new ExpressGatewayContainerProperty
+            {
+                Image = asset.ImageUri
+            };
+
+            var fargateServiceProps = new CfnExpressGatewayServiceProps
+            {
+                PrimaryContainer = primaryContainer,
+                ExecutionRoleArn = "arn:aws:iam::626492997873:role/ecsTaskExecutionRole",
+                InfrastructureRoleArn = "arn:aws:iam::626492997873:role/ecsInfrastructureRoleForExpressServices",
+                ServiceName = projectResource.Name
+            };
+            publishAnnotation.Config.PropsCfnExpressGatewayServicePropsCallback?.Invoke(fargateServiceProps);
+            environment.DefaultValuesProvider.ApplyCfnExpressGatewayServiceDefaults(environment, fargateServiceProps);
+            ProcessRelationShips(fargateServiceProps, projectResource);
+
+            var fargateService = new CfnExpressGatewayService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
+            publishAnnotation.Config.ConstructCfnExpressGatewayServiceCallback?.Invoke(fargateService);
+            ApplyLinkedConstructAnnotation(projectResource, fargateService);
+
+            await activityTask.SucceedAsync(cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to prepare {ProjectName} for ECS Fargate.", projectResource.Name);
+            await activityTask.FailAsync($"Failed to prepare {projectResource.Name} for ECS Fargate: {ex}", cancellationToken);
+            throw;
+        }
+    }
 
     private async Task ProcessECSFargateServiceWithALBAsync(PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, ProjectResource projectResource, PublishCDKECSFargateWithALBAnnotation publishAnnotation, CancellationToken cancellationToken)
     {
@@ -275,6 +325,38 @@ internal class CDKPublishingContext(ITarballContainerImageBuilder imageBuilder, 
             await activityTask.FailAsync($"Failed to prepare {projectResource.Name} for ECS Fargate: { ex}", cancellationToken);
             throw;
         }
+    }
+
+    private void ProcessRelationShips(CfnExpressGatewayServiceProps props, IResource resource)
+    {
+        var dict = new Dictionary<string, string>();
+        ApplyRelationshipEnvironmentVariable(dict, resource);
+
+        if (!dict.Any())
+            return;
+
+        var primaryContainer = props.PrimaryContainer as ExpressGatewayContainerProperty;
+        if (primaryContainer == null)
+            throw new InvalidDataException("PrimaryContainer must be set in CfnExpressGatewayServiceProps and of type ExpressGatewayContainerProperty");
+
+        var kvp = new List<IKeyValuePairProperty>();
+        
+        var existingKvp = primaryContainer.Environment as IKeyValuePairProperty[];
+        if (existingKvp != null)
+        {
+            kvp.AddRange(existingKvp);
+        }
+
+        foreach (var item in dict)
+        {
+            kvp.Add(new KeyValuePairProperty
+            {
+                Name = item.Key,
+                Value = item.Value
+            });
+        }
+
+        primaryContainer.Environment = kvp.ToArray();
     }
 
     private void ProcessRelationShips(ApplicationLoadBalancedFargateServiceProps props, IResource resource)

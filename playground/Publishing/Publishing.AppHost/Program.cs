@@ -22,7 +22,7 @@ using Lambda.AppHost;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-var awsEnvironment = builder.AddAWSCDKEnvironment("aws", DeploymentComputeService.ECSFargate, DefaultProvider.V1, app => new DeploymentStack(app, "DeploymentInfrastructure3"));
+var awsEnvironment = builder.AddAWSCDKEnvironment("aws", DeploymentComputeService.ECSFargate, DefaultProvider.V1, app => new DeploymentStack(app, "DeploymentInfrastructure5"));
 var deploymentStack = awsEnvironment.Resource.EnvironmentStack;
 var deploymentTag = "v" + DateTime.UtcNow.ToString("yyyyMMddHHmmss");
 
@@ -31,55 +31,59 @@ var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.US
 var cdkStackResource = builder.AddAWSCDKStack("AWSLambdaPlaygroundResources");
 var localDevQueue = cdkStackResource.AddSQSQueue("LocalDevQueue");
 
-var cache = builder.AddRedis("cache");
+//var cache = builder.AddRedis("cache");
 
 var frontend = builder.AddProject<Projects.Frontend>("Frontend")
         .WithDeploymentImageTag(context => deploymentTag)
-        .WithReference(cache)
-        .WaitFor(cache)
-        // Add callback to customize the default settings of the CDK construct created for this project.
-        .PublishAsECSFargateServiceWithALB(new PublishCDKECSFargateWithALBConfig
+        //.WithReference(cache)
+        //.WaitFor(cache)
+        .PublishAsECSFargateServiceExpress(new PublishCDKECSFargateExpressConfig
         {
-            PropsApplicationLoadBalancedFargateServiceCallback = props =>
-            {
-                props.DesiredCount = 1;
-            },
-            ConstructApplicationLoadBalancedFargateServiceCallback = construct =>
-            {
-                // For faster dev turn around set deregistration to a short time
-                construct.TargetGroup.SetAttribute("deregistration_delay.timeout_seconds", "10");
-                // Enable cookie stickiness for session affinity for 24 hours
-                construct.TargetGroup.EnableCookieStickiness(Duration.Seconds(86400));
-            }
+
         });
+        // Add callback to customize the default settings of the CDK construct created for this project.
+        //.PublishAsECSFargateServiceWithALB(new PublishCDKECSFargateWithALBConfig
+        //{
+        //    PropsApplicationLoadBalancedFargateServiceCallback = props =>
+        //    {
+        //        props.DesiredCount = 1;
+        //    },
+        //    ConstructApplicationLoadBalancedFargateServiceCallback = construct =>
+        //    {
+        //        // For faster dev turn around set deregistration to a short time
+        //        construct.TargetGroup.SetAttribute("deregistration_delay.timeout_seconds", "10");
+        //        // Enable cookie stickiness for session affinity for 24 hours
+        //        construct.TargetGroup.EnableCookieStickiness(Duration.Seconds(86400));
+        //    }
+        //});
 
-builder.AddProject<Projects.Backend>("backend")
-        .WithDeploymentImageTag(context => deploymentTag)
-        .WithReference(frontend)
-        .WithReference(cache)
-        .WaitFor(cache);
+//builder.AddProject<Projects.Backend>("backend")
+//        .WithDeploymentImageTag(context => deploymentTag)
+//        .WithReference(frontend)
+//        .WithReference(cache)
+//        .WaitFor(cache);
 
-builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
-        .WithDeploymentImageTag(context => deploymentTag)
-        .PublishAsLambdaFunction(new PublishCDKLambdaConfig
-        {
-            PropsFunctionCallback = props =>
-            {
-                props.Vpc = awsEnvironment.Resource.DeploymentConstructProvider.GetDefaultVpc();
-                props.SecurityGroups = new[] { awsEnvironment.Resource.DeploymentConstructProvider.GetDefaultElastiCacheSecurityGroup() };
-            },
-            ConstructFunctionCallback = construct =>
-            {
-                construct.AddEventSource(new SqsEventSource(deploymentStack.LambdaQueue, new SqsEventSourceProps
-                {
-                    BatchSize = 5,
-                    Enabled = true
-                }));
-            }
-        })
-        .WithReference(cache)
-        .WithReference(awsSdkConfig)
-        .WithSQSEventSource(localDevQueue);
+//builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
+//        .WithDeploymentImageTag(context => deploymentTag)
+//        .PublishAsLambdaFunction(new PublishCDKLambdaConfig
+//        {
+//            PropsFunctionCallback = props =>
+//            {
+//                props.Vpc = awsEnvironment.Resource.DeploymentConstructProvider.GetDefaultVpc();
+//                props.SecurityGroups = new[] { awsEnvironment.Resource.DeploymentConstructProvider.GetDefaultElastiCacheSecurityGroup() };
+//            },
+//            ConstructFunctionCallback = construct =>
+//            {
+//                construct.AddEventSource(new SqsEventSource(deploymentStack.LambdaQueue, new SqsEventSourceProps
+//                {
+//                    BatchSize = 5,
+//                    Enabled = true
+//                }));
+//            }
+//        })
+//        .WithReference(cache)
+//        .WithReference(awsSdkConfig)
+//        .WithSQSEventSource(localDevQueue);
 
 
 builder.Build().Run();

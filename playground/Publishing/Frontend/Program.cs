@@ -3,8 +3,8 @@ using Frontend.Components;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
-builder.AddRedisOutputCache("cache");
-builder.AddRedisClient("cache");
+//builder.AddRedisOutputCache("cache");
+//builder.AddRedisClient("cache");
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

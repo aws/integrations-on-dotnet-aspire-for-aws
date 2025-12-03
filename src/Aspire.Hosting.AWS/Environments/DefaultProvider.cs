@@ -6,6 +6,7 @@ using Amazon.CDK.AWS.Lambda;
 using Aspire.Hosting.AWS.Environments.DefaultProviderImplementations;
 using Aspire.Hosting.AWS.Utils;
 using System.Diagnostics.CodeAnalysis;
+using static Amazon.CDK.AWS.ECS.CfnExpressGatewayService;
 
 namespace Aspire.Hosting.AWS.Environments;
 
@@ -53,12 +54,38 @@ public class DefaultProvider
 
     #endregion
 
+    #region ECSFargateExpress
+    public virtual double? ECSFargateExpressCpu => 1024;
+
+    public virtual double? ECSFargateExpressMiB => 2048;
+
+    public virtual double? ECSFargateExpressContainerPort => 8080;
+
+    internal protected virtual void ApplyCfnExpressGatewayServiceDefaults(AWSCDKEnvironmentResource environment, CfnExpressGatewayServiceProps props)
+    {
+        if (props.Cluster == null)
+            props.Cluster = environment.DeploymentConstructProvider.GetDefaultECSCluster().ClusterName;
+        if (string.IsNullOrEmpty(props.Cpu))
+            props.Cpu = ECSFargateExpressCpu.ToString();
+        if (string.IsNullOrEmpty(props.Memory))
+            props.Memory = ECSFargateExpressMiB.ToString();
+
+        var primaryContainer = props.PrimaryContainer as ExpressGatewayContainerProperty;
+        if (primaryContainer == null)
+            throw new InvalidDataException("PrimaryContainer must be set and of type ExpressGatewayContainerProperty.");
+
+        if (!primaryContainer.ContainerPort.HasValue)
+            primaryContainer.ContainerPort = ECSFargateExpressContainerPort;
+    }
+
+    #endregion
+
     #region ECSFargateServiceWithALB
-    public virtual double? ECSFargateServiceWithALBCpu => 256;
+    public virtual double? ECSFargateServiceWithALBCpu => 1024;
 
-    public virtual double? ECSFargateServiceWithALBMemoryLimitMiB => 512;
+    public virtual double? ECSFargateServiceWithALBMemoryLimitMiB => 2048;
 
-    public virtual double? ECSFargateServiceWithALBDesiredCount => 3;
+    public virtual double? ECSFargateServiceWithALBDesiredCount => 2;
 
     public virtual double? ECSFargateServiceWithALBListenerPort => 80;
 

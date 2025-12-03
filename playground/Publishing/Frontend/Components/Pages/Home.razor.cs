@@ -7,9 +7,9 @@ namespace Frontend.Components.Pages
     {
         protected override async Task OnInitializedAsync()
         {
-            var db = redis.GetDatabase();
-            await db.StringSetAsync(new RedisKey("cacheString"), new RedisValue("Hello World"));
-            CacheString = await db.StringGetAsync(new RedisKey("cacheString"));
+            //var db = redis.GetDatabase();
+            //await db.StringSetAsync(new RedisKey("cacheString"), new RedisValue("Hello World"));
+            //CacheString = await db.StringGetAsync(new RedisKey("cacheString"));
         }
 
         public string? CacheString { get; set; }

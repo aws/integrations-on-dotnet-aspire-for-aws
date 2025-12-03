@@ -74,6 +74,15 @@ public static class AWSEnvironmentExtensions
     }
 
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+    public static IResourceBuilder<ProjectResource> PublishAsECSFargateServiceExpress(this IResourceBuilder<ProjectResource> builder, PublishCDKECSFargateExpressConfig config)
+    {
+        var annotation = new PublishCDKECSFargateExpressAnnotation { Config = config };
+        builder.Resource.Annotations.Add(annotation);
+
+        return builder;
+    }
+
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
     public static IResourceBuilder<ProjectResource> PublishAsECSFargateService(this IResourceBuilder<ProjectResource> builder, PublishCDKECSFargateConfig config)
     {
         var annotation = new PublishCDKECSFargateAnnotation { Config = config };
