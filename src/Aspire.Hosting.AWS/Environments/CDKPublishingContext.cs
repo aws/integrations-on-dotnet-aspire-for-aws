@@ -224,6 +224,12 @@ internal class CDKPublishingContext(ITarballContainerImageBuilder imageBuilder, 
             var fargateService = new CfnExpressGatewayService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
             publishAnnotation.Config.ConstructCfnExpressGatewayServiceCallback?.Invoke(fargateService);
             ApplyLinkedConstructAnnotation(projectResource, fargateService);
+            
+            _ = new CfnOutput(environment.CDKStack, "ExpressGatewayEndpoint", new CfnOutputProps
+            {
+                Description = "Endpoint for the ECS Express Gateway Service",
+                Value = Fn.Join("", ["https://", Fn.GetAtt(fargateService.LogicalId, "Endpoint").ToString(), "/"]) 
+            });            
 
             await activityTask.SucceedAsync(cancellationToken: cancellationToken);
         }
