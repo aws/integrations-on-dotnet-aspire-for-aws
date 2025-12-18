@@ -14,9 +14,6 @@ namespace Aspire.Hosting.AWS.Environments;
 #pragma warning disable ASPIREPUBLISHERS001
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-public enum DeploymentComputeService { ECSFargate }
-
-[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 public abstract class AWSCDKEnvironmentResource : Resource
 {
     /// <summary>
@@ -24,16 +21,13 @@ public abstract class AWSCDKEnvironmentResource : Resource
     /// </summary>
     public IAWSSDKConfig? AWSSDKConfig { get; set; }
 
-    public DeploymentComputeService PreferredComputeService { get; private set; }
-
     public DeploymentConstructProvider DeploymentConstructProvider { get; }
 
     public DefaultProvider DefaultValuesProvider { get; }
 
-    protected AWSCDKEnvironmentResource(string name, DeploymentComputeService preferredComputeService, DefaultProvider defaultProvider)
+    protected AWSCDKEnvironmentResource(string name, DefaultProvider defaultProvider)
     : base(name)
     {
-        PreferredComputeService = preferredComputeService;
         DefaultValuesProvider = defaultProvider;
 
         CDKApp = new App(new AppProps
@@ -128,8 +122,8 @@ public abstract class AWSCDKEnvironmentResource : Resource
 public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
     where T : Stack 
 {
-    public AWSCDKEnvironmentResource(string name, DeploymentComputeService preferredComputeService, DefaultProvider defaultProvider, Func<App, T> stackFactory)
-        : base(name, preferredComputeService, defaultProvider)
+    public AWSCDKEnvironmentResource(string name, DefaultProvider defaultProvider, Func<App, T> stackFactory)
+        : base(name, defaultProvider)
     {
         EnvironmentStack = stackFactory(CDKApp);
         var stacks = CDKApp.Node.Children

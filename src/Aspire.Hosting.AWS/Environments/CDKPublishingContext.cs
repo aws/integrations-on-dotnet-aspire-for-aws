@@ -96,8 +96,8 @@ internal class CDKPublishingContext(ITarballContainerImageBuilder imageBuilder, 
                     }
                     await ProcessLambdaFunctionAsync(context, model, environment, (LambdaProjectResource)projectResource, lambdaAnnotation, cancellationToken);
                     break;
-                case PublishCDKECSFargateExpressAnnotation:
-                    await ProcessECSFargateExpressServiceAsync(context, model, environment, projectResource, (PublishCDKECSFargateExpressAnnotation)fargateExpressAnnotation!, cancellationToken);
+                case PublishCDKECSFargateExpressAnnotation expressAnnotation:
+                    await ProcessECSFargateExpressServiceAsync(context, model, environment, projectResource, expressAnnotation, cancellationToken);
                     break;
                 case PublishCDKECSFargateWithALBAnnotation fargateWithALBAnnotation:
                     await ProcessECSFargateServiceWithALBAsync(context, model, environment, projectResource, fargateWithALBAnnotation, cancellationToken);
@@ -113,26 +113,45 @@ internal class CDKPublishingContext(ITarballContainerImageBuilder imageBuilder, 
 
     private IResourceAnnotation? DetermineDefaultPublishAnnotation(AWSCDKEnvironmentResource environment, ProjectResource projectResource)
     {
+        IResourceAnnotation? annotation;
         if (projectResource is LambdaProjectResource)
         {
-            var annotation = new PublishCDKLambdaAnnotation();
-            return annotation;
-        }
-        if (environment.PreferredComputeService == DeploymentComputeService.ECSFargate)
-        {
-            if(projectResource.GetEndpoints().Any())
+            switch (environment.DefaultValuesProvider.DefaultLambdaComputeService)
             {
-                var annotation = new PublishCDKECSFargateWithALBAnnotation();
-                return annotation;
+                case DefaultProvider.LambdaComputeService.Lambda:
+                    annotation = new PublishCDKLambdaAnnotation();
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unsupported default Lambda project compute service: {environment.DefaultValuesProvider.DefaultConsoleAppComputeService}");
             }
-            else
+        }
+        else if (projectResource.GetEndpoints().Any())
+        {
+            switch (environment.DefaultValuesProvider.DefaultWebAppComputeService)
             {
-                var annotation = new PublishCDKECSFargateAnnotation();
-                return annotation;
+                case DefaultProvider.WebAppComputeService.ECSFargateExpress:
+                    annotation = new PublishCDKECSFargateExpressAnnotation();
+                    break;
+                case DefaultProvider.WebAppComputeService.ECSFargateServiceWithALB:
+                    annotation = new PublishCDKECSFargateAnnotation();
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unsupported default console project compute service: {environment.DefaultValuesProvider.DefaultConsoleAppComputeService}");
+            }
+        }
+        else
+        {
+            switch(environment.DefaultValuesProvider.DefaultConsoleAppComputeService)
+            {
+                case DefaultProvider.ConsoleAppComputeService.ECSService:
+                    annotation = new PublishCDKECSFargateAnnotation();
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unsupported default console project compute service: {environment.DefaultValuesProvider.DefaultConsoleAppComputeService}");
             }
         }
 
-        return null;
+        return annotation;
     }
 
     private void ProcessElastiCacheRedisCluster(PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment)
@@ -213,6 +232,7 @@ internal class CDKPublishingContext(ITarballContainerImageBuilder imageBuilder, 
             var fargateServiceProps = new CfnExpressGatewayServiceProps
             {
                 PrimaryContainer = primaryContainer,
+                // TODO: Stop hardcoding these ARNs
                 ExecutionRoleArn = "arn:aws:iam::626492997873:role/ecsTaskExecutionRole",
                 InfrastructureRoleArn = "arn:aws:iam::626492997873:role/ecsInfrastructureRoleForExpressServices",
                 ServiceName = projectResource.Name
@@ -403,6 +423,11 @@ internal class CDKPublishingContext(ITarballContainerImageBuilder imageBuilder, 
                     string protocol = listener.Port == 443 ? "https" : "http";
                     environmentVariables[$"services__{relatedAnnotation.Resource.Name}__{protocol}__0"] = $"{protocol}://{Token.AsString(albFargateConstruct.LoadBalancer.LoadBalancerDnsName)}:{Token.AsString(listener.Port)}/";
                 }
+            }
+            else if (targetLinkedConstructAnnotation.LinkedConstruct is CfnExpressGatewayService fargateExpressConstruct)
+            {
+                var endpoint = Fn.Join("", ["https://", Fn.GetAtt(fargateExpressConstruct.LogicalId, "Endpoint").ToString(), "/"]);
+                environmentVariables[$"services__{relatedAnnotation.Resource.Name}__https__0"] = endpoint;
             }
         }
     }
