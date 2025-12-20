@@ -1,6 +1,7 @@
 ﻿using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.ElastiCache;
+using Amazon.CDK.AWS.IAM;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -134,6 +135,43 @@ public class DeploymentConstructProvider
         return _defaultElastiCacheSecurityGroup;
     }
 
+    private IRole? _defaultECSExpressExecutionRole;
+    public IRole GetDefaultECSExpressExecutionRole()
+    {
+        if (_defaultECSExpressExecutionRole == null)
+        {
+            var definedDefault = FindDefaultConstructByAttribute<DefaultECSExpressExecutionRoleAttribute, IRole>();
+            if (definedDefault != null)
+            {
+                _defaultECSExpressExecutionRole = definedDefault;
+            }
+            else
+            {
+                _defaultECSExpressExecutionRole = Environment.DefaultValuesProvider.CreateDefaultECSExpressExecutionRole(Environment);
+            }
+        }
+        return _defaultECSExpressExecutionRole;
+    }
+
+    private IRole? _defaultECSExpressInfrastructureRole;
+    public IRole GetDefaultECSExpressInfrastructureRole()
+    {
+        if (_defaultECSExpressInfrastructureRole == null)
+        {            
+            var definedDefault = FindDefaultConstructByAttribute<DefaultECSExpressInfrastructureRoleAttribute, IRole>();
+            if (definedDefault != null)
+            {
+                _defaultECSExpressInfrastructureRole = definedDefault;
+            }
+            else
+            {
+                _defaultECSExpressInfrastructureRole = Environment.DefaultValuesProvider.CreateDefaultECSExpressInfrastructureRole(Environment);
+            }
+        }
+
+        return _defaultECSExpressInfrastructureRole;
+    }
+
     private TConstruct? FindDefaultConstructByAttribute<TAttribute, TConstruct>()
         where TAttribute : Attribute
         where TConstruct : class
@@ -196,6 +234,18 @@ public class DefaultECSClusterAttribute : Attribute
 
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
 public class DefaultECSClusterSecurityGroupAttribute : Attribute
+{
+
+}
+
+[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
+public class DefaultECSExpressExecutionRoleAttribute : Attribute
+{
+
+}
+
+[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
+public class DefaultECSExpressInfrastructureRoleAttribute : Attribute
 {
 
 }

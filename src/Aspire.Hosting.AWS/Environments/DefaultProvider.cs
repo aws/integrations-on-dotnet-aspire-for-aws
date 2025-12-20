@@ -2,6 +2,7 @@
 using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.ECS.Patterns;
 using Amazon.CDK.AWS.ElastiCache;
+using Amazon.CDK.AWS.IAM;
 using Amazon.CDK.AWS.Lambda;
 using Aspire.Hosting.AWS.Environments.DefaultProviderImplementations;
 using Aspire.Hosting.AWS.Utils;
@@ -145,6 +146,32 @@ public class DefaultProvider
 
         if (!primaryContainer.ContainerPort.HasValue)
             primaryContainer.ContainerPort = ECSFargateExpressContainerPort;
+
+        if (string.IsNullOrEmpty(props.ExecutionRoleArn))
+        {
+            var role = environment.DeploymentConstructProvider.GetDefaultECSExpressExecutionRole();
+            props.ExecutionRoleArn = role.RoleArn;
+        }
+
+        if (string.IsNullOrEmpty(props.InfrastructureRoleArn))
+        {
+            var role = environment.DeploymentConstructProvider.GetDefaultECSExpressInfrastructureRole();
+            props.InfrastructureRoleArn = role.RoleArn;
+        }
+
+        if (props.NetworkConfiguration == null)
+        {
+            props.NetworkConfiguration = new ExpressGatewayServiceNetworkConfigurationProperty
+            {
+                SecurityGroups = new[]
+                {
+                    environment.DeploymentConstructProvider.GetDefaultECSClusterSecurityGroup().SecurityGroupId
+                },
+                // Using public subnets because ECS Express chooses the ALB to be internet facing when using public subnets.
+                // Otherwise if you use private subnets the ALB will be internal only to the VPC.
+                Subnets = environment.DeploymentConstructProvider.GetDefaultVpc().PublicSubnets.Select(s => s.SubnetId).ToArray()
+            };
+        }
     }
 
     #endregion
@@ -355,6 +382,32 @@ public class DefaultProvider
         defaultElastiCacheSecurityGroup.AddIngressRule(Peer.AnyIpv4(), Port.Tcp(environment.DefaultValuesProvider.ElasticCacheClusterPort), "Allow Redis access");
         return defaultElastiCacheSecurityGroup;
     }
+
+    internal protected virtual IRole CreateDefaultECSExpressExecutionRole(AWSCDKEnvironmentResource environment)
+    {
+        return new Role(environment.CDKStack, "DefaultECSExpressExecutionRole", new RoleProps
+        {
+            AssumedBy = new ServicePrincipal("ecs-tasks.amazonaws.com"),
+            ManagedPolicies = new[]
+            {
+                ManagedPolicy.FromAwsManagedPolicyName("AmazonEC2ContainerRegistryReadOnly"),
+                ManagedPolicy.FromAwsManagedPolicyName("CloudWatchLogsFullAccess"),
+            }
+        });
+    }
+
+    internal protected virtual IRole CreateDefaultECSExpressInfrastructureRole(AWSCDKEnvironmentResource environment)
+    {
+        return new Role(environment.CDKStack, "DefaultECSExpressInfrastructureRole", new RoleProps
+        {
+            AssumedBy = new ServicePrincipal("ecs.amazonaws.com"),
+            ManagedPolicies = new[]
+            {
+                ManagedPolicy.FromAwsManagedPolicyName("service-role/AmazonECSInfrastructureRoleforExpressGatewayServices"),
+            }
+        });
+    }
+
 
     #endregion
 }

@@ -232,9 +232,6 @@ internal class CDKPublishingContext(ITarballContainerImageBuilder imageBuilder, 
             var fargateServiceProps = new CfnExpressGatewayServiceProps
             {
                 PrimaryContainer = primaryContainer,
-                // TODO: Stop hardcoding these ARNs
-                ExecutionRoleArn = "arn:aws:iam::626492997873:role/ecsTaskExecutionRole",
-                InfrastructureRoleArn = "arn:aws:iam::626492997873:role/ecsInfrastructureRoleForExpressServices",
                 ServiceName = projectResource.Name
             };
             publishAnnotation.Config.PropsCfnExpressGatewayServicePropsCallback?.Invoke(fargateServiceProps);

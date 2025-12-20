@@ -22,7 +22,7 @@ using Lambda.AppHost;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-var awsEnvironment = builder.AddAWSCDKEnvironment("aws", DefaultProvider.V1, app => new DeploymentStack(app, "DeploymentInfrastructure5"));
+var awsEnvironment = builder.AddAWSCDKEnvironment("aws", DefaultProvider.V1, app => new DeploymentStack(app, "DeploymentInfrastructure9"));
 var deploymentStack = awsEnvironment.Resource.EnvironmentStack;
 var deploymentTag = "v" + DateTime.UtcNow.ToString("yyyyMMddHHmmss");
 
