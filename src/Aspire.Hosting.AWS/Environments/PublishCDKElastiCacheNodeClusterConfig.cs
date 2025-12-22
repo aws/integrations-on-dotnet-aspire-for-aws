@@ -1,12 +1,13 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Amazon.CDK.AWS.ElastiCache;
+using Aspire.Hosting.AWS.Environments.PublishTargets;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Aspire.Hosting.AWS.Environments;
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-public class PublishCDKElastiCacheRedisConfig
+public class PublishCDKElastiCacheNodeClusterConfig
 {
     public Action<CfnReplicationGroupProps>? PropsCfnReplicationGroupCallback { get; set; }
 
@@ -14,7 +15,7 @@ public class PublishCDKElastiCacheRedisConfig
 }
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-internal class PublishCDKElasticCacheRedisAnnotation : Aspire.Hosting.ApplicationModel.IResourceAnnotation
+internal class PublishCDKElasticCacheNodeClusterAnnotation : IAWSPublishTargetAnnotation
 {
-    public PublishCDKElastiCacheRedisConfig Config { get; init; } = new PublishCDKElastiCacheRedisConfig();
+    public PublishCDKElastiCacheNodeClusterConfig Config { get; init; } = new PublishCDKElastiCacheNodeClusterConfig();
 }

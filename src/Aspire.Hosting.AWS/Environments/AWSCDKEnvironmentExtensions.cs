@@ -3,8 +3,10 @@
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS;
 using Aspire.Hosting.AWS.Environments;
+using Aspire.Hosting.AWS.Environments.CDKResourceContexts;
 using Aspire.Hosting.AWS.Lambda;
 using Aspire.Hosting.AWS.Utils.Internal;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Diagnostics.CodeAnalysis;
 using App = Amazon.CDK.App;
@@ -12,16 +14,23 @@ using Stack = Amazon.CDK.Stack;
 
 namespace Aspire.Hosting;
 
-public static class AWSEnvironmentExtensions
+public static class AWSCDKEnvironmentExtensions
 {
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
     private static void AddEnvironmentServices(this IDistributedApplicationBuilder builder)
     {
-        builder.Services.TryAddSingleton<CDKPublishingContext, CDKPublishingContext>();
+        builder.Services.TryAddSingleton<CDKPublishingGenerator, CDKPublishingGenerator>();
         builder.Services.TryAddSingleton<CDKDeployContext, CDKDeployContext>();
         builder.Services.TryAddSingleton<ITarballContainerImageBuilder, DefaultTarballContainerImageBuilder>();
         builder.Services.TryAddSingleton<IProcessCommandService, ProcessCommandService>();
         builder.Services.TryAddSingleton<ILambdaDeploymentPackager, LambdaDeploymentPackager>();
+
+        builder.Services.AddTransient<IAWSPublishTarget, ECSFargateExpressServicePublishTarget>();
+        builder.Services.AddTransient<IAWSPublishTarget, ECSFargateServicePublishTarget>();
+        builder.Services.AddTransient<IAWSPublishTarget, ECSFargateServiceWithALBPublishTarget>();
+        builder.Services.AddTransient<IAWSPublishTarget, ElastiCacheNodeClusterPublishTarget>();
+        builder.Services.AddTransient<IAWSPublishTarget, ElastiCacheServerlessClusterPublishTarget>();
+        builder.Services.AddTransient<IAWSPublishTarget, LambdaFunctionPublishTarget>();
     }
 
     /// <summary>
@@ -84,9 +93,9 @@ public static class AWSEnvironmentExtensions
     /// <param name="config">Configuration for attaching callbacks to configure the CDK construct's props and associate the created CDK construct to other CDK constructs.</param>
     /// <returns></returns>
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    public static IResourceBuilder<LambdaProjectResource> PublishAsLambdaFunction(this IResourceBuilder<LambdaProjectResource> builder, PublishCDKLambdaConfig? config = null)
+    public static IResourceBuilder<LambdaProjectResource> PublishAsLambdaFunction(this IResourceBuilder<LambdaProjectResource> builder, PublishCDKLambdaFunctionConfig? config = null)
     {
-        var annotation = new PublishCDKLambdaAnnotation { Config = config ?? new PublishCDKLambdaConfig() };
+        var annotation = new PublishCDKLambdaFunctionAnnotation { Config = config ?? new PublishCDKLambdaFunctionConfig() };
         builder.Resource.Annotations.Add(annotation);
 
         return builder;
@@ -127,9 +136,9 @@ public static class AWSEnvironmentExtensions
     /// <param name="config"></param>
     /// <returns></returns>
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    public static IResourceBuilder<ProjectResource> PublishAsECSFargateServiceExpress(this IResourceBuilder<ProjectResource> builder, PublishCDKECSFargateExpressConfig? config = null)
+    public static IResourceBuilder<ProjectResource> PublishAsECSFargateServiceExpress(this IResourceBuilder<ProjectResource> builder, PublishCDKECSFargateServiceExpressConfig? config = null)
     {
-        var annotation = new PublishCDKECSFargateExpressAnnotation { Config = config ?? new PublishCDKECSFargateExpressConfig() };
+        var annotation = new PublishCDKECSFargateServiceExpressAnnotation { Config = config ?? new PublishCDKECSFargateServiceExpressConfig() };
         builder.Resource.Annotations.Add(annotation);
 
         return builder;
@@ -152,9 +161,18 @@ public static class AWSEnvironmentExtensions
     }
 
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    public static IResourceBuilder<RedisResource> PublishAsElasticCacheCluster(this IResourceBuilder<RedisResource> builder, PublishCDKElastiCacheRedisConfig? config = null)
+    public static IResourceBuilder<RedisResource> PublishAsElasticCacheNodeCluster(this IResourceBuilder<RedisResource> builder, PublishCDKElastiCacheNodeClusterConfig? config = null)
     {
-        var annotation = new PublishCDKElasticCacheRedisAnnotation { Config = config ?? new PublishCDKElastiCacheRedisConfig()};
+        var annotation = new PublishCDKElasticCacheNodeClusterAnnotation { Config = config ?? new PublishCDKElastiCacheNodeClusterConfig()};
+        builder.Resource.Annotations.Add(annotation);
+
+        return builder;
+    }
+
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+    public static IResourceBuilder<RedisResource> PublishAsElasticCacheServerlessCluster(this IResourceBuilder<RedisResource> builder, PublishCDKElastiCacheServerlessClusterConfig? config = null)
+    {
+        var annotation = new PublishCDKElasticCacheServerlessClusterAnnotation { Config = config ?? new PublishCDKElastiCacheServerlessClusterConfig() };
         builder.Resource.Annotations.Add(annotation);
 
         return builder;

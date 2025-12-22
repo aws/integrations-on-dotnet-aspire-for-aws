@@ -53,8 +53,8 @@ public abstract class AWSCDKEnvironmentResource : Resource
             Name = $"publish-{Name}",
             Action = async (context) =>
             {
-                var cdkCtx = context.Services.GetRequiredService<CDKPublishingContext>();
-                await cdkCtx.WriteModelAsync(context, model, this);
+                var cdkCtx = context.Services.GetRequiredService<CDKPublishingGenerator>();
+                await cdkCtx.GenerateCDKOutputAsync(context, model, this);
             },
             RequiredBySteps = [WellKnownPipelineSteps.Publish],
             DependsOnSteps = [WellKnownPipelineSteps.PublishPrereq]

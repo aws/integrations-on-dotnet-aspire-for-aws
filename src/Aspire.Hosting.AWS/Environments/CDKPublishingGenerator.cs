@@ -1,0 +1,196 @@
+﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#pragma warning disable ASPIREPUBLISHERS001
+#pragma warning disable ASPIREAWSPUBLISHERS001
+
+using Amazon.CDK;
+using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.AWS.CDK;
+using Aspire.Hosting.AWS.Environments.CDKResourceContexts;
+using Aspire.Hosting.AWS.Environments.PublishTargets;
+using Aspire.Hosting.Pipelines;
+using Constructs;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using static Aspire.Hosting.AWS.Environments.CDKResourceContexts.IAWSPublishTarget;
+using IResource = Aspire.Hosting.ApplicationModel.IResource;
+
+namespace Aspire.Hosting.AWS.Environments;
+
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+internal class CDKPublishingGenerator(IServiceProvider serviceProvider, ILogger<CDKPublishingGenerator> logger)
+{
+    IDictionary<Type, IAWSPublishTarget> _annotationsToPublishTargetsMapping = new Dictionary<Type, IAWSPublishTarget>(); 
+
+    public async Task GenerateCDKOutputAsync(PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken = default)
+    {
+        var step = await context.ReportingStep.CreateTaskAsync($"Synthesizing CDK Application", cancellationToken);
+        try
+        {
+            InitializePublishTargetMapping(environment);
+
+            var outputPath = environment.CDKApp.Outdir;
+
+            logger.LogInformation("Publishing to {output}", outputPath);
+            ClearOutputDirectory(outputPath);
+
+            ApplyDefaultPublishTargetAnnotations(model, environment);
+            await ProcessResources(context, step, model, environment, cancellationToken);
+
+            var assembly = environment.CDKApp.Synth();
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                FixCDKAssetsFileForWindows(outputPath);
+            }
+
+            await step.SucceedAsync(cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to synthesize CDK application");
+            await step.FailAsync($"Failed to synthesize CDK application: {ex}", cancellationToken);
+        }
+    }
+
+    private void InitializePublishTargetMapping(AWSCDKEnvironmentResource environment)
+    {
+        _annotationsToPublishTargetsMapping.Clear();
+
+        var awsPublishingTargets = serviceProvider.GetServices<IAWSPublishTarget>();
+        foreach (var publishingTarget in awsPublishingTargets)
+        {
+            logger.LogTrace("Registering AWS CDK publishing target {PublishTargetName} for annotation {PublishTargetAnnotation}", publishingTarget.GetType().Name, publishingTarget.PublishTargetAnnotation.Name);
+            _annotationsToPublishTargetsMapping[publishingTarget.PublishTargetAnnotation] = publishingTarget;
+        }
+    }
+
+    private void ApplyDefaultPublishTargetAnnotations(DistributedApplicationModel model, AWSCDKEnvironmentResource environment)
+    {
+        foreach (var resource in model.Resources)
+        {
+            if (resource.IsExcludedFromPublish())
+                continue;
+
+            if (!resource.TryGetLastAnnotation<IAWSPublishTargetAnnotation>(out _))
+            {
+                var annotation = DetermineDefaultPublishAnnotation(environment, resource);
+                if (annotation == null)
+                {
+                    if (resource is not AWSCDKEnvironmentResource &&
+                        resource is not StackResource)
+                    {
+                        logger.LogInformation("Resource \"{ResourceName}\" of type \"{ResourceType}\" has no AWS publish target and will not be included in CDK stack.", resource.Name, resource.GetType().Namespace + "." + resource.GetType().Name);
+                    }
+                    continue;
+                }
+
+                resource.Annotations.Add(annotation);
+            }
+        }
+    }
+
+    private IResourceAnnotation? DetermineDefaultPublishAnnotation(AWSCDKEnvironmentResource environment, IResource resource)
+    {
+        IsDefaultPublishTargetMatchResult? bestMatch = null;
+        foreach(var publishTarget in _annotationsToPublishTargetsMapping.Values)
+        {
+            var matchResults = publishTarget.IsDefaultPublishTargetMatch(environment.DefaultValuesProvider, resource);
+
+            if (matchResults.IsMatch && (bestMatch == null || bestMatch.Rank < matchResults.Rank))
+            {
+                bestMatch = matchResults;
+            }
+        }
+
+        return bestMatch?.PublishTargetAnnotation;
+    }
+
+    private async Task ProcessResources(PipelineStepContext context, IReportingTask step, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken)
+    {
+        // TODO: Make sure the order of processing resources responds to dependencies between resources
+        foreach (var resource in model.Resources)
+        {
+            if (resource.IsExcludedFromPublish())
+                continue;
+
+            if (!resource.TryGetLastAnnotation<IAWSPublishTargetAnnotation>(out var publishAnnotation))
+                continue;
+
+            if (!_annotationsToPublishTargetsMapping.TryGetValue(publishAnnotation.GetType(), out var publishTarget))
+                continue;
+
+            var activityTask = await context.ReportingStep.CreateTaskAsync($"Preparing {resource.Name} for {publishTarget.PublishTargetName}", cancellationToken);
+            try
+            {
+                await publishTarget.GenerateConstructAsync(environment, resource, publishAnnotation, cancellationToken);
+                await activityTask.SucceedAsync(cancellationToken: cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to prepare {ProjectName} for {ResourceType}.", resource.Name, publishTarget.PublishTargetName);
+                await activityTask.FailAsync($"Failed to prepare {resource.Name} for ECS Fargate: {ex}", cancellationToken);
+                throw;
+            }
+        }
+    }
+
+    private void ClearOutputDirectory(string outputPath)
+    {
+        if (Directory.Exists(outputPath))
+        {
+            logger.LogTrace("Clearing output directory '{outputPath}'...", outputPath);
+            foreach (var file in Directory.EnumerateFiles(outputPath))
+            {
+                logger.LogTrace("Deleting file '{file}'...", file);
+                File.Delete(file);
+            }
+            foreach (var directory in Directory.EnumerateDirectories(outputPath))
+            {
+                logger.LogTrace("Deleting directory '{directory}'...", directory);
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+    }
+
+    private void FixCDKAssetsFileForWindows(string outputPath)
+    {
+        foreach (var file in Directory.EnumerateFiles(outputPath, "*.assets.json", SearchOption.AllDirectories))
+        {
+            try
+            {
+                string json = File.ReadAllText(file);
+                JsonNode root = JsonNode.Parse(json)!;
+                bool changed = false;
+
+                if (root["dockerImages"] is JsonObject dockerImages)
+                {
+                    foreach (var image in dockerImages)
+                    {
+                        JsonObject imageObject = image.Value!.AsObject();
+
+                        if (imageObject["source"]?["executable"] is JsonArray)
+                        {
+                            // Replace the executable array
+                            imageObject["source"]!["executable"] = new JsonArray("powershell", "-Command", $"docker load -i asset.{image.Key}.tar | ForEach-Object {{ ($_ -replace '^Loaded image: ', '') }}");
+                            changed = true;
+                        }
+                    }
+                }
+
+                if (changed)
+                {
+                    var updatedJson = root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+                    File.WriteAllText(file, updatedJson);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Error switching CDK assets file {file} to use PowerShell for restoring tarball", file);
+            }
+        }
+    }
+}

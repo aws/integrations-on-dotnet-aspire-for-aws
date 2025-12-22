@@ -25,7 +25,7 @@ public class DefaultProvider
     /// <summary>
     /// Specifies the available compute services for the web application.
     /// </summary>
-    public enum WebAppComputeService 
+    public enum WebAppPublishTarget 
     {
         /// <summary>
         /// Deploy to AWS Elastic Container Service using the <a href="https://docs.aws.amazon.com/AmazonECS/latest/developerguide/express-service-overview.html">Express Mode</a>.
@@ -36,7 +36,7 @@ public class DefaultProvider
         /// <remarks>
         /// Port 8080 is assumed to be the container port the web application listens on.
         /// </remarks>
-        ECSFargateExpress,
+        ECSFargateExpressService,
 
         /// <summary>
         /// Deploy to AWS ECS Fargate Service with Application Load Balancer. This uses the CDK 
@@ -52,26 +52,26 @@ public class DefaultProvider
     }
 
     /// <summary>
-    /// The default compute service to use when publishing web applications. The default value is <see cref="WebAppComputeService.ECSFargateExpress"/>.
+    /// The default compute service to use when publishing web applications. The default value is <see cref="WebAppPublishTarget.ECSFargateExpressService"/>.
     /// </summary>
-    public virtual WebAppComputeService DefaultWebAppComputeService { get; set; } = WebAppComputeService.ECSFargateExpress;
+    public virtual WebAppPublishTarget DefaultWebAppPublishTarget { get; set; } = WebAppPublishTarget.ECSFargateExpressService;
 
     /// <summary>
     /// Specifies the available compute services for the console application.
     /// </summary>
-    public enum ConsoleAppComputeService 
+    public enum ConsoleAppPublishTaret 
     {
         /// <summary>
         /// Deploy to as a service to the AWS Elastic Container Service (ECS). An ECS service is a continuously running set of tasks running the console application as a container.
         /// The CDK <a href="https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_ecs.FargateService.html">FargateService</a> construct is used to create the ECS service.
         /// </summary>
-        ECSService
+        ECSFargateService
     }
 
     /// <summary>
-    /// The default compute service to use when publishing console applications. For example background workers or message processors. The default value is <see cref="ConsoleAppComputeService.ECSService"/>.
+    /// The default compute service to use when publishing console applications. For example background workers or message processors. The default value is <see cref="ConsoleAppPublishTaret.ECSFargateService"/>.
     /// </summary>
-    public virtual ConsoleAppComputeService DefaultConsoleAppComputeService { get; set; } = ConsoleAppComputeService.ECSService;
+    public virtual ConsoleAppPublishTaret DefaultConsoleAppPublishTarget { get; set; } = ConsoleAppPublishTaret.ECSFargateService;
 
     /// <summary>
     /// Specifies the available compute services that support Lambda-based deployments.
@@ -88,7 +88,15 @@ public class DefaultProvider
     /// <summary>
     /// The default compute service to use when publishing Lambda functions. The default value is <see cref="LambdaComputeService.Lambda"/>.
     /// </summary>
-    public virtual LambdaComputeService DefaultLambdaComputeService { get; set; } = LambdaComputeService.Lambda;
+    public virtual LambdaComputeService DefaultLambdaProjectPublishTarget { get; set; } = LambdaComputeService.Lambda;
+
+    public enum RedisPublishTarget
+    {
+        ElastiCacheNodeCluster,
+        ElastiCacheServerlessCluster
+    }
+
+    public virtual RedisPublishTarget DefaultRedisPublishTarget { get; set; } = RedisPublishTarget.ElastiCacheNodeCluster;
 
 
     #region LambdaFunction
@@ -271,53 +279,72 @@ public class DefaultProvider
 
     #endregion
 
-    #region ElasticCacheCluster
-    public virtual string ElasticCacheClusterReplicationGroupDescription => "Cache for Aspire Application";
+    #region ElasticCacheServerlessCluster
 
-    public virtual string ElasticCacheClusterEngine => "redis";
+    public virtual string ElasticCacheServerlessClusterEngine => "valkey";
 
-    public virtual string? ElasticCacheClusterEngineVersion => "7.1";
+    public virtual string ElasticCacheServerlessMajorEngineVersion => "8";
 
-    public virtual string? ElasticCacheClusterCacheNodeType => "cache.t3.micro";
-
-    public virtual double? ElasticCacheClusterNumCacheClusters => 2;
-
-    public virtual bool? ElasticCacheClusterAutomaticFailoverEnabled => true;
-
-    public virtual double ElasticCacheClusterPort => 6379;
-
-    public virtual string ElasticCacheClusterSubnetGroupDescription => "Subnet group for ElastiCache cluster";
-
-    public virtual string ElasticCacheClusterParameterGroupFamily => "redis7";
-
-    public virtual string ElasticCacheClusterParameterGroupDescription => "Parameter group for Redis cluster";
-
-    public virtual IDictionary<string, string>? ElasticCacheClusterParameterGroupProperties => new Dictionary<string, string>
+    internal protected virtual void ApplyCfnServerlessCachePropsDefaults(AWSCDKEnvironmentResource environment, CfnServerlessCacheProps props)
     {
-        { "maxmemory-policy", "volatile-lru" }
+        if (props.Engine == null)
+            props.Engine = ElasticCacheServerlessClusterEngine;
+        if (props.MajorEngineVersion == null)
+            props.MajorEngineVersion = ElasticCacheServerlessMajorEngineVersion;
+    }
+
+    #endregion
+
+    #region ElasticCacheNodeCluster
+    public virtual string ElasticCacheNodeClusterReplicationGroupDescription => "Cache for Aspire Application";
+
+    public virtual string ElasticCacheNodeClusterEngine => "valkey";
+
+    public virtual string? ElasticCacheNodeClusterEngineVersion => "8.2";
+
+    public virtual string? ElasticCacheNodeClusterCacheNodeType => "cache.t3.micro";
+
+    public virtual double? ElasticCacheNodeClusterNumCacheClusters => 2;
+
+    public virtual bool? ElasticCacheNodeClusterAutomaticFailoverEnabled => true;
+
+    public virtual double ElasticCacheNodeClusterPort => 6379;
+
+    public virtual string ElasticCacheNodeClusterSubnetGroupDescription => "Subnet group for ElastiCache Node Cluster";
+
+    public virtual string ElasticCacheNodeClusterParameterGroupFamily => "valkey8";
+
+    public virtual string ElasticCacheNodeClusterParameterGroupDescription => "Parameter group for Node Cluster";
+
+    public virtual bool? ElasticCacheNodeClusterTransitEncryptionEnabled => false;
+
+    public virtual IDictionary<string, string>? ElasticCacheNodeClusterParameterGroupProperties => new Dictionary<string, string>
+    {
     };
 
     internal protected virtual void ApplyCfnReplicationGroupPropsDefaults(AWSCDKEnvironmentResource environment, CfnReplicationGroupProps props)
     {
         if (props.ReplicationGroupDescription == null)
-            props.ReplicationGroupDescription = ElasticCacheClusterReplicationGroupDescription;
+            props.ReplicationGroupDescription = ElasticCacheNodeClusterReplicationGroupDescription;
         if (props.CacheNodeType == null)
-            props.CacheNodeType = ElasticCacheClusterCacheNodeType;
+            props.CacheNodeType = ElasticCacheNodeClusterCacheNodeType;
         if (props.Engine == null)
-            props.Engine = ElasticCacheClusterEngine;
+            props.Engine = ElasticCacheNodeClusterEngine;
         if (props.EngineVersion == null)
-            props.EngineVersion = ElasticCacheClusterEngineVersion;
+            props.EngineVersion = ElasticCacheNodeClusterEngineVersion;
         if (props.NumCacheClusters == null)
-            props.NumCacheClusters = ElasticCacheClusterNumCacheClusters;
+            props.NumCacheClusters = ElasticCacheNodeClusterNumCacheClusters;
         if (props.AutomaticFailoverEnabled == null)
-            props.AutomaticFailoverEnabled = ElasticCacheClusterAutomaticFailoverEnabled;
+            props.AutomaticFailoverEnabled = ElasticCacheNodeClusterAutomaticFailoverEnabled;
         if (props.Port == null)
-            props.Port = ElasticCacheClusterPort;
+            props.Port = ElasticCacheNodeClusterPort;
+        if (props.TransitEncryptionEnabled == null)
+            props.TransitEncryptionEnabled = ElasticCacheNodeClusterTransitEncryptionEnabled;
 
         if (props.CacheSubnetGroupName == null)
             props.CacheSubnetGroupName = environment.DeploymentConstructProvider.GetDefaultElastiCacheCfnSubnetGroup().Ref;
         if (props.CacheParameterGroupName == null)
-            props.CacheParameterGroupName = environment.DeploymentConstructProvider.GetDefaultElastiCacheCfnParameterGroup().Ref;
+            props.CacheParameterGroupName = "default.valkey8.cluster.on";// environment.DeploymentConstructProvider.GetDefaultElastiCacheCfnParameterGroup().Ref;
         if (props.SecurityGroupIds == null)
             props.SecurityGroupIds = new[] { environment.DeploymentConstructProvider.GetDefaultElastiCacheSecurityGroup().SecurityGroupId };
     }
@@ -356,7 +383,7 @@ public class DefaultProvider
         var subnetIds = environment.DeploymentConstructProvider.GetDefaultVpc().PrivateSubnets.Select(s => s.SubnetId).ToArray();
         return new CfnSubnetGroup(environment.CDKStack, "DefaultElastiCacheSubnetGroup", new CfnSubnetGroupProps
         {
-            Description = environment.DefaultValuesProvider.ElasticCacheClusterSubnetGroupDescription,
+            Description = environment.DefaultValuesProvider.ElasticCacheNodeClusterSubnetGroupDescription,
             SubnetIds = subnetIds
         });
     }
@@ -365,9 +392,9 @@ public class DefaultProvider
     {
         return new CfnParameterGroup(environment.CDKStack, "DefaultElastiCacheParameterGroup", new CfnParameterGroupProps
         {
-            CacheParameterGroupFamily = environment.DefaultValuesProvider.ElasticCacheClusterParameterGroupFamily,
-            Description = environment.DefaultValuesProvider.ElasticCacheClusterParameterGroupDescription,
-            Properties = environment.DefaultValuesProvider.ElasticCacheClusterParameterGroupProperties
+            CacheParameterGroupFamily = environment.DefaultValuesProvider.ElasticCacheNodeClusterParameterGroupFamily,
+            Description = environment.DefaultValuesProvider.ElasticCacheNodeClusterParameterGroupDescription,
+            Properties = environment.DefaultValuesProvider.ElasticCacheNodeClusterParameterGroupProperties
         });
     }
 
@@ -379,7 +406,7 @@ public class DefaultProvider
             AllowAllOutbound = true
         });
 
-        defaultElastiCacheSecurityGroup.AddIngressRule(Peer.AnyIpv4(), Port.Tcp(environment.DefaultValuesProvider.ElasticCacheClusterPort), "Allow Redis access");
+        defaultElastiCacheSecurityGroup.AddIngressRule(Peer.AnyIpv4(), Port.Tcp(environment.DefaultValuesProvider.ElasticCacheNodeClusterPort), "Allow Redis access");
         return defaultElastiCacheSecurityGroup;
     }
 

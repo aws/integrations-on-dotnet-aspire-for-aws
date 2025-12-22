@@ -1,13 +1,13 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Amazon.CDK.AWS.Lambda;
-using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.AWS.Environments.PublishTargets;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Aspire.Hosting.AWS.Environments;
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-public class PublishCDKLambdaConfig
+public class PublishCDKLambdaFunctionConfig
 {
     public Action<FunctionProps>? PropsFunctionCallback { get; set; }
 
@@ -15,7 +15,7 @@ public class PublishCDKLambdaConfig
 }
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-internal class PublishCDKLambdaAnnotation : IResourceAnnotation
+internal class PublishCDKLambdaFunctionAnnotation : IAWSPublishTargetAnnotation
 {
-    public PublishCDKLambdaConfig Config { get; init; } = new PublishCDKLambdaConfig();
+    public PublishCDKLambdaFunctionConfig Config { get; init; } = new PublishCDKLambdaFunctionConfig();
 }

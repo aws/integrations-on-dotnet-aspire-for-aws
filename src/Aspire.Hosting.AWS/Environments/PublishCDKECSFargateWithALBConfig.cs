@@ -1,6 +1,7 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Amazon.CDK.AWS.ECS.Patterns;
+using Aspire.Hosting.AWS.Environments.PublishTargets;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Aspire.Hosting.AWS.Environments;
@@ -17,7 +18,7 @@ public class PublishCDKECSFargateWithALBConfig
 }
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-internal class PublishCDKECSFargateWithALBAnnotation : Aspire.Hosting.ApplicationModel.IResourceAnnotation
+internal class PublishCDKECSFargateWithALBAnnotation : IAWSPublishTargetAnnotation
 {
     public PublishCDKECSFargateWithALBConfig Config { get; init; } = new PublishCDKECSFargateWithALBConfig();
 }

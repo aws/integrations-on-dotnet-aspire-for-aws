@@ -22,7 +22,7 @@ using Lambda.AppHost;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-var awsEnvironment = builder.AddAWSCDKEnvironment("aws", DefaultProvider.V1, app => new DeploymentStack(app, "DeploymentInfrastructure9"));
+var awsEnvironment = builder.AddAWSCDKEnvironment("aws", DefaultProvider.V1, app => new DeploymentStack(app, "DeploymentInfrastructure10"));
 var deploymentStack = awsEnvironment.Resource.EnvironmentStack;
 var deploymentTag = "v" + DateTime.UtcNow.ToString("yyyyMMddHHmmss");
 
@@ -47,7 +47,7 @@ builder.AddProject<Projects.Backend>("backend")
 
 builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
         .WithDeploymentImageTag(context => deploymentTag)
-        .PublishAsLambdaFunction(new PublishCDKLambdaConfig
+        .PublishAsLambdaFunction(new PublishCDKLambdaFunctionConfig
         {
             PropsFunctionCallback = props =>
             {

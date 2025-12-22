@@ -20,7 +20,7 @@ namespace Aspire.Hosting.AWS.Environments;
 #pragma warning disable ASPIREPUBLISHERS001
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-internal class CDKDeployContext(IProcessCommandService processCommandService, ILogger<CDKPublishingContext> logger)
+internal class CDKDeployContext(IProcessCommandService processCommandService, ILogger<CDKPublishingGenerator> logger)
 {
     public async Task ExecuteCDKDeployAsync(PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken = default)
     {
