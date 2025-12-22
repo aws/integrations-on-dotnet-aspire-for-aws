@@ -6,63 +6,96 @@
 using Amazon.CDK;
 using Amazon.CDK.AWS.ElastiCache;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.AWS.Environments;
 using Aspire.Hosting.AWS.Environments.PublishTargets;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
-using static Aspire.Hosting.AWS.Environments.CDKResourceContexts.IAWSPublishTarget;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
-namespace Aspire.Hosting.AWS.Environments.CDKResourceContexts;
-
-[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-internal class ElastiCacheNodeClusterPublishTarget(ILogger<ElastiCacheNodeClusterPublishTarget> logger) : AbstractAWSPublishTarget(logger)
+namespace Aspire.Hosting.AWS.Environments
 {
-    public override string PublishTargetName => "ElastiCache Node Cluster";
-
-    public override Type PublishTargetAnnotation => typeof(PublishCDKElasticCacheNodeClusterAnnotation);
-
-    public override async Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+    public class PublishCDKElastiCacheNodeClusterConfig
     {
-        var publishAnnotation = annotation as PublishCDKElasticCacheNodeClusterAnnotation
-            ?? throw new InvalidOperationException($"Annotation for resource {resource.Name} is not a valid {nameof(PublishCDKElasticCacheNodeClusterAnnotation)}.");
+        public Action<CfnReplicationGroupProps>? PropsCfnReplicationGroupCallback { get; set; }
 
-        var clusterProps = new CfnReplicationGroupProps();
-        publishAnnotation.Config.PropsCfnReplicationGroupCallback?.Invoke(clusterProps);
-        environment.DefaultValuesProvider.ApplyCfnReplicationGroupPropsDefaults(environment, clusterProps);
-
-        var cluster = new CfnReplicationGroup(environment.CDKStack, $"ElastiCache-{resource.Name}", clusterProps);
-        publishAnnotation.Config.ConstructCfnReplicationGroupCallback?.Invoke(cluster);
-        ApplyLinkedConstructAnnotation(resource, cluster, this);
+        public Action<CfnReplicationGroup>? ConstructCfnReplicationGroupCallback { get; set; }
     }
 
-    public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(DefaultProvider defaultProvider, IResource resource)
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+    internal class PublishCDKElasticCacheNodeClusterAnnotation : IAWSPublishTargetAnnotation
     {
-        if (resource is RedisResource &&
-            defaultProvider.DefaultRedisPublishTarget == DefaultProvider.RedisPublishTarget.ElastiCacheNodeCluster
-            )
+        public PublishCDKElastiCacheNodeClusterConfig Config { get; init; } = new PublishCDKElastiCacheNodeClusterConfig();
+    }
+}
+
+namespace Aspire.Hosting
+{
+    public static partial class AWSCDKEnvironmentExtensions
+    {
+        [Experimental(AWS.Constants.ASPIREAWSPUBLISHERS001)]
+        public static IResourceBuilder<RedisResource> PublishAsElasticCacheNodeCluster(this IResourceBuilder<RedisResource> builder, PublishCDKElastiCacheNodeClusterConfig? config = null)
         {
-            return new IsDefaultPublishTargetMatchResult
-            {
-                IsMatch = true,
-                PublishTargetAnnotation = new PublishCDKElasticCacheNodeClusterAnnotation()
-            };
+            var annotation = new PublishCDKElasticCacheNodeClusterAnnotation { Config = config ?? new PublishCDKElastiCacheNodeClusterConfig() };
+            builder.Resource.Annotations.Add(annotation);
+
+            return builder;
+        }
+    }
+}
+
+namespace Aspire.Hosting.AWS.Environments.CDKResourceContexts
+{
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+    internal class ElastiCacheNodeClusterPublishTarget(ILogger<ElastiCacheNodeClusterPublishTarget> logger) : AbstractAWSPublishTarget(logger)
+    {
+        public override string PublishTargetName => "ElastiCache Node Cluster";
+
+        public override Type PublishTargetAnnotation => typeof(PublishCDKElasticCacheNodeClusterAnnotation);
+
+        public override async Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
+        {
+            var publishAnnotation = annotation as PublishCDKElasticCacheNodeClusterAnnotation
+                ?? throw new InvalidOperationException($"Annotation for resource {resource.Name} is not a valid {nameof(PublishCDKElasticCacheNodeClusterAnnotation)}.");
+
+            var clusterProps = new CfnReplicationGroupProps();
+            publishAnnotation.Config.PropsCfnReplicationGroupCallback?.Invoke(clusterProps);
+            environment.DefaultValuesProvider.ApplyCfnReplicationGroupPropsDefaults(environment, clusterProps);
+
+            var cluster = new CfnReplicationGroup(environment.CDKStack, $"ElastiCache-{resource.Name}", clusterProps);
+            publishAnnotation.Config.ConstructCfnReplicationGroupCallback?.Invoke(cluster);
+            ApplyLinkedConstructAnnotation(resource, cluster, this);
         }
 
-        return IsDefaultPublishTargetMatchResult.NO_MATCH;
-    }
+        public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(DefaultProvider defaultProvider, IResource resource)
+        {
+            if (resource is RedisResource &&
+                defaultProvider.DefaultRedisPublishTarget == DefaultProvider.RedisPublishTarget.ElastiCacheNodeCluster
+                )
+            {
+                return new IsDefaultPublishTargetMatchResult
+                {
+                    IsMatch = true,
+                    PublishTargetAnnotation = new PublishCDKElasticCacheNodeClusterAnnotation()
+                };
+            }
 
-    public override IList<KeyValuePair<string, string>>? GetReferences(IResource resource, IConstruct resourceConstruct)
-    {
-        if (resourceConstruct is not CfnReplicationGroup cacheConstruct)
-            return null;
+            return IsDefaultPublishTargetMatchResult.NO_MATCH;
+        }
 
-        var list = new List<KeyValuePair<string, string>>();
+        public override IList<KeyValuePair<string, string>>? GetReferences(IResource resource, IConstruct resourceConstruct)
+        {
+            if (resourceConstruct is not CfnReplicationGroup cacheConstruct)
+                return null;
 
-        var key = $"ConnectionStrings__{resource.Name}";
-        var endpoint = $"{Token.AsString(cacheConstruct.AttrPrimaryEndPointAddress)}:{Token.AsString(cacheConstruct.AttrPrimaryEndPointPort)}";
-        list.Add(new KeyValuePair<string, string>(key, endpoint));
+            var list = new List<KeyValuePair<string, string>>();
 
-        return list.Any() ? list : null;
+            var key = $"ConnectionStrings__{resource.Name}";
+            var endpoint = $"{Token.AsString(cacheConstruct.AttrPrimaryEndPointAddress)}:{Token.AsString(cacheConstruct.AttrPrimaryEndPointPort)}";
+            list.Add(new KeyValuePair<string, string>(key, endpoint));
+
+            return list.Any() ? list : null;
+        }
     }
 }
