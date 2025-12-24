@@ -46,7 +46,7 @@ internal class ElastiCacheServerlessClusterPublishTarget(ILogger<ElastiCacheServ
     public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(DefaultProvider defaultProvider, IResource resource)
     {
         if (resource is RedisResource &&
-            defaultProvider.DefaultRedisPublishTarget == DefaultProvider.RedisPublishTarget.ElastiCacheServerlessCluster
+            defaultProvider.DefaultRedisResourcePublishTarget == DefaultProvider.RedisResourcePublishTarget.ElastiCacheServerlessCluster
            )
         {
             return new IsDefaultPublishTargetMatchResult

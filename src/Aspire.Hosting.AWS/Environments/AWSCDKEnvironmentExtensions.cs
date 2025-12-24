@@ -8,6 +8,7 @@ using Aspire.Hosting.AWS.Utils.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Diagnostics.CodeAnalysis;
+using Aspire.Hosting.AWS.Environments.Services;
 using Aspire.Hosting.AWS.Lambda;
 using App = Amazon.CDK.App;
 using Stack = Amazon.CDK.Stack;

@@ -51,7 +51,7 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
     public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(DefaultProvider defaultProvider, IResource resource)
     {
         if (resource is LambdaProjectResource &&
-            defaultProvider.DefaultLambdaProjectPublishTarget == DefaultProvider.LambdaProjectPublishTarget.Lambda
+            defaultProvider.DefaultLambdaProjectResourcePublishTarget == DefaultProvider.LambdaProjectResourcePublishTarget.LambdaFunction
            )
         {
             return new IsDefaultPublishTargetMatchResult

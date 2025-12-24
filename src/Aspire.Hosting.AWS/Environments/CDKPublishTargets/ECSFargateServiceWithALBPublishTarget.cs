@@ -10,6 +10,7 @@ using Aspire.Hosting.ApplicationModel;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
+using Aspire.Hosting.AWS.Environments.Services;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
 namespace Aspire.Hosting.AWS.Environments.CDKPublishTargets;
@@ -59,7 +60,7 @@ internal class ECSFargateServiceWithALBPublishTarget(ITarballContainerImageBuild
     {
         if (resource is ProjectResource projectResource &&
             projectResource.GetEndpoints().Any() &&
-            defaultProvider.DefaultWebAppPublishTarget == DefaultProvider.WebAppPublishTarget.ECSFargateServiceWithALB
+            defaultProvider.DefaultWebProjectResourcePublishTarget == DefaultProvider.WebProjectResourcePublishTarget.ECSFargateServiceWithALB
            )
         {
             return new IsDefaultPublishTargetMatchResult

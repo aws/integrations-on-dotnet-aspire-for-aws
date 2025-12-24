@@ -9,6 +9,7 @@ using Aspire.Hosting.ApplicationModel;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
+using Aspire.Hosting.AWS.Environments.Services;
 using static Amazon.CDK.AWS.ECS.CfnExpressGatewayService;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
@@ -65,7 +66,7 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
     {
         if (resource is ProjectResource projectResource &&
             projectResource.GetEndpoints().Any() &&
-            defaultProvider.DefaultWebAppPublishTarget == DefaultProvider.WebAppPublishTarget.ECSFargateExpressService
+            defaultProvider.DefaultWebProjectResourcePublishTarget == DefaultProvider.WebProjectResourcePublishTarget.ECSFargateExpressService
            )
         {
             return new IsDefaultPublishTargetMatchResult

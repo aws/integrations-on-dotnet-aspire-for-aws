@@ -23,9 +23,10 @@ public class DefaultProvider
     public virtual string DeploymentTagName => "aspire:deployment-tag";
 
     /// <summary>
-    /// Specifies the available compute services for the web application.
+    /// Specifies the available publishing targets for a <see cref="Aspire.Hosting.ApplicationModel.ProjectResource">ProjectResource</see> with
+    /// endpoints defined implying the resource is web application.
     /// </summary>
-    public enum WebAppPublishTarget 
+    public enum WebProjectResourcePublishTarget 
     {
         /// <summary>
         /// Deploy to AWS Elastic Container Service using the <a href="https://docs.aws.amazon.com/AmazonECS/latest/developerguide/express-service-overview.html">Express Mode</a>.
@@ -52,51 +53,53 @@ public class DefaultProvider
     }
 
     /// <summary>
-    /// The default compute service to use when publishing web applications. The default value is <see cref="WebAppPublishTarget.ECSFargateExpressService"/>.
+    /// The default publishing target to use when publishing <see cref="Aspire.Hosting.ApplicationModel.ProjectResource">ProjectResource</see>
+    /// with endpoints defined implying a web application. The default value is <see cref="WebProjectResourcePublishTarget.ECSFargateExpressService"/>.
     /// </summary>
-    public virtual WebAppPublishTarget DefaultWebAppPublishTarget { get; set; } = WebAppPublishTarget.ECSFargateExpressService;
+    public virtual WebProjectResourcePublishTarget DefaultWebProjectResourcePublishTarget { get; set; } = WebProjectResourcePublishTarget.ECSFargateExpressService;
 
     /// <summary>
-    /// Specifies the available compute services for the console application.
+    /// Specifies the available publishing targets for <see cref="Aspire.Hosting.ApplicationModel.ProjectResource">ProjectResource</see> with no endpoints defined.
     /// </summary>
-    public enum ConsoleAppPublishTarget 
+    public enum ConsoleProjectResourcePublishTarget 
     {
         /// <summary>
-        /// Deploy to as a service to the AWS Elastic Container Service (ECS). An ECS service is a continuously running set of tasks running the console application as a container.
+        /// Deploy as a service to AWS Elastic Container Service (ECS). An ECS service is a continuously running set of tasks running the console application as a container.
         /// The CDK <a href="https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_ecs.FargateService.html">FargateService</a> construct is used to create the ECS service.
         /// </summary>
         ECSFargateService
     }
 
     /// <summary>
-    /// The default compute service to use when publishing console applications. For example background workers or message processors. The default value is <see cref="ConsoleAppPublishTarget.ECSFargateService"/>.
+    /// The default publishing target to use when publishing <see cref="Aspire.Hosting.ApplicationModel.ProjectResource">ProjectResource</see>  with no endpoints defined. For example background
+    /// workers or message processors. The default value is <see cref="ConsoleProjectResourcePublishTarget.ECSFargateService"/>.
     /// </summary>
-    public virtual ConsoleAppPublishTarget DefaultConsoleAppPublishTarget { get; set; } = ConsoleAppPublishTarget.ECSFargateService;
+    public virtual ConsoleProjectResourcePublishTarget DefaultConsoleProjectResourcePublishTarget { get; set; } = ConsoleProjectResourcePublishTarget.ECSFargateService;
 
     /// <summary>
-    /// Specifies the available compute services that support Lambda-based deployments.
+    /// Specifies the available publishing targets <see cref="Aspire.Hosting.AWS.Lambda.LambdaProjectResource">LambdaProjectResource</see>.
     /// </summary>
-    public enum LambdaProjectPublishTarget 
+    public enum LambdaProjectResourcePublishTarget 
     {
         /// <summary>
-        /// Deploy project as to AWS Lambda as a function.
+        /// Deploy <see cref="Aspire.Hosting.AWS.Lambda.LambdaProjectResource">LambdaProjectResource</see> to AWS Lambda as a Lambda Function.
         /// The CDK <a href="https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda.Function.html">Function</a> construct is used to create the Lambda function.
         /// </summary>
-        Lambda
+        LambdaFunction
     }
 
     /// <summary>
-    /// The default compute service to use when publishing Lambda functions. The default value is <see cref="LambdaFLambdaProjectPublishTarget"/>.
+    /// The default publishing target to use when publishing <see cref="Aspire.Hosting.AWS.Lambda.LambdaProjectResource">LambdaProjectResource</see>. The default value is <see cref="LambdaProjectResourcePublishTarget.LambdaFunction"/>.
     /// </summary>
-    public virtual LambdaProjectPublishTarget DefaultLambdaProjectPublishTarget { get; set; } = LambdaProjectPublishTarget.Lambda;
+    public virtual LambdaProjectResourcePublishTarget DefaultLambdaProjectResourcePublishTarget { get; set; } = LambdaProjectResourcePublishTarget.LambdaFunction;
 
-    public enum RedisPublishTarget
+    public enum RedisResourcePublishTarget
     {
         ElastiCacheNodeCluster,
         ElastiCacheServerlessCluster
     }
 
-    public virtual RedisPublishTarget DefaultRedisPublishTarget { get; set; } = RedisPublishTarget.ElastiCacheNodeCluster;
+    public virtual RedisResourcePublishTarget DefaultRedisResourcePublishTarget { get; set; } = RedisResourcePublishTarget.ElastiCacheNodeCluster;
 
 
     #region LambdaFunction

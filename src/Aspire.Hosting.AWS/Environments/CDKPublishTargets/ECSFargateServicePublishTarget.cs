@@ -7,6 +7,7 @@ using Aspire.Hosting.ApplicationModel;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
+using Aspire.Hosting.AWS.Environments.Services;
 
 namespace Aspire.Hosting.AWS.Environments.CDKPublishTargets;
 
@@ -66,7 +67,7 @@ internal class ECSFargateServicePublishTarget(ITarballContainerImageBuilder imag
     public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(DefaultProvider defaultProvider, IResource resource)
     {
         if (resource is ProjectResource &&
-            defaultProvider.DefaultConsoleAppPublishTarget == DefaultProvider.ConsoleAppPublishTarget.ECSFargateService
+            defaultProvider.DefaultConsoleProjectResourcePublishTarget == DefaultProvider.ConsoleProjectResourcePublishTarget.ECSFargateService
            )
         {
             return new IsDefaultPublishTargetMatchResult

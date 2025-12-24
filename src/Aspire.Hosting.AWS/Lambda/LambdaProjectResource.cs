@@ -1,7 +1,7 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Aspire.Hosting.ApplicationModel;
-using Aspire.Hosting.AWS.Environments;
+using Aspire.Hosting.AWS.Environments.Services;
 using Aspire.Hosting.Pipelines;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -11,9 +11,12 @@ namespace Aspire.Hosting.AWS.Lambda;
 /// <summary>
 /// Aspire resource representing a Lambda function.
 /// </summary>
-/// <param name="name"></param>
 public class LambdaProjectResource : ProjectResource
 {
+    /// <summary>
+    /// Creates an instance of LambdaProjectResource.
+    /// </summary>
+    /// <param name="name">The name of the Aspire Resource</param>
     public LambdaProjectResource(string name)
         : base(name)
     {
