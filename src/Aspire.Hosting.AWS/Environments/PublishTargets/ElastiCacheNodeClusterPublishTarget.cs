@@ -54,7 +54,7 @@ namespace Aspire.Hosting.AWS.Environments.CDKResourceContexts
 
         public override Type PublishTargetAnnotation => typeof(PublishCDKElasticCacheNodeClusterAnnotation);
 
-        public override async Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
+        public override Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
         {
             var publishAnnotation = annotation as PublishCDKElasticCacheNodeClusterAnnotation
                 ?? throw new InvalidOperationException($"Annotation for resource {resource.Name} is not a valid {nameof(PublishCDKElasticCacheNodeClusterAnnotation)}.");
@@ -66,6 +66,8 @@ namespace Aspire.Hosting.AWS.Environments.CDKResourceContexts
             var cluster = new CfnReplicationGroup(environment.CDKStack, $"ElastiCache-{resource.Name}", clusterProps);
             publishAnnotation.Config.ConstructCfnReplicationGroupCallback?.Invoke(cluster);
             ApplyLinkedConstructAnnotation(resource, cluster, this);
+            
+            return Task.CompletedTask;
         }
 
         public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(DefaultProvider defaultProvider, IResource resource)
