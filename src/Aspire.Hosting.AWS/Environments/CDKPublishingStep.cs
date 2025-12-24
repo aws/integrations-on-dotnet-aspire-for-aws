@@ -2,26 +2,22 @@
 #pragma warning disable ASPIREPUBLISHERS001
 #pragma warning disable ASPIREAWSPUBLISHERS001
 
-using Amazon.CDK;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.CDK;
-using Aspire.Hosting.AWS.Environments.CDKResourceContexts;
-using Aspire.Hosting.AWS.Environments.PublishTargets;
+using Aspire.Hosting.AWS.Environments.CDKPublishTargets;
 using Aspire.Hosting.Pipelines;
-using Constructs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using static Aspire.Hosting.AWS.Environments.CDKResourceContexts.IAWSPublishTarget;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
 namespace Aspire.Hosting.AWS.Environments;
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-internal class CDKPublishingGenerator(IServiceProvider serviceProvider, ILogger<CDKPublishingGenerator> logger)
+internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPublishingStep> logger)
 {
     IDictionary<Type, IAWSPublishTarget> _annotationsToPublishTargetsMapping = new Dictionary<Type, IAWSPublishTarget>(); 
 

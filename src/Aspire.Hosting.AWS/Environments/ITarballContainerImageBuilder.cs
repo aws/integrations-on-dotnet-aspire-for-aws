@@ -2,7 +2,6 @@
 
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Utils.Internal;
-using Aspire.Hosting.Publishing;
 using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
 

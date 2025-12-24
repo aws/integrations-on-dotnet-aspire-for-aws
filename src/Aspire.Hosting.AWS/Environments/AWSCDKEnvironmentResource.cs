@@ -2,7 +2,6 @@
 
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Pipelines;
-using Aspire.Hosting.Publishing;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics.CodeAnalysis;
 using App = Amazon.CDK.App;
@@ -32,7 +31,7 @@ public abstract class AWSCDKEnvironmentResource : Resource
 
         CDKApp = new App(new AppProps
         {
-            Outdir = DetermineOuptutDirectory()
+            Outdir = DetermineOutputDirectory()
         });
 
         DeploymentConstructProvider = new DeploymentConstructProvider(this);
@@ -53,7 +52,7 @@ public abstract class AWSCDKEnvironmentResource : Resource
             Name = $"publish-{Name}",
             Action = async (context) =>
             {
-                var cdkCtx = context.Services.GetRequiredService<CDKPublishingGenerator>();
+                var cdkCtx = context.Services.GetRequiredService<CDKPublishingStep>();
                 await cdkCtx.GenerateCDKOutputAsync(context, model, this);
             },
             RequiredBySteps = [WellKnownPipelineSteps.Publish],
@@ -73,7 +72,7 @@ public abstract class AWSCDKEnvironmentResource : Resource
             Name = $"deploy-{Name}",
             Action = async (context) =>
             {
-                var cdkCtx = context.Services.GetRequiredService<CDKDeployContext>();
+                var cdkCtx = context.Services.GetRequiredService<CDKDeployStep>();
                 await cdkCtx.ExecuteCDKDeployAsync(context, model, this);
             },
             RequiredBySteps = [WellKnownPipelineSteps.Deploy],
@@ -84,7 +83,7 @@ public abstract class AWSCDKEnvironmentResource : Resource
         return deployStep;
     }
 
-    private string DetermineOuptutDirectory()
+    private string DetermineOutputDirectory()
     {
         string? outputPath = null;
         var args = Environment.GetCommandLineArgs();

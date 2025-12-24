@@ -59,7 +59,7 @@ public class DefaultProvider
     /// <summary>
     /// Specifies the available compute services for the console application.
     /// </summary>
-    public enum ConsoleAppPublishTaret 
+    public enum ConsoleAppPublishTarget 
     {
         /// <summary>
         /// Deploy to as a service to the AWS Elastic Container Service (ECS). An ECS service is a continuously running set of tasks running the console application as a container.
@@ -69,14 +69,14 @@ public class DefaultProvider
     }
 
     /// <summary>
-    /// The default compute service to use when publishing console applications. For example background workers or message processors. The default value is <see cref="ConsoleAppPublishTaret.ECSFargateService"/>.
+    /// The default compute service to use when publishing console applications. For example background workers or message processors. The default value is <see cref="ConsoleAppPublishTarget.ECSFargateService"/>.
     /// </summary>
-    public virtual ConsoleAppPublishTaret DefaultConsoleAppPublishTarget { get; set; } = ConsoleAppPublishTaret.ECSFargateService;
+    public virtual ConsoleAppPublishTarget DefaultConsoleAppPublishTarget { get; set; } = ConsoleAppPublishTarget.ECSFargateService;
 
     /// <summary>
     /// Specifies the available compute services that support Lambda-based deployments.
     /// </summary>
-    public enum LambdaComputeService 
+    public enum LambdaProjectPublishTarget 
     {
         /// <summary>
         /// Deploy project as to AWS Lambda as a function.
@@ -86,9 +86,9 @@ public class DefaultProvider
     }
 
     /// <summary>
-    /// The default compute service to use when publishing Lambda functions. The default value is <see cref="LambdaComputeService.Lambda"/>.
+    /// The default compute service to use when publishing Lambda functions. The default value is <see cref="LambdaFLambdaProjectPublishTarget"/>.
     /// </summary>
-    public virtual LambdaComputeService DefaultLambdaProjectPublishTarget { get; set; } = LambdaComputeService.Lambda;
+    public virtual LambdaProjectPublishTarget DefaultLambdaProjectPublishTarget { get; set; } = LambdaProjectPublishTarget.Lambda;
 
     public enum RedisPublishTarget
     {
@@ -132,7 +132,7 @@ public class DefaultProvider
 
     #endregion
 
-    #region ECSFargateExpress
+    #region ECSFargateExpressService
     public virtual double? ECSFargateExpressCpu => 1024;
 
     public virtual double? ECSFargateExpressMiB => 2048;
@@ -183,53 +183,7 @@ public class DefaultProvider
     }
 
     #endregion
-
-    #region ECSFargateServiceWithALB
-    public virtual double? ECSFargateServiceWithALBCpu => 1024;
-
-    public virtual double? ECSFargateServiceWithALBMemoryLimitMiB => 2048;
-
-    public virtual double? ECSFargateServiceWithALBDesiredCount => 2;
-
-    public virtual double? ECSFargateServiceWithALBListenerPort => 80;
-
-    public virtual double? ECSFargateServiceWithALBContainerPort => 8080;
-
-    public virtual bool? ECSFargateServiceWithALBPublicLoadBalancer => true;
-
-    public virtual double? ECSFargateServiceWithALBMinHealthyPercent => 100;
-
-    internal protected virtual void ApplyECSFargateServiceWithALBDefaults(ApplicationLoadBalancedTaskImageOptions props)
-    {
-        if (!props.ContainerPort.HasValue)
-            props.ContainerPort = ECSFargateServiceWithALBContainerPort;
-    }
-
-    internal protected virtual void ApplyECSFargateServiceWithALBDefaults(AWSCDKEnvironmentResource environment, ApplicationLoadBalancedFargateServiceProps props)
-    {
-        if (props.Cluster == null)
-            props.Cluster = environment.DeploymentConstructProvider.GetDefaultECSCluster();
-        if (!props.Cpu.HasValue)
-            props.Cpu = ECSFargateServiceWithALBCpu;
-        if (!props.MemoryLimitMiB.HasValue)
-            props.MemoryLimitMiB = ECSFargateServiceWithALBMemoryLimitMiB;
-        if (!props.DesiredCount.HasValue)
-            props.DesiredCount = ECSFargateServiceWithALBDesiredCount;
-        if (!props.ListenerPort.HasValue)
-            props.ListenerPort = ECSFargateServiceWithALBListenerPort;
-        if (!props.PublicLoadBalancer.HasValue)
-            props.PublicLoadBalancer = ECSFargateServiceWithALBPublicLoadBalancer;
-        if (!props.MinHealthyPercent.HasValue)
-            props.MinHealthyPercent = ECSFargateServiceWithALBMinHealthyPercent;
-        if (props.SecurityGroups == null || props.SecurityGroups.Length == 0)
-        {
-            var defaultSecurityGroup = environment.DeploymentConstructProvider.GetDefaultECSClusterSecurityGroup();
-            props.SecurityGroups = new[] { defaultSecurityGroup };
-        }
-    }
-
-    #endregion
-
+    
     #region ECSFargateService
 
     public virtual double? ECSFargateServiceCpu => 256;
@@ -279,24 +233,54 @@ public class DefaultProvider
 
     #endregion
 
-    #region ElasticCacheServerlessCluster
+    #region ECSFargateServiceWithALB
+    public virtual double? ECSFargateServiceWithALBCpu => 1024;
 
-    public virtual string ElasticCacheServerlessClusterEngine => "valkey";
+    public virtual double? ECSFargateServiceWithALBMemoryLimitMiB => 2048;
 
-    public virtual string ElasticCacheServerlessMajorEngineVersion => "8";
+    public virtual double? ECSFargateServiceWithALBDesiredCount => 2;
 
-    internal protected virtual void ApplyCfnServerlessCachePropsDefaults(AWSCDKEnvironmentResource environment, CfnServerlessCacheProps props)
+    public virtual double? ECSFargateServiceWithALBListenerPort => 80;
+
+    public virtual double? ECSFargateServiceWithALBContainerPort => 8080;
+
+    public virtual bool? ECSFargateServiceWithALBPublicLoadBalancer => true;
+
+    public virtual double? ECSFargateServiceWithALBMinHealthyPercent => 100;
+
+    internal protected virtual void ApplyECSFargateServiceWithALBDefaults(ApplicationLoadBalancedTaskImageOptions props)
     {
-        if (props.Engine == null)
-            props.Engine = ElasticCacheServerlessClusterEngine;
-        if (props.MajorEngineVersion == null)
-            props.MajorEngineVersion = ElasticCacheServerlessMajorEngineVersion;
+        if (!props.ContainerPort.HasValue)
+            props.ContainerPort = ECSFargateServiceWithALBContainerPort;
+    }
+
+    internal protected virtual void ApplyECSFargateServiceWithALBDefaults(AWSCDKEnvironmentResource environment, ApplicationLoadBalancedFargateServiceProps props)
+    {
+        if (props.Cluster == null)
+            props.Cluster = environment.DeploymentConstructProvider.GetDefaultECSCluster();
+        if (!props.Cpu.HasValue)
+            props.Cpu = ECSFargateServiceWithALBCpu;
+        if (!props.MemoryLimitMiB.HasValue)
+            props.MemoryLimitMiB = ECSFargateServiceWithALBMemoryLimitMiB;
+        if (!props.DesiredCount.HasValue)
+            props.DesiredCount = ECSFargateServiceWithALBDesiredCount;
+        if (!props.ListenerPort.HasValue)
+            props.ListenerPort = ECSFargateServiceWithALBListenerPort;
+        if (!props.PublicLoadBalancer.HasValue)
+            props.PublicLoadBalancer = ECSFargateServiceWithALBPublicLoadBalancer;
+        if (!props.MinHealthyPercent.HasValue)
+            props.MinHealthyPercent = ECSFargateServiceWithALBMinHealthyPercent;
+        if (props.SecurityGroups == null || props.SecurityGroups.Length == 0)
+        {
+            var defaultSecurityGroup = environment.DeploymentConstructProvider.GetDefaultECSClusterSecurityGroup();
+            props.SecurityGroups = new[] { defaultSecurityGroup };
+        }
     }
 
     #endregion
-
-    #region ElasticCacheNodeCluster
-    public virtual string ElasticCacheNodeClusterReplicationGroupDescription => "Cache for Aspire Application";
+    
+    #region ElastiCacheNodeCluster
+    public virtual string ElasticCacheNodeClusterReplicationGroupDescription => "Node Cache for Aspire Application";
 
     public virtual string ElasticCacheNodeClusterEngine => "valkey";
 
@@ -350,7 +334,23 @@ public class DefaultProvider
     }
 
     #endregion
+    
+    #region ElasticCacheServerlessCluster
 
+    public virtual string ElasticCacheServerlessClusterEngine => "valkey";
+
+    public virtual string ElasticCacheServerlessMajorEngineVersion => "8";
+
+    internal protected virtual void ApplyCfnServerlessCachePropsDefaults(AWSCDKEnvironmentResource environment, CfnServerlessCacheProps props)
+    {
+        if (props.Engine == null)
+            props.Engine = ElasticCacheServerlessClusterEngine;
+        if (props.MajorEngineVersion == null)
+            props.MajorEngineVersion = ElasticCacheServerlessMajorEngineVersion;
+    }
+
+    #endregion
+    
     #region Default CDK Constructions
 
     internal protected virtual IVpc CreateDefaultVpc(AWSCDKEnvironmentResource environment)

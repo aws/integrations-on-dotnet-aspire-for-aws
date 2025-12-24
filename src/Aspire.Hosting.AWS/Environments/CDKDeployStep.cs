@@ -4,7 +4,6 @@ using Amazon.CloudFormation;
 using Amazon.CloudFormation.Model;
 using Amazon.Runtime.Credentials;
 using Aspire.Hosting.ApplicationModel;
-using Aspire.Hosting.AWS.CloudFormation;
 using Aspire.Hosting.AWS.Provisioning;
 using Aspire.Hosting.AWS.Utils.Internal;
 using Aspire.Hosting.Pipelines;
@@ -20,7 +19,7 @@ namespace Aspire.Hosting.AWS.Environments;
 #pragma warning disable ASPIREPUBLISHERS001
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-internal class CDKDeployContext(IProcessCommandService processCommandService, ILogger<CDKPublishingGenerator> logger)
+internal class CDKDeployStep(IProcessCommandService processCommandService, ILogger<CDKDeployStep> logger)
 {
     public async Task ExecuteCDKDeployAsync(PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken = default)
     {

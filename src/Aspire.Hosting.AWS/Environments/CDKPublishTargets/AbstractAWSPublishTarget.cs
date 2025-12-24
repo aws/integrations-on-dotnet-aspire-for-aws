@@ -2,13 +2,12 @@
 
 using Amazon.CDK;
 using Aspire.Hosting.ApplicationModel;
-using Aspire.Hosting.AWS.Environments.CDKResourceContexts;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
-namespace Aspire.Hosting.AWS.Environments.PublishTargets;
+namespace Aspire.Hosting.AWS.Environments.CDKPublishTargets;
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarget

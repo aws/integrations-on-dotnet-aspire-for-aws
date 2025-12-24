@@ -3,6 +3,7 @@
 using Amazon.CDK;
 using Amazon.CDK.AWS.Lambda.EventSources;
 using Aspire.Hosting.AWS.Environments;
+using Aspire.Hosting.AWS.Environments.CDKPublishTargets;
 using Lambda.AppHost;
 
 // TODOs:
@@ -47,7 +48,7 @@ builder.AddProject<Projects.Backend>("backend")
 
 builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
         .WithDeploymentImageTag(context => deploymentTag)
-        .PublishAsLambdaFunction(new PublishCDKLambdaFunctionConfig
+        .PublishAsLambdaFunction(new PublishLambdaFunctionConfig
         {
             PropsFunctionCallback = props =>
             {

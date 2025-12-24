@@ -1,16 +1,15 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Aspire.Hosting.ApplicationModel;
-using Aspire.Hosting.AWS.Environments.CDKResourceContexts;
 using Constructs;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Aspire.Hosting.AWS.Environments;
+namespace Aspire.Hosting.AWS.Environments.CDKPublishTargets;
 
-[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 /// <summary>
 /// This annotation is used for being able to find the CDK construct for the Aspire resource.
 /// </summary>
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 internal class LinkedConstructAnnotations : IResourceAnnotation
 {
     /// <summary>

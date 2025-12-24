@@ -12,7 +12,7 @@ public interface ILambdaDeploymentPackager
     Task<LambdaDeploymentPackagerOutput> CreateDeploymentPackageAsync(LambdaProjectResource lambdaFunction, string outputDirectory, CancellationToken cancellationToken);
 }
 
-internal class LambdaDeploymentPackager(IProcessCommandService processCommandService, ILogger<LambdaDeploymentPackager> logger) : ILambdaDeploymentPackager
+internal class DefaultLambdaDeploymentPackager(IProcessCommandService processCommandService, ILogger<DefaultLambdaDeploymentPackager> logger) : ILambdaDeploymentPackager
 {
     public async Task<LambdaDeploymentPackagerOutput> CreateDeploymentPackageAsync(LambdaProjectResource lambdaFunction, string outputDirectory, CancellationToken cancellationToken)
     {

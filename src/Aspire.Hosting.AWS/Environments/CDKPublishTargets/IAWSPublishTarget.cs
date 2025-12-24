@@ -1,9 +1,8 @@
 ﻿using Aspire.Hosting.ApplicationModel;
-using Aspire.Hosting.AWS.Environments.PublishTargets;
 using Constructs;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Aspire.Hosting.AWS.Environments.CDKResourceContexts;
+namespace Aspire.Hosting.AWS.Environments.CDKPublishTargets;
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 public interface IAWSPublishTarget
