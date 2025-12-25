@@ -9,6 +9,7 @@
 *.user
 *.userosscache
 *.sln.docstates
+*.DS_Store
 
 playground/**/launchSettings.json
 **/.aspire/**
