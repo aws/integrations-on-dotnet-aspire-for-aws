@@ -49,7 +49,7 @@ internal class CDKDeployStep(IProcessCommandService processCommandService, ILogg
             }
 
             var environmentVariables = SdkUtilities.CreateDictionaryOfAWSCredentialsAndRegion(cfClient);
-            // TODO: Make sure the configured SDK credentials and region are set for the region.
+
             var exitCode = processCommandService.RunProcess(logger, shellCommand, arguments, environment.CDKApp.Outdir, streamOutputToLogger: true, environmentVariables: environmentVariables);
             if (exitCode != 0)
             {

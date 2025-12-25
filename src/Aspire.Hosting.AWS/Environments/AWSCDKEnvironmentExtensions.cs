@@ -36,20 +36,20 @@ public static partial class AWSCDKEnvironmentExtensions
 
     /// <summary>
     /// Adds the Aspire environment to deploy resources using AWS. The DefaultProvider is used configure the default choices used
-    /// when deploying resources. This is generally set to <see cref="DefaultProvider.V1"/>. As AWS evolves and defaults need
+    /// when deploying resources. This is generally set to <see cref="CDKDefaultsProvider.V1"/>. As AWS evolves and defaults need
     /// to change a new version will be created. Users can then opt-in to when they want to migrated to the new version. 
-    /// See <see cref="DefaultProvider"/> for more details.
+    /// See <see cref="CDKDefaultsProvider"/> for more details.
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="name">The Aspire resource name also used as the CloudFormation stack name.</param>
-    /// <param name="defaultProvider">The DefaultProvider is used configure the default choices used when deploying resources.</param>
+    /// <param name="cdkDefaultsProviderFactory">The DefaultProvider is used configure the default choices used when deploying resources.</param>
     /// <returns></returns>
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    public static IResourceBuilder<AWSCDKEnvironmentResource<Stack>> AddAWSCDKEnvironment(this IDistributedApplicationBuilder builder, [ResourceName] string name, DefaultProvider defaultProvider)
+    public static IResourceBuilder<AWSCDKEnvironmentResource<Stack>> AddAWSCDKEnvironment(this IDistributedApplicationBuilder builder, [ResourceName] string name, CDKDefaultsProviderFactory cdkDefaultsProviderFactory)
     {
         builder.AddEnvironmentServices();
 
-        var env = new AWSCDKEnvironmentResource<Stack>(name, defaultProvider, app => new Stack(app, name));
+        var env = new AWSCDKEnvironmentResource<Stack>(name, cdkDefaultsProviderFactory, app => new Stack(app, name));
 
         if (builder.ExecutionContext.IsRunMode)
         {
@@ -61,22 +61,22 @@ public static partial class AWSCDKEnvironmentExtensions
 
     /// <summary>
     /// Adds the Aspire environment to deploy resources using AWS. The DefaultProvider is used configure the default choices used
-    /// when deploying resources. This is generally set to <see cref="DefaultProvider.V1"/>. As AWS evolves and defaults need
+    /// when deploying resources. This is generally set to <see cref="CDKDefaultsProvider.V1"/>. As AWS evolves and defaults need
     /// to change a new version will be created. Users can then opt-in to when they want to migrated to the new version. 
-    /// See <see cref="DefaultProvider"/> for more details.
+    /// See <see cref="CDKDefaultsProvider"/> for more details.
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="name">The Aspire resource name also used as the CloudFormation stack name.</param>
-    /// <param name="defaultProvider">The DefaultProvider is used configure the default choices used when deploying resources.</param>
+    /// <param name="cdkDefaultsProviderFactory">The DefaultProvider is used configure the default choices used when deploying resources.</param>
     /// <param name="stackFactory">Func to provide a custom CDK stack with it's own resources. The Aspire provisioned resource will be added to this CDK stack.</param>
     /// <returns></returns>
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    public static IResourceBuilder<AWSCDKEnvironmentResource<T>> AddAWSCDKEnvironment<T>(this IDistributedApplicationBuilder builder, [ResourceName] string name, DefaultProvider defaultProvider, Func<App, T> stackFactory)
+    public static IResourceBuilder<AWSCDKEnvironmentResource<T>> AddAWSCDKEnvironment<T>(this IDistributedApplicationBuilder builder, [ResourceName] string name, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, Func<App, T> stackFactory)
         where T : Stack
     {
         builder.AddEnvironmentServices();
 
-        var env = new AWSCDKEnvironmentResource<T>(name, defaultProvider, stackFactory);
+        var env = new AWSCDKEnvironmentResource<T>(name, cdkDefaultsProviderFactory, stackFactory);
 
         if (builder.ExecutionContext.IsRunMode)
         {

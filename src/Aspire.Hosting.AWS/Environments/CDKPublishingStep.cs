@@ -94,7 +94,7 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
         IsDefaultPublishTargetMatchResult? bestMatch = null;
         foreach(var publishTarget in _annotationsToPublishTargetsMapping.Values)
         {
-            var matchResults = publishTarget.IsDefaultPublishTargetMatch(environment.DefaultValuesProvider, resource);
+            var matchResults = publishTarget.IsDefaultPublishTargetMatch(environment.DefaultsProvider, resource);
 
             if (matchResults.IsMatch && (bestMatch == null || bestMatch.Rank < matchResults.Rank))
             {

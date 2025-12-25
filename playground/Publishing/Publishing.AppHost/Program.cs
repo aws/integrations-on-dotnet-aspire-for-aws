@@ -23,7 +23,7 @@ using Lambda.AppHost;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-var awsEnvironment = builder.AddAWSCDKEnvironment("aws", DefaultProvider.V1, app => new DeploymentStack(app, "DeploymentInfrastructure10"));
+var awsEnvironment = builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.V1, app => new DeploymentStack(app, "DeploymentInfrastructure10"));
 var deploymentStack = awsEnvironment.Resource.EnvironmentStack;
 var deploymentTag = "v" + DateTime.UtcNow.ToString("yyyyMMddHHmmss");
 
@@ -52,8 +52,8 @@ builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunctio
         {
             PropsFunctionCallback = props =>
             {
-                props.Vpc = awsEnvironment.Resource.DeploymentConstructProvider.GetDefaultVpc();
-                props.SecurityGroups = new[] { awsEnvironment.Resource.DeploymentConstructProvider.GetDefaultElastiCacheSecurityGroup() };
+                props.Vpc = awsEnvironment.Resource.DefaultsProvider.GetDefaultVpc();
+                props.SecurityGroups = new[] { awsEnvironment.Resource.DefaultsProvider.GetDefaultElastiCacheSecurityGroup() };
             },
             ConstructFunctionCallback = construct =>
             {

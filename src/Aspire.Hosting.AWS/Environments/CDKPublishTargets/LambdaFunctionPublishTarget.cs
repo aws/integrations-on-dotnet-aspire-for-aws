@@ -9,6 +9,7 @@ using Aspire.Hosting.AWS.Lambda;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
+using Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;
 
 namespace Aspire.Hosting.AWS.Environments.CDKPublishTargets;
 
@@ -39,7 +40,7 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
         };
         ProcessRelationShips(functionProps, lambdaFunction);
         publishAnnotation.Config.PropsFunctionCallback?.Invoke(functionProps);
-        environment.DefaultValuesProvider.ApplyLambdaFunctionDefaults(lambdaFunction.GetProjectMetadata().ProjectPath, functionProps);
+        environment.DefaultsProvider.ApplyLambdaFunctionDefaults(lambdaFunction.GetProjectMetadata().ProjectPath, functionProps);
 
         var function = new Function(environment.CDKStack, $"Function-{lambdaFunction.Name}", functionProps);
         publishAnnotation.Config.ConstructFunctionCallback?.Invoke(function);
@@ -48,10 +49,10 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
         await ApplyDeploymentTagAsync(environment, lambdaFunction, function, cancellationToken);
     }
 
-    public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(DefaultProvider defaultProvider, IResource resource)
+    public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
     {
         if (resource is LambdaProjectResource &&
-            defaultProvider.DefaultLambdaProjectResourcePublishTarget == DefaultProvider.LambdaProjectResourcePublishTarget.LambdaFunction
+            cdkDefaultsProvider.DefaultLambdaProjectResourcePublishTarget == CDKDefaultsProvider.LambdaProjectResourcePublishTarget.LambdaFunction
            )
         {
             return new IsDefaultPublishTargetMatchResult

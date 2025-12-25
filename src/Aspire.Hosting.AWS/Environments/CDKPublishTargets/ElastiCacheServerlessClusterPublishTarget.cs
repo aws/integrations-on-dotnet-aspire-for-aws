@@ -9,6 +9,7 @@ using Aspire.Hosting.ApplicationModel;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
+using Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
 namespace Aspire.Hosting.AWS.Environments.CDKPublishTargets;
@@ -31,7 +32,7 @@ internal class ElastiCacheServerlessClusterPublishTarget(ILogger<ElastiCacheServ
         publishAnnotation.Config.PropsCfnServerlessCacheCallback?.Invoke(serverlessCacheProps);
 
         // Apply defaults from provider
-        environment.DefaultValuesProvider.ApplyCfnServerlessCachePropsDefaults(environment, serverlessCacheProps);
+        environment.DefaultsProvider.ApplyCfnServerlessCachePropsDefaults(serverlessCacheProps);
 
         var cluster = new CfnServerlessCache(environment.CDKStack, $"ElastiCache-{resource.Name}", serverlessCacheProps);
 
@@ -43,10 +44,10 @@ internal class ElastiCacheServerlessClusterPublishTarget(ILogger<ElastiCacheServ
         return Task.CompletedTask;
     }
 
-    public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(DefaultProvider defaultProvider, IResource resource)
+    public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
     {
         if (resource is RedisResource &&
-            defaultProvider.DefaultRedisResourcePublishTarget == DefaultProvider.RedisResourcePublishTarget.ElastiCacheServerlessCluster
+            cdkDefaultsProvider.DefaultRedisResourcePublishTarget == CDKDefaultsProvider.RedisResourcePublishTarget.ElastiCacheServerlessCluster
            )
         {
             return new IsDefaultPublishTargetMatchResult

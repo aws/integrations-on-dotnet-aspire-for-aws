@@ -5,6 +5,7 @@ using Aspire.Hosting.ApplicationModel;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
+using Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
 namespace Aspire.Hosting.AWS.Environments.CDKPublishTargets;
@@ -17,7 +18,7 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
 
     public abstract Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation publishAnnotation, CancellationToken cancellationToken);
     public abstract IList<KeyValuePair<string, string>>? GetReferences(IResource resource, IConstruct resourceConstruct);
-    public abstract IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(DefaultProvider defaultProvider, IResource resource);
+    public abstract IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource);
 
     protected void ApplyRelationshipEnvironmentVariable(IDictionary<string, string> environmentVariables, IResource resource)
     {
@@ -68,7 +69,7 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
             var tag = await deploymentTag.Callback(context).ConfigureAwait(false);
             if (tag != null)
             {
-                Tags.Of(scope).Add(environment.DefaultValuesProvider.DeploymentTagName, tag);
+                Tags.Of(scope).Add(environment.DefaultsProvider.DeploymentTagName, tag);
             }
         }
     }

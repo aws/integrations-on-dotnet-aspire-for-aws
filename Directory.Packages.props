@@ -19,9 +19,9 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
     <!-- AWS SDK for .NET dependencies -->
     <PackageVersion Include="AWSSDK.CloudFormation" Version="4.0.5.4" />
-    <PackageVersion Include="AWSSDK.Core" Version="4.0.3" />
+    <PackageVersion Include="AWSSDK.Core" Version="4.0.3.6" />
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.0.9.5" />
-    <PackageVersion Include="AWSSDK.Lambda" Version="4.0.6.2" />
+    <PackageVersion Include="AWSSDK.Lambda" Version="4.0.12.1" />
     <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.4" />
     <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.0.2.4" />
     <PackageVersion Include="AWSSDK.SQS" Version="4.0.2.2" />
@@ -36,7 +36,7 @@
     <PackageVersion Include="Amazon.Lambda.SQSEvents" Version="2.2.0" />
     <PackageVersion Include="Amazon.AspNetCore.DataProtection.SSM" Version="4.0.0" />
     <!-- AWS CDK dependencies -->
-    <PackageVersion Include="Amazon.CDK.Lib" Version="2.232.2" />
+    <PackageVersion Include="Amazon.CDK.Lib" Version="2.233.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
     <!-- Open Telemetry -->
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.13.1" />

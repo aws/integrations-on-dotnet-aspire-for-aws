@@ -10,6 +10,7 @@ using Aspire.Hosting.ApplicationModel;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
+using Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;
 using Aspire.Hosting.AWS.Environments.Services;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
@@ -39,14 +40,14 @@ internal class ECSFargateServiceWithALBPublishTarget(ITarballContainerImageBuild
         };
 
         publishAnnotation.Config.PropsApplicationLoadBalancedTaskImageOptionsCallback?.Invoke(taskImageOptions);
-        environment.DefaultValuesProvider.ApplyECSFargateServiceWithALBDefaults(taskImageOptions);
+        environment.DefaultsProvider.ApplyECSFargateServiceWithALBDefaults(taskImageOptions);
 
         var fargateServiceProps = new ApplicationLoadBalancedFargateServiceProps
         {
             TaskImageOptions = taskImageOptions
         };
         publishAnnotation.Config.PropsApplicationLoadBalancedFargateServiceCallback?.Invoke(fargateServiceProps);
-        environment.DefaultValuesProvider.ApplyECSFargateServiceWithALBDefaults(environment, fargateServiceProps);
+        environment.DefaultsProvider.ApplyECSFargateServiceWithALBDefaults(fargateServiceProps);
         ProcessRelationShips(fargateServiceProps, projectResource);
 
         var fargateService = new ApplicationLoadBalancedFargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
@@ -56,11 +57,11 @@ internal class ECSFargateServiceWithALBPublishTarget(ITarballContainerImageBuild
         await ApplyDeploymentTagAsync(environment, projectResource, fargateService.Service, cancellationToken);
     }
 
-    public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(DefaultProvider defaultProvider, IResource resource)
+    public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
     {
         if (resource is ProjectResource projectResource &&
             projectResource.GetEndpoints().Any() &&
-            defaultProvider.DefaultWebProjectResourcePublishTarget == DefaultProvider.WebProjectResourcePublishTarget.ECSFargateServiceWithALB
+            cdkDefaultsProvider.DefaultWebProjectResourcePublishTarget == CDKDefaultsProvider.WebProjectResourcePublishTarget.ECSFargateServiceWithALB
            )
         {
             return new IsDefaultPublishTargetMatchResult

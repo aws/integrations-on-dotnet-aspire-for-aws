@@ -2,27 +2,12 @@
 using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.ElastiCache;
 using Amazon.CDK.AWS.IAM;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Aspire.Hosting.AWS.Environments;
+namespace Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;
 
-[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-public class DeploymentConstructProvider
+public partial class CDKDefaultsProvider
 {
-    public AWSCDKEnvironmentResource Environment { get; }
-
-
-    internal DeploymentConstructProvider(AWSCDKEnvironmentResource environment)
-    {
-        Environment = environment;
-    }
-
     private IVpc? _defaultVpc;
     public IVpc GetDefaultVpc()
     {
@@ -35,11 +20,19 @@ public class DeploymentConstructProvider
             }
             else
             {
-                _defaultVpc = Environment.DefaultValuesProvider.CreateDefaultVpc(Environment);
+                _defaultVpc = CreateDefaultVpc();
             }
         }
 
         return _defaultVpc;
+    }
+    
+    protected virtual IVpc CreateDefaultVpc()
+    {
+        return new Vpc(EnvironmentResource.CDKStack, "DefaultVPC", new VpcProps
+        {
+            MaxAzs = 2
+        });
     }
 
     private ICluster? _defaultECSCluster;
@@ -54,13 +47,21 @@ public class DeploymentConstructProvider
             }
             else
             {
-                _defaultECSCluster = Environment.DefaultValuesProvider.CreateDefaultECSCluster(Environment);
+                _defaultECSCluster = CreateDefaultECSCluster();
             }
         }
 
         return _defaultECSCluster;
     }
-
+    
+    protected virtual ICluster CreateDefaultECSCluster()
+    {
+        return new Cluster(EnvironmentResource.CDKStack, "DefaultECSCluster", new ClusterProps
+        {
+            Vpc = GetDefaultVpc()
+        });
+    }
+    
     private ISecurityGroup? _defaultECSClusterSecurityGroup;
     public ISecurityGroup GetDefaultECSClusterSecurityGroup()
     {
@@ -73,12 +74,21 @@ public class DeploymentConstructProvider
             }
             else
             {
-                _defaultECSClusterSecurityGroup = Environment.DefaultValuesProvider.CreateDefaultECSClusterSecurityGroup(Environment);
+                _defaultECSClusterSecurityGroup = CreateDefaultECSClusterSecurityGroup();
             }
         }
         return _defaultECSClusterSecurityGroup;
-    }
+    }    
 
+    protected virtual ISecurityGroup CreateDefaultECSClusterSecurityGroup()
+    {
+        return new SecurityGroup(EnvironmentResource.CDKStack, "DefaultECSClusterSecurityGroup", new SecurityGroupProps
+        {
+            Vpc = GetDefaultVpc(),
+            AllowAllOutbound = true
+        });
+    }
+    
     private CfnSubnetGroup? _defaultElastiCacheCfnSubnetGroup;
     public CfnSubnetGroup GetDefaultElastiCacheCfnSubnetGroup()
     {
@@ -91,13 +101,23 @@ public class DeploymentConstructProvider
             }
             else
             {
-                _defaultElastiCacheCfnSubnetGroup = Environment.DefaultValuesProvider.CreateDefaultElastiCacheCfnSubnetGroup(Environment);
+                _defaultElastiCacheCfnSubnetGroup = CreateDefaultElastiCacheCfnSubnetGroup();
             }
         }
         return _defaultElastiCacheCfnSubnetGroup;
-    }
+    }    
 
-    public CfnParameterGroup? _defaultElastiCacheCfnParameterGroup;
+    protected virtual CfnSubnetGroup CreateDefaultElastiCacheCfnSubnetGroup()
+    {
+        var subnetIds = GetDefaultVpc().PrivateSubnets.Select(s => s.SubnetId).ToArray();
+        return new CfnSubnetGroup(EnvironmentResource.CDKStack, "DefaultElastiCacheSubnetGroup", new CfnSubnetGroupProps
+        {
+            Description = ElasticCacheNodeClusterSubnetGroupDescription,
+            SubnetIds = subnetIds
+        });
+    }
+    
+    private CfnParameterGroup? _defaultElastiCacheCfnParameterGroup;
     public CfnParameterGroup GetDefaultElastiCacheCfnParameterGroup()
     {
         if (_defaultElastiCacheCfnParameterGroup == null)
@@ -109,13 +129,23 @@ public class DeploymentConstructProvider
             }
             else
             {
-                _defaultElastiCacheCfnParameterGroup = Environment.DefaultValuesProvider.CreateDefaultElastiCacheCfnParameterGroup(Environment);
+                _defaultElastiCacheCfnParameterGroup = CreateDefaultElastiCacheCfnParameterGroup();
             }
         }
 
         return _defaultElastiCacheCfnParameterGroup;
-    }
+    }    
 
+    protected virtual CfnParameterGroup CreateDefaultElastiCacheCfnParameterGroup()
+    {
+        return new CfnParameterGroup(EnvironmentResource.CDKStack, "DefaultElastiCacheParameterGroup", new CfnParameterGroupProps
+        {
+            CacheParameterGroupFamily = ElasticCacheNodeClusterParameterGroupFamily,
+            Description = ElasticCacheNodeClusterParameterGroupDescription,
+            Properties = ElasticCacheNodeClusterParameterGroupProperties
+        });
+    }
+    
     private ISecurityGroup? _defaultElastiCacheSecurityGroup;
     public ISecurityGroup GetDefaultElastiCacheSecurityGroup()
     {
@@ -128,13 +158,25 @@ public class DeploymentConstructProvider
             }
             else
             {
-                _defaultElastiCacheSecurityGroup = Environment.DefaultValuesProvider.CreateDefaultElastiCacheSecurityGroup(Environment);
+                _defaultElastiCacheSecurityGroup = CreateDefaultElastiCacheSecurityGroup();
             }
         }
 
         return _defaultElastiCacheSecurityGroup;
-    }
+    }    
 
+    protected virtual ISecurityGroup CreateDefaultElastiCacheSecurityGroup()
+    {
+        var defaultElastiCacheSecurityGroup = new SecurityGroup(EnvironmentResource.CDKStack, "DefaultElastiCacheSecurityGroup", new SecurityGroupProps
+        {
+            Vpc = GetDefaultVpc(),
+            AllowAllOutbound = true
+        });
+
+        defaultElastiCacheSecurityGroup.AddIngressRule(Peer.AnyIpv4(), Port.Tcp(ElasticCacheNodeClusterPort), "Allow Redis access");
+        return defaultElastiCacheSecurityGroup;
+    }
+    
     private IRole? _defaultECSExpressExecutionRole;
     public IRole GetDefaultECSExpressExecutionRole()
     {
@@ -147,12 +189,25 @@ public class DeploymentConstructProvider
             }
             else
             {
-                _defaultECSExpressExecutionRole = Environment.DefaultValuesProvider.CreateDefaultECSExpressExecutionRole(Environment);
+                _defaultECSExpressExecutionRole = CreateDefaultECSExpressExecutionRole();
             }
         }
         return _defaultECSExpressExecutionRole;
-    }
+    }    
 
+    protected virtual IRole CreateDefaultECSExpressExecutionRole()
+    {
+        return new Role(EnvironmentResource.CDKStack, "DefaultECSExpressExecutionRole", new RoleProps
+        {
+            AssumedBy = new ServicePrincipal("ecs-tasks.amazonaws.com"),
+            ManagedPolicies = new[]
+            {
+                ManagedPolicy.FromAwsManagedPolicyName("AmazonEC2ContainerRegistryReadOnly"),
+                ManagedPolicy.FromAwsManagedPolicyName("CloudWatchLogsFullAccess"),
+            }
+        });
+    }
+    
     private IRole? _defaultECSExpressInfrastructureRole;
     public IRole GetDefaultECSExpressInfrastructureRole()
     {
@@ -165,23 +220,35 @@ public class DeploymentConstructProvider
             }
             else
             {
-                _defaultECSExpressInfrastructureRole = Environment.DefaultValuesProvider.CreateDefaultECSExpressInfrastructureRole(Environment);
+                _defaultECSExpressInfrastructureRole = CreateDefaultECSExpressInfrastructureRole();
             }
         }
 
         return _defaultECSExpressInfrastructureRole;
+    }    
+
+    protected virtual IRole CreateDefaultECSExpressInfrastructureRole()
+    {
+        return new Role(EnvironmentResource.CDKStack, "DefaultECSExpressInfrastructureRole", new RoleProps
+        {
+            AssumedBy = new ServicePrincipal("ecs.amazonaws.com"),
+            ManagedPolicies = new[]
+            {
+                ManagedPolicy.FromAwsManagedPolicyName("service-role/AmazonECSInfrastructureRoleforExpressGatewayServices"),
+            }
+        });
     }
 
     private TConstruct? FindDefaultConstructByAttribute<TAttribute, TConstruct>()
         where TAttribute : Attribute
         where TConstruct : class
     {
-        var properties = Environment.CDKStack.GetType().GetProperties(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+        var properties = EnvironmentResource.CDKStack.GetType().GetProperties(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
         foreach (var prop in properties)
         {
             if (Attribute.IsDefined(prop, typeof(TAttribute)))
             {
-                var value = prop.GetValue(Environment.CDKStack);
+                var value = prop.GetValue(EnvironmentResource.CDKStack);
                 if (value == null)
                 {
                     return null;
@@ -196,12 +263,12 @@ public class DeploymentConstructProvider
             }
         }
 
-        var fields = Environment.CDKStack.GetType().GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+        var fields = EnvironmentResource.CDKStack.GetType().GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
         foreach (var field in fields)
         {
             if (Attribute.IsDefined(field, typeof(TAttribute)))
             {
-                var value = field.GetValue(Environment.CDKStack);
+                var value = field.GetValue(EnvironmentResource.CDKStack);
                 if (value == null)
                 {
                     return null;

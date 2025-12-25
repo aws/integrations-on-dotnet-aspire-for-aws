@@ -9,6 +9,7 @@ using Aspire.Hosting.ApplicationModel;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
+using Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;
 using Aspire.Hosting.AWS.Environments.Services;
 using static Amazon.CDK.AWS.ECS.CfnExpressGatewayService;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
@@ -48,7 +49,7 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
             ServiceName = projectResource.Name
         };
         publishAnnotation.Config.PropsCfnExpressGatewayServicePropsCallback?.Invoke(fargateServiceProps);
-        environment.DefaultValuesProvider.ApplyCfnExpressGatewayServiceDefaults(environment, fargateServiceProps);
+        environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(fargateServiceProps);
         ProcessRelationShips(fargateServiceProps, projectResource);
 
         var fargateService = new CfnExpressGatewayService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
@@ -62,11 +63,11 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
         });
     }
 
-    public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(DefaultProvider defaultProvider, IResource resource)
+    public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
     {
         if (resource is ProjectResource projectResource &&
             projectResource.GetEndpoints().Any() &&
-            defaultProvider.DefaultWebProjectResourcePublishTarget == DefaultProvider.WebProjectResourcePublishTarget.ECSFargateExpressService
+            cdkDefaultsProvider.DefaultWebProjectResourcePublishTarget == CDKDefaultsProvider.WebProjectResourcePublishTarget.ECSFargateExpressService
            )
         {
             return new IsDefaultPublishTargetMatchResult

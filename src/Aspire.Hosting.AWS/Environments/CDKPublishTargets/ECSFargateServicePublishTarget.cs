@@ -7,6 +7,7 @@ using Aspire.Hosting.ApplicationModel;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
+using Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;
 using Aspire.Hosting.AWS.Environments.Services;
 
 namespace Aspire.Hosting.AWS.Environments.CDKPublishTargets;
@@ -31,7 +32,7 @@ internal class ECSFargateServicePublishTarget(ITarballContainerImageBuilder imag
         // Create Task Definition
         var fargateTaskDefinitionProps = new FargateTaskDefinitionProps();
         publishAnnotation.Config.PropsFargateTaskDefinitionCallback?.Invoke(fargateTaskDefinitionProps);
-        environment.DefaultValuesProvider.ApplyECSFargateServiceDefaults(fargateTaskDefinitionProps);
+        environment.DefaultsProvider.ApplyECSFargateServiceDefaults(fargateTaskDefinitionProps);
 
         var taskDef = new FargateTaskDefinition(environment.CDKStack, $"TaskDefinition-{projectResource.Name}", fargateTaskDefinitionProps);
         publishAnnotation.Config.ConstructFargateTaskDefinitionCallback?.Invoke(taskDef);
@@ -44,7 +45,7 @@ internal class ECSFargateServicePublishTarget(ITarballContainerImageBuilder imag
         };
         ApplyRelationshipEnvironmentVariable(containerDefinitionProps.Environment, projectResource);
         publishAnnotation.Config.PropsContainerDefinitionCallback?.Invoke(containerDefinitionProps);
-        environment.DefaultValuesProvider.ApplyECSFargateServiceDefaults(environment, projectResource.Name, containerDefinitionProps);
+        environment.DefaultsProvider.ApplyECSFargateServiceDefaults(projectResource.Name, containerDefinitionProps);
 
         var containerDefinition = taskDef.AddContainer($"Container-{projectResource.Name}", containerDefinitionProps);
         publishAnnotation.Config.ConstructContainerDefinitionCallback?.Invoke(containerDefinition);
@@ -55,7 +56,7 @@ internal class ECSFargateServicePublishTarget(ITarballContainerImageBuilder imag
             TaskDefinition = taskDef,
         };
         publishAnnotation.Config.PropsFargateServiceCallback?.Invoke(fargateServiceProps);
-        environment.DefaultValuesProvider.ApplyECSFargateServiceDefaults(environment, fargateServiceProps);
+        environment.DefaultsProvider.ApplyECSFargateServiceDefaults(fargateServiceProps);
 
         var fargateService = new FargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
         publishAnnotation.Config.ConstructFargateServiceCallback?.Invoke(fargateService);
@@ -64,10 +65,10 @@ internal class ECSFargateServicePublishTarget(ITarballContainerImageBuilder imag
         await ApplyDeploymentTagAsync(environment, projectResource, fargateService, cancellationToken);
     }
 
-    public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(DefaultProvider defaultProvider, IResource resource)
+    public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
     {
         if (resource is ProjectResource &&
-            defaultProvider.DefaultConsoleProjectResourcePublishTarget == DefaultProvider.ConsoleProjectResourcePublishTarget.ECSFargateService
+            cdkDefaultsProvider.DefaultConsoleProjectResourcePublishTarget == CDKDefaultsProvider.ConsoleProjectResourcePublishTarget.ECSFargateService
            )
         {
             return new IsDefaultPublishTargetMatchResult

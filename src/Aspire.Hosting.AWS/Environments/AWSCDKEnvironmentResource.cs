@@ -4,6 +4,7 @@ using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Pipelines;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics.CodeAnalysis;
+using Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;
 using App = Amazon.CDK.App;
 using AppProps = Amazon.CDK.AppProps;
 using Stack = Amazon.CDK.Stack;
@@ -20,21 +21,18 @@ public abstract class AWSCDKEnvironmentResource : Resource
     /// </summary>
     public IAWSSDKConfig? AWSSDKConfig { get; set; }
 
-    public DeploymentConstructProvider DeploymentConstructProvider { get; }
+    public CDKDefaultsProvider DefaultsProvider { get; }
 
-    public DefaultProvider DefaultValuesProvider { get; }
-
-    protected AWSCDKEnvironmentResource(string name, DefaultProvider defaultProvider)
+    protected AWSCDKEnvironmentResource(string name, CDKDefaultsProviderFactory cdkDefaultsProviderFactory)
     : base(name)
     {
-        DefaultValuesProvider = defaultProvider;
+        DefaultsProvider = cdkDefaultsProviderFactory.Create(this);
 
         CDKApp = new App(new AppProps
         {
             Outdir = DetermineOutputDirectory()
         });
-
-        DeploymentConstructProvider = new DeploymentConstructProvider(this);
+        
         Annotations.Add(new PipelineStepAnnotation(ConfigurePublishPipelineStep));
         Annotations.Add(new PipelineStepAnnotation(ConfigureDeployPipelineStep));
     }
@@ -121,8 +119,8 @@ public abstract class AWSCDKEnvironmentResource : Resource
 public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
     where T : Stack 
 {
-    public AWSCDKEnvironmentResource(string name, DefaultProvider defaultProvider, Func<App, T> stackFactory)
-        : base(name, defaultProvider)
+    public AWSCDKEnvironmentResource(string name, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, Func<App, T> stackFactory)
+        : base(name, cdkDefaultsProviderFactory)
     {
         EnvironmentStack = stackFactory(CDKApp);
         var stacks = CDKApp.Node.Children

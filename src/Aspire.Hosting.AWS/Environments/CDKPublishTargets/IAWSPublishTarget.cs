@@ -1,6 +1,7 @@
 ﻿using Aspire.Hosting.ApplicationModel;
 using Constructs;
 using System.Diagnostics.CodeAnalysis;
+using Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;
 
 namespace Aspire.Hosting.AWS.Environments.CDKPublishTargets;
 
@@ -15,7 +16,7 @@ public interface IAWSPublishTarget
 
     IList<KeyValuePair<string, string>>? GetReferences(IResource resource, IConstruct resourceConstruct);
 
-    IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(DefaultProvider defaultProvider, IResource resource);
+    IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource);
 }
 
 public class IsDefaultPublishTargetMatchResult
