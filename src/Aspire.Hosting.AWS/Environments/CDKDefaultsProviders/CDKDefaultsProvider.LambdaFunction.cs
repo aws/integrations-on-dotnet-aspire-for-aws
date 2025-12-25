@@ -1,4 +1,5 @@
-﻿
+﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
 using Amazon.CDK.AWS.Lambda;
 using Aspire.Hosting.AWS.Utils;
 

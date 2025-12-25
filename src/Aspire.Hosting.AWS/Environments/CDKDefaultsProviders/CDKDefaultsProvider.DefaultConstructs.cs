@@ -1,4 +1,6 @@
-﻿using Amazon.CDK.AWS.EC2;
+﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.ElastiCache;
 using Amazon.CDK.AWS.IAM;

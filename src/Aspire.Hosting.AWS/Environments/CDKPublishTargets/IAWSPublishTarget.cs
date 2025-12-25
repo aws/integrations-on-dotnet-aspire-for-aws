@@ -1,4 +1,6 @@
-﻿using Aspire.Hosting.ApplicationModel;
+﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+using Aspire.Hosting.ApplicationModel;
 using Constructs;
 using System.Diagnostics.CodeAnalysis;
 using Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;

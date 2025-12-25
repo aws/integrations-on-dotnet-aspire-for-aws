@@ -1,3 +1,5 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
 using System.Runtime.InteropServices;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Utils.Internal;

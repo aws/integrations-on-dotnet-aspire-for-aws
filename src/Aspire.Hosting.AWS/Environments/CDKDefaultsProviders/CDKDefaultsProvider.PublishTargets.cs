@@ -1,4 +1,5 @@
-﻿
+﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
 namespace Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;
 
 public partial class CDKDefaultsProvider

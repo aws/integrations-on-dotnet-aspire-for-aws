@@ -1,4 +1,5 @@
-﻿
+﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
 using Amazon.CDK.AWS.ECS.Patterns;
 
 namespace Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;

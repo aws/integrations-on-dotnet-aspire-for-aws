@@ -1,4 +1,6 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+using System.Diagnostics.CodeAnalysis;
 
 namespace Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;
 
