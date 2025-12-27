@@ -9,7 +9,7 @@ using Aspire.Hosting.AWS.Lambda;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
-using Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;
+using Aspire.Hosting.AWS.Environments.CDKDefaults;
 
 namespace Aspire.Hosting.AWS.Environments.CDKPublishTargets;
 

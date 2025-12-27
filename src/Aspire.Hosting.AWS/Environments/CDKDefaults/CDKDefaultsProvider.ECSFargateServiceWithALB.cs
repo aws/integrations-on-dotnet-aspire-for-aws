@@ -2,7 +2,7 @@
 
 using Amazon.CDK.AWS.ECS.Patterns;
 
-namespace Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;
+namespace Aspire.Hosting.AWS.Environments.CDKDefaults;
 
 public partial class CDKDefaultsProvider
 {

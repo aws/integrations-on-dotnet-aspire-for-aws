@@ -9,7 +9,7 @@ using Aspire.Hosting.ApplicationModel;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
-using Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;
+using Aspire.Hosting.AWS.Environments.CDKDefaults;
 using Aspire.Hosting.AWS.Environments.Services;
 using static Amazon.CDK.AWS.ECS.CfnExpressGatewayService;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;

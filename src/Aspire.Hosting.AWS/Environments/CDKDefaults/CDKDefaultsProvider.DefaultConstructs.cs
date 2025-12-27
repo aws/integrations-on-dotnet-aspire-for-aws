@@ -6,7 +6,7 @@ using Amazon.CDK.AWS.ElastiCache;
 using Amazon.CDK.AWS.IAM;
 using System.Reflection;
 
-namespace Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;
+namespace Aspire.Hosting.AWS.Environments.CDKDefaults;
 
 public partial class CDKDefaultsProvider
 {

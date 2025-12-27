@@ -3,7 +3,7 @@
 using Amazon.CDK.AWS.Lambda;
 using Aspire.Hosting.AWS.Utils;
 
-namespace Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;
+namespace Aspire.Hosting.AWS.Environments.CDKDefaults;
 
 public partial class CDKDefaultsProvider
 {

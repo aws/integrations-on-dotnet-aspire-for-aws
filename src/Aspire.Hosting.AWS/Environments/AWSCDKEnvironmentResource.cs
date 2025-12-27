@@ -4,7 +4,7 @@ using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Pipelines;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics.CodeAnalysis;
-using Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;
+using Aspire.Hosting.AWS.Environments.CDKDefaults;
 using App = Amazon.CDK.App;
 using AppProps = Amazon.CDK.AppProps;
 using Stack = Amazon.CDK.Stack;

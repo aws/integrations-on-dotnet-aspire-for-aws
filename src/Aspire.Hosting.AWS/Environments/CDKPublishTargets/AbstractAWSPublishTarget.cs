@@ -5,7 +5,7 @@ using Aspire.Hosting.ApplicationModel;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
-using Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;
+using Aspire.Hosting.AWS.Environments.CDKDefaults;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
 namespace Aspire.Hosting.AWS.Environments.CDKPublishTargets;

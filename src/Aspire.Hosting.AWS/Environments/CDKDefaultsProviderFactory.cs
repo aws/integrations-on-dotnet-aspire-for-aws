@@ -1,5 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
-using Aspire.Hosting.AWS.Environments.CDKDefaultsProviders;
+using Aspire.Hosting.AWS.Environments.CDKDefaults;
 
 namespace Aspire.Hosting.AWS.Environments;
 
