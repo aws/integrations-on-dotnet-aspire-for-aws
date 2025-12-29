@@ -1,6 +1,8 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Amazon.CDK.AWS.Lambda;
+using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.AWS.Lambda;
 using Aspire.Hosting.AWS.Utils;
 
 namespace Aspire.Hosting.AWS.Environments.CDKDefaults;
@@ -9,14 +11,14 @@ public partial class CDKDefaultsProvider
 {
     public virtual double? LambdaFunctionMemorySize => 512;
 
-    protected internal virtual void ApplyLambdaFunctionDefaults(string projectPath, FunctionProps props)
+    protected internal virtual void ApplyLambdaFunctionDefaults(FunctionProps props, LambdaProjectResource lambdaProjectResource)
     {
         if (!props.MemorySize.HasValue)
             props.MemorySize = LambdaFunctionMemorySize;
 
         if (props.Runtime == null)
         {
-            var targetFramework = ProjectUtilities.LookupTargetFrameworkFromProjectFile(projectPath);
+            var targetFramework = ProjectUtilities.LookupTargetFrameworkFromProjectFile(lambdaProjectResource.GetProjectMetadata().ProjectPath);
             if (string.IsNullOrEmpty(targetFramework))
             {
                 throw new InvalidOperationException($"Unable to determine target .NET version for Lambda function.");

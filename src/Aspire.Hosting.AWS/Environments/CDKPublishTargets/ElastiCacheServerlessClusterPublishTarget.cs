@@ -32,7 +32,7 @@ internal class ElastiCacheServerlessClusterPublishTarget(ILogger<ElastiCacheServ
         publishAnnotation.Config.PropsCfnServerlessCacheCallback?.Invoke(serverlessCacheProps);
 
         // Apply defaults from provider
-        environment.DefaultsProvider.ApplyCfnServerlessCachePropsDefaults(serverlessCacheProps);
+        environment.DefaultsProvider.ApplyCfnServerlessCachePropsDefaults(serverlessCacheProps, resource);
 
         var cluster = new CfnServerlessCache(environment.CDKStack, $"ElastiCache-{resource.Name}", serverlessCacheProps);
 
@@ -64,7 +64,7 @@ internal class ElastiCacheServerlessClusterPublishTarget(ILogger<ElastiCacheServ
     {
         if (resourceConstruct is not CfnServerlessCache cacheConstruct)
             return null;
-
+        
         var list = new List<KeyValuePair<string, string>>();
 
         var key = $"ConnectionStrings__{resource.Name}";

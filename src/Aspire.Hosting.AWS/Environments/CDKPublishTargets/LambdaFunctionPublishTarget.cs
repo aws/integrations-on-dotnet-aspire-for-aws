@@ -40,7 +40,7 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
         };
         ProcessRelationShips(functionProps, lambdaFunction);
         publishAnnotation.Config.PropsFunctionCallback?.Invoke(functionProps);
-        environment.DefaultsProvider.ApplyLambdaFunctionDefaults(lambdaFunction.GetProjectMetadata().ProjectPath, functionProps);
+        environment.DefaultsProvider.ApplyLambdaFunctionDefaults(functionProps, lambdaFunction);
 
         var function = new Function(environment.CDKStack, $"Function-{lambdaFunction.Name}", functionProps);
         publishAnnotation.Config.ConstructFunctionCallback?.Invoke(function);

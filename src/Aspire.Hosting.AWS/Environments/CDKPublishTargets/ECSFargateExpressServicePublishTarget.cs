@@ -137,7 +137,7 @@ public class PublishECSFargateExpressServiceConfig
 }
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-internal class PublishECSFargateServiceExpressAnnotation : IResourceAnnotation
+internal class PublishECSFargateServiceExpressAnnotation : IAWSPublishTargetAnnotation
 {
     public PublishECSFargateExpressServiceConfig Config { get; init; } = new PublishECSFargateExpressServiceConfig();
 }

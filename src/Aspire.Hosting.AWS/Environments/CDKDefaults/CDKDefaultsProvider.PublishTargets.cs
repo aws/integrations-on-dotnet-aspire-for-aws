@@ -81,5 +81,5 @@ public partial class CDKDefaultsProvider
         ElastiCacheServerlessCluster
     }
 
-    public virtual RedisResourcePublishTarget DefaultRedisResourcePublishTarget { get; set; } = RedisResourcePublishTarget.ElastiCacheNodeCluster;
+    public virtual RedisResourcePublishTarget DefaultRedisResourcePublishTarget { get; set; } = RedisResourcePublishTarget.ElastiCacheServerlessCluster;
 }
