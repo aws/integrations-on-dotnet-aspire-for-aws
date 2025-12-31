@@ -50,11 +50,11 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
         };
         publishAnnotation.Config.PropsCfnExpressGatewayServicePropsCallback?.Invoke(fargateServiceProps);
         environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(fargateServiceProps);
-        ProcessRelationShips(fargateServiceProps, projectResource);
+        ProcessRelationShips(environment, fargateServiceProps, projectResource);
 
         var fargateService = new CfnExpressGatewayService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
         publishAnnotation.Config.ConstructCfnExpressGatewayServiceCallback?.Invoke(fargateService);
-        ApplyLinkedConstructAnnotation(projectResource, fargateService, this);
+        ApplyLinkedConstructAnnotation(environment, projectResource, fargateService, this);
 
         _ = new CfnOutput(environment.CDKStack, "ExpressGatewayEndpoint", new CfnOutputProps
         {
@@ -81,50 +81,77 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
         return IsDefaultPublishTargetMatchResult.NO_MATCH;
     }
 
-    public override IList<KeyValuePair<string, string>>? GetReferences(IResource resource, IConstruct resourceConstruct)
+    public override GetReferencesResult GetAllReferences(IResource resource, IConstruct resourceConstruct)
     {
+        var result = new GetReferencesResult();
         if (resourceConstruct is not CfnExpressGatewayService fargateExpressConstruct)
-            return null;
+            return result;
 
-        var list = new List<KeyValuePair<string, string>>();
+        result.EnvironmentVariables = new Dictionary<string, string>();
 
         var key = $"services__{resource.Name}__https__0";
         var endpoint = Fn.Join("", ["https://", Fn.GetAtt(fargateExpressConstruct.LogicalId, "Endpoint").ToString(), "/"]);
-        list.Add(new KeyValuePair<string, string>(key, endpoint));
+        result.EnvironmentVariables[key] = endpoint;
 
-        return list.Any() ? list : null;
+        return result;
     }
 
-    private void ProcessRelationShips(CfnExpressGatewayServiceProps props, ApplicationModel.IResource resource)
+    private void ProcessRelationShips(AWSCDKEnvironmentResource environmentResource, CfnExpressGatewayServiceProps props, ApplicationModel.IResource resource)
     {
-        var dict = new Dictionary<string, string>();
-        ApplyRelationshipEnvironmentVariable(dict, resource);
-
-        if (!dict.Any())
-            return;
-
         var primaryContainer = props.PrimaryContainer as ExpressGatewayContainerProperty;
         if (primaryContainer == null)
             throw new InvalidDataException("PrimaryContainer must be set in CfnExpressGatewayServiceProps and of type ExpressGatewayContainerProperty");
 
-        var kvp = new List<IKeyValuePairProperty>();
+        ExpressGatewayServiceNetworkConfigurationProperty? networkConfiguration;
+        if (props.NetworkConfiguration != null)
+        {
+            networkConfiguration = props.NetworkConfiguration as ExpressGatewayServiceNetworkConfigurationProperty;
+            if (networkConfiguration == null)
+                throw new InvalidDataException("NetworkConfiguration must be set in CfnExpressGatewayServiceProps and of type ExpressGatewayServiceNetworkConfigurationProperty");
+        }
+        else
+        {
+            networkConfiguration = new ExpressGatewayServiceNetworkConfigurationProperty();
+            props.NetworkConfiguration = networkConfiguration;
+        }
+        
+        var environmentVariables = new List<IKeyValuePairProperty>();
 
         var existingKvp = primaryContainer.Environment as IKeyValuePairProperty[];
         if (existingKvp != null)
         {
-            kvp.AddRange(existingKvp);
+            environmentVariables.AddRange(existingKvp);
         }
-
-        foreach (var item in dict)
+        
+        var securityGroupIdSet = new HashSet<string>();
+        if (networkConfiguration.SecurityGroups != null)
         {
-            kvp.Add(new KeyValuePairProperty
+            foreach (var securityGroup in networkConfiguration.SecurityGroups)
             {
-                Name = item.Key,
-                Value = item.Value
-            });
+                securityGroupIdSet.Add(securityGroup);
+            }
+        }
+        
+        var allLinkReferences = GetAllReferencesLink(resource);
+        foreach (var linkAnnotation in allLinkReferences)
+        {
+            var results =
+                linkAnnotation.PublishTarget.GetAllReferences(linkAnnotation.Resource, linkAnnotation.LinkedConstruct);
+
+            if (results.EnvironmentVariables != null)
+            {
+                environmentVariables.AddRange(results.EnvironmentVariables.Select(x => new KeyValuePairProperty
+                {
+                    Name = x.Key,
+                    Value = x.Value
+                }));
+            }
+
+            linkAnnotation.PublishTarget.ApplyReferenceSecurityGroup(linkAnnotation, environmentResource.DefaultsProvider.GetDefaultECSClusterSecurityGroup());
         }
 
-        primaryContainer.Environment = kvp.ToArray();
+        primaryContainer.Environment = environmentVariables.ToArray();
+        networkConfiguration.SecurityGroups = securityGroupIdSet.ToArray();
     }
 }
     

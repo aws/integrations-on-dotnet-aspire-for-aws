@@ -44,7 +44,7 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
 
         var function = new Function(environment.CDKStack, $"Function-{lambdaFunction.Name}", functionProps);
         publishAnnotation.Config.ConstructFunctionCallback?.Invoke(function);
-        ApplyLinkedConstructAnnotation(lambdaFunction, function, this);
+        ApplyLinkedConstructAnnotation(environment, lambdaFunction, function, this);
 
         await ApplyDeploymentTagAsync(environment, lambdaFunction, function, cancellationToken);
     }
@@ -66,16 +66,27 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
         return IsDefaultPublishTargetMatchResult.NO_MATCH;
     }
 
-    public override IList<KeyValuePair<string, string>>? GetReferences(IResource resource, IConstruct resourceConstruct)
+    public override GetReferencesResult GetAllReferences(IResource resource, IConstruct resourceConstruct)
     {
-        return null;
+        return new GetReferencesResult();
     }
 
     private void ProcessRelationShips(FunctionProps props, IResource resource)
     {
-        props.Environment ??= new Dictionary<string, string>();
+        var environmentVariables = props.Environment ?? new Dictionary<string, string>();
+        var allReferences = GetAllReferences(resource);
+        foreach (var reference in allReferences)
+        {
+            if (reference.EnvironmentVariables != null)
+            {
+                foreach (var kvp in reference.EnvironmentVariables)
+                {
+                    environmentVariables[kvp.Key] = kvp.Value;
+                }
+            }
+        }
 
-        ApplyRelationshipEnvironmentVariable(props.Environment, resource);
+        props.Environment = environmentVariables;
     }
 }
     

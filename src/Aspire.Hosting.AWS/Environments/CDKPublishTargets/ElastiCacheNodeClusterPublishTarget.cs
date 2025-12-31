@@ -32,7 +32,7 @@ internal class ElastiCacheNodeClusterPublishTarget(ILogger<ElastiCacheNodeCluste
 
         var cluster = new CfnReplicationGroup(environment.CDKStack, $"ElastiCache-{resource.Name}", clusterProps);
         publishAnnotation.Config.ConstructCfnReplicationGroupCallback?.Invoke(cluster);
-        ApplyLinkedConstructAnnotation(resource, cluster, this);
+        ApplyLinkedConstructAnnotation(environment, resource, cluster, this);
             
         return Task.CompletedTask;
     }
@@ -53,18 +53,28 @@ internal class ElastiCacheNodeClusterPublishTarget(ILogger<ElastiCacheNodeCluste
         return IsDefaultPublishTargetMatchResult.NO_MATCH;
     }
 
-    public override IList<KeyValuePair<string, string>>? GetReferences(IResource resource, IConstruct resourceConstruct)
+    public override GetReferencesResult GetAllReferences(IResource resource, IConstruct resourceConstruct)
     {
+        var result = new GetReferencesResult();
         if (resourceConstruct is not CfnReplicationGroup cacheConstruct)
-            return null;
+            return result;
 
-        var list = new List<KeyValuePair<string, string>>();
+        result.EnvironmentVariables = new Dictionary<string, string>();
 
         var key = $"ConnectionStrings__{resource.Name}";
         var endpoint = $"{Token.AsString(cacheConstruct.AttrPrimaryEndPointAddress)}:{Token.AsString(cacheConstruct.AttrPrimaryEndPointPort)}";
-        list.Add(new KeyValuePair<string, string>(key, endpoint));
+        result.EnvironmentVariables[key] = endpoint;
 
-        return list.Any() ? list : null;
+        if (cacheConstruct.SecurityGroupIds != null)
+        {
+            result.SecurityGroupsIds = new List<string>();
+            foreach (var securityGroupId in cacheConstruct.SecurityGroupIds)
+            {
+                result.SecurityGroupsIds.Add(securityGroupId);
+            }
+        }
+
+        return result;
     }
 }
     

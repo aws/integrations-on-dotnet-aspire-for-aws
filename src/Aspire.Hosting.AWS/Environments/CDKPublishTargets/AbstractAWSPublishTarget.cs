@@ -5,6 +5,7 @@ using Aspire.Hosting.ApplicationModel;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
+using Amazon.CDK.AWS.EC2;
 using Aspire.Hosting.AWS.Environments.CDKDefaults;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
@@ -13,44 +14,62 @@ namespace Aspire.Hosting.AWS.Environments.CDKPublishTargets;
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarget
 {
+    protected ILogger Logger { get; } = logger;
+    
     public abstract string PublishTargetName { get; }
     public abstract Type PublishTargetAnnotation { get; }
 
     public abstract Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation publishAnnotation, CancellationToken cancellationToken);
-    public abstract IList<KeyValuePair<string, string>>? GetReferences(IResource resource, IConstruct resourceConstruct);
+    public abstract GetReferencesResult GetAllReferences(IResource resource, IConstruct resourceConstruct);
     public abstract IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource);
 
-    protected void ApplyRelationshipEnvironmentVariable(IDictionary<string, string> environmentVariables, IResource resource)
+    public virtual void ApplyReferenceSecurityGroup(LinkedConstructAnnotation linkedAnnotation, ISecurityGroup securityGroup)
     {
-        var relatedAnnotations = resource.Annotations.OfType<ResourceRelationshipAnnotation>();
-        foreach (var relatedAnnotation in relatedAnnotations)
-        {
-            if (relatedAnnotation.Type != "Reference" || !relatedAnnotation.Resource.TryGetLastAnnotation<LinkedConstructAnnotations>(out var targetLinkedConstructAnnotation))
-                continue;
-
-            var references = targetLinkedConstructAnnotation.PublishTarget.GetReferences(relatedAnnotation.Resource, targetLinkedConstructAnnotation.LinkedConstruct);
-            if (references != null)
-            {
-                foreach (var reference in references)
-                {
-                    environmentVariables[reference.Key] = reference.Value;
-                }
-            }
-            else
-            {
-                logger.LogWarning("No references found for relationship from resource {ResourceName} to {RelatedResourceName} using publish target {PublishTargetName}", resource.Name, relatedAnnotation.Resource.Name, targetLinkedConstructAnnotation.PublishTarget.PublishTargetName);
-            }
-        }
+        
     }
 
-    protected void ApplyLinkedConstructAnnotation(IResource resource, Construct sourceConstruct, IAWSPublishTarget publishTarget)
+    protected IList<GetReferencesResult> GetAllReferences(IResource resource)
     {
-        resource.Annotations.Add(new LinkedConstructAnnotations { LinkedConstruct = sourceConstruct, PublishTarget = publishTarget });
+        var references = new List<GetReferencesResult>();
+        var relatedAnnotations = resource.Annotations.OfType<ResourceRelationshipAnnotation>();
+        
+        foreach (var relatedAnnotation in relatedAnnotations)
+        {
+            if (relatedAnnotation.Type != "Reference" || !relatedAnnotation.Resource.TryGetLastAnnotation<LinkedConstructAnnotation>(out var targetLinkedConstructAnnotation))
+                continue;            
+            
+            var result = targetLinkedConstructAnnotation.PublishTarget.GetAllReferences(relatedAnnotation.Resource, targetLinkedConstructAnnotation.LinkedConstruct);
+            references.Add(result);
+        }
+
+        return references;
+    }
+
+    protected IList<LinkedConstructAnnotation> GetAllReferencesLink(IResource resource)
+    {
+        var links = new List<LinkedConstructAnnotation>();
+        
+        var relatedAnnotations = resource.Annotations.OfType<ResourceRelationshipAnnotation>();
+        
+        foreach (var relatedAnnotation in relatedAnnotations)
+        {
+            if (relatedAnnotation.Type != "Reference" || !relatedAnnotation.Resource.TryGetLastAnnotation<LinkedConstructAnnotation>(out var targetLinkedConstructAnnotation))
+                continue;            
+            
+            links.Add(targetLinkedConstructAnnotation);
+        }        
+
+        return links;
+    }
+
+    protected void ApplyLinkedConstructAnnotation(AWSCDKEnvironmentResource environmentResource, IResource resource, Construct sourceConstruct, IAWSPublishTarget publishTarget)
+    {
+        resource.Annotations.Add(new LinkedConstructAnnotation { EnvironmentResource = environmentResource, Resource = resource, LinkedConstruct = sourceConstruct, PublishTarget = publishTarget });
 
         var relatedAnnotations = resource.Annotations.OfType<ResourceRelationshipAnnotation>();
         foreach (var relatedAnnotation in relatedAnnotations)
         {
-            if (relatedAnnotation.Type != "Reference" || !relatedAnnotation.Resource.TryGetLastAnnotation<LinkedConstructAnnotations>(out var targetLinkedConstructAnnotation))
+            if (relatedAnnotation.Type != "Reference" || !relatedAnnotation.Resource.TryGetLastAnnotation<LinkedConstructAnnotation>(out var targetLinkedConstructAnnotation))
                 continue;
 
             sourceConstruct.Node.AddDependency(targetLinkedConstructAnnotation.LinkedConstruct);

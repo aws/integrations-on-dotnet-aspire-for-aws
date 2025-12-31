@@ -10,6 +10,7 @@ using Aspire.Hosting.ApplicationModel;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
+using Amazon.CDK.AWS.EC2;
 using Aspire.Hosting.AWS.Environments.CDKDefaults;
 using Aspire.Hosting.AWS.Environments.Services;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
@@ -48,11 +49,11 @@ internal class ECSFargateServiceWithALBPublishTarget(ITarballContainerImageBuild
         };
         publishAnnotation.Config.PropsApplicationLoadBalancedFargateServiceCallback?.Invoke(fargateServiceProps);
         environment.DefaultsProvider.ApplyECSFargateServiceWithALBDefaults(fargateServiceProps);
-        ProcessRelationShips(fargateServiceProps, projectResource);
+        ProcessRelationShips(environment, fargateServiceProps, projectResource);
 
         var fargateService = new ApplicationLoadBalancedFargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
         publishAnnotation.Config.ConstructApplicationLoadBalancedFargateServiceCallback?.Invoke(fargateService);
-        ApplyLinkedConstructAnnotation(projectResource, fargateService, this);
+        ApplyLinkedConstructAnnotation(environment, projectResource, fargateService, this);
 
         await ApplyDeploymentTagAsync(environment, projectResource, fargateService.Service, cancellationToken);
     }
@@ -75,12 +76,13 @@ internal class ECSFargateServiceWithALBPublishTarget(ITarballContainerImageBuild
         return IsDefaultPublishTargetMatchResult.NO_MATCH;
     }
 
-    public override IList<KeyValuePair<string, string>>? GetReferences(IResource resource, IConstruct resourceConstruct)
+    public override GetReferencesResult GetAllReferences(IResource resource, IConstruct resourceConstruct)
     {
+        var result = new GetReferencesResult();
         if (resourceConstruct is not ApplicationLoadBalancedFargateService albFargateConstruct)
-            return null;
+            return result;
 
-        var list = new List<KeyValuePair<string, string>>();
+        result.EnvironmentVariables = new Dictionary<string, string>();
 
         foreach (var listener in albFargateConstruct.LoadBalancer.Listeners)
         {
@@ -88,20 +90,58 @@ internal class ECSFargateServiceWithALBPublishTarget(ITarballContainerImageBuild
 
             var key = $"services__{resource.Name}__{protocol}__0";
             var endpoint = $"{protocol}://{Token.AsString(albFargateConstruct.LoadBalancer.LoadBalancerDnsName)}:{Token.AsString(listener.Port)}/";
-            list.Add(new KeyValuePair<string, string>(key, endpoint));
+            result.EnvironmentVariables[key] = endpoint;
         }
 
-        return list.Any() ? list : null;
+        return result;
     }
-
-    private void ProcessRelationShips(ApplicationLoadBalancedFargateServiceProps props, IResource resource)
+    
+    private void ProcessRelationShips(AWSCDKEnvironmentResource environmentResource, ApplicationLoadBalancedFargateServiceProps props, ApplicationModel.IResource resource)
     {
         if (props.TaskImageOptions?.Environment == null)
         {
             throw new InvalidOperationException("TaskImageOptions.Environment must be set for the ApplicationLoadBalancedFargateServiceProps");
         }
-        ApplyRelationshipEnvironmentVariable(props.TaskImageOptions.Environment, resource);
-    }
+        
+        var environmentVariables = props.TaskImageOptions.Environment;
+        HashSet<string> securityGroupIds = new HashSet<string>();
+        if (props.SecurityGroups != null)
+        {
+            foreach (var securityGroup in props.SecurityGroups)
+            {
+                securityGroupIds.Add(securityGroup.SecurityGroupId);
+            }
+        }
+        
+        var allReferences = GetAllReferences(resource);
+        foreach (var reference in allReferences)
+        {
+            if (reference.EnvironmentVariables != null)
+            {
+                foreach (var kvp in reference.EnvironmentVariables)
+                {
+                    environmentVariables[kvp.Key] = kvp.Value;
+                }
+            }
+            if (reference.SecurityGroupsIds != null)
+            {
+                foreach (var securityGroupId in reference.SecurityGroupsIds)
+                {
+                    securityGroupIds.Add(securityGroupId);
+                }
+            }            
+        }
+        
+        var securityGroups = new List<ISecurityGroup>();
+        var securityGroupsIdsList = securityGroupIds.ToList();
+        for (var i = 0; i < securityGroupsIdsList.Count; i++)
+        {
+            var securityGroup =
+                SecurityGroup.FromSecurityGroupId(environmentResource.CDKStack, $"Reference-{resource.Name}-{i}", securityGroupsIdsList[i]);
+            securityGroups.Add(securityGroup);
+        }
+        props.SecurityGroups = securityGroups.ToArray();        
+    }    
 }
     
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]

@@ -9,6 +9,7 @@ using Aspire.Hosting.ApplicationModel;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
+using Amazon.CDK.AWS.EC2;
 using Aspire.Hosting.AWS.Environments.CDKDefaults;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
@@ -39,7 +40,7 @@ internal class ElastiCacheServerlessClusterPublishTarget(ILogger<ElastiCacheServ
         // Apply construct-level customizations
         publishAnnotation.Config.ConstructCfnServerlessCacheCallback?.Invoke(cluster);
 
-        ApplyLinkedConstructAnnotation(resource, cluster, this);
+        ApplyLinkedConstructAnnotation(environment, resource, cluster, this);
 
         return Task.CompletedTask;
     }
@@ -60,18 +61,34 @@ internal class ElastiCacheServerlessClusterPublishTarget(ILogger<ElastiCacheServ
         return IsDefaultPublishTargetMatchResult.NO_MATCH;
     }
 
-    public override IList<KeyValuePair<string, string>>? GetReferences(IResource resource, IConstruct resourceConstruct)
+    public override GetReferencesResult GetAllReferences(IResource resource, IConstruct resourceConstruct)
     {
+        var result = new GetReferencesResult();
         if (resourceConstruct is not CfnServerlessCache cacheConstruct)
-            return null;
-        
-        var list = new List<KeyValuePair<string, string>>();
+            return result;
+
+        result.EnvironmentVariables = new Dictionary<string, string>();
 
         var key = $"ConnectionStrings__{resource.Name}";
-        var endpoint = $"{Token.AsString(cacheConstruct.AttrEndpointAddress)}:{Token.AsString(cacheConstruct.AttrEndpointPort)}";
-        list.Add(new KeyValuePair<string, string>(key, endpoint));
+        var endpoint = $"{Token.AsString(cacheConstruct.AttrEndpointAddress)}:{Token.AsString(cacheConstruct.AttrEndpointPort)},ssl=True";
+        result.EnvironmentVariables[key] = endpoint;
+        
+        if (cacheConstruct.SecurityGroupIds != null)
+        {
+            result.SecurityGroupsIds = new List<string>();
+            foreach (var securityGroupId in cacheConstruct.SecurityGroupIds)
+            {
+                result.SecurityGroupsIds.Add(securityGroupId);
+            }
+        }        
 
-        return list.Any() ? list : null;
+        return result;
+    }
+    
+    public override void ApplyReferenceSecurityGroup(LinkedConstructAnnotation linkedAnnotation, ISecurityGroup securityGroup)
+    {
+        var elastiCacheSecurityGroup = linkedAnnotation.EnvironmentResource.DefaultsProvider.GetDefaultElastiCacheSecurityGroup();
+        elastiCacheSecurityGroup.AddIngressRule(peer: securityGroup, connection: Port.Tcp(6379));
     }
 }
     
