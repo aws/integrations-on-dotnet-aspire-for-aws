@@ -32,7 +32,7 @@ internal class ElastiCacheNodeClusterPublishTarget(ILogger<ElastiCacheNodeCluste
 
         var cluster = new CfnReplicationGroup(environment.CDKStack, $"ElastiCache-{resource.Name}", clusterProps);
         publishAnnotation.Config.ConstructCfnReplicationGroupCallback?.Invoke(cluster);
-        ApplyLinkedConstructAnnotation(environment, resource, cluster, this);
+        ApplyAWSLinkedObjectsAnnotation(environment, resource, cluster, this);
             
         return Task.CompletedTask;
     }

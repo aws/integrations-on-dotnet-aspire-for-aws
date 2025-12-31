@@ -26,8 +26,15 @@ public partial class CDKDefaultsProvider
 
         if (props.SecurityGroupIds == null)
         {
-            if (props.SecurityGroupIds == null)
-                props.SecurityGroupIds = new[] { GetDefaultElastiCacheSecurityGroup().SecurityGroupId };
+            props.SecurityGroupIds = new[] { GetDefaultElastiCacheServerlessClusterSecurityGroup().SecurityGroupId };
+        }
+        else
+        {
+            // Even if the user set the SecurityGroupIds still append the default security group which will be used 
+            // when adding permissions for Aspire references.
+            var securityGroupsxistingSecurityGroup = new List<object>(props.SecurityGroupIds);
+            securityGroupsxistingSecurityGroup.Add(GetDefaultElastiCacheServerlessClusterSecurityGroup().SecurityGroupId);
+            props.SecurityGroupIds = securityGroupsxistingSecurityGroup.ToArray();
         }
     }    
 }

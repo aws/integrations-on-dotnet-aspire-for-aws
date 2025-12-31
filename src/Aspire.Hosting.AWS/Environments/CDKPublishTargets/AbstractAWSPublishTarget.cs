@@ -23,7 +23,17 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
     public abstract GetReferencesResult GetAllReferences(IResource resource, IConstruct resourceConstruct);
     public abstract IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource);
 
-    public virtual void ApplyReferenceSecurityGroup(LinkedConstructAnnotation linkedAnnotation, ISecurityGroup securityGroup)
+    public virtual bool ReferenceRequiresVPC()
+    {
+        return false;
+    }
+
+    public virtual bool ReferenceRequiresSecurityGroup()
+    {
+        return false;
+    }
+
+    public virtual void ApplyReferenceSecurityGroup(AWSLinkedObjectsAnnotation linkedAnnotation, ISecurityGroup securityGroup)
     {
         
     }
@@ -35,44 +45,44 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
         
         foreach (var relatedAnnotation in relatedAnnotations)
         {
-            if (relatedAnnotation.Type != "Reference" || !relatedAnnotation.Resource.TryGetLastAnnotation<LinkedConstructAnnotation>(out var targetLinkedConstructAnnotation))
+            if (relatedAnnotation.Type != "Reference" || !relatedAnnotation.Resource.TryGetLastAnnotation<AWSLinkedObjectsAnnotation>(out var targetLinkedAnnotation))
                 continue;            
             
-            var result = targetLinkedConstructAnnotation.PublishTarget.GetAllReferences(relatedAnnotation.Resource, targetLinkedConstructAnnotation.LinkedConstruct);
+            var result = targetLinkedAnnotation.PublishTarget.GetAllReferences(relatedAnnotation.Resource, targetLinkedAnnotation.Construct);
             references.Add(result);
         }
 
         return references;
     }
 
-    protected IList<LinkedConstructAnnotation> GetAllReferencesLink(IResource resource)
+    protected IList<AWSLinkedObjectsAnnotation> GetAllReferencesLink(IResource resource)
     {
-        var links = new List<LinkedConstructAnnotation>();
+        var links = new List<AWSLinkedObjectsAnnotation>();
         
         var relatedAnnotations = resource.Annotations.OfType<ResourceRelationshipAnnotation>();
         
         foreach (var relatedAnnotation in relatedAnnotations)
         {
-            if (relatedAnnotation.Type != "Reference" || !relatedAnnotation.Resource.TryGetLastAnnotation<LinkedConstructAnnotation>(out var targetLinkedConstructAnnotation))
+            if (relatedAnnotation.Type != "Reference" || !relatedAnnotation.Resource.TryGetLastAnnotation<AWSLinkedObjectsAnnotation>(out var targetLinkedAnnotation))
                 continue;            
             
-            links.Add(targetLinkedConstructAnnotation);
+            links.Add(targetLinkedAnnotation);
         }        
 
         return links;
     }
 
-    protected void ApplyLinkedConstructAnnotation(AWSCDKEnvironmentResource environmentResource, IResource resource, Construct sourceConstruct, IAWSPublishTarget publishTarget)
+    protected void ApplyAWSLinkedObjectsAnnotation(AWSCDKEnvironmentResource environmentResource, IResource resource, Construct sourceConstruct, IAWSPublishTarget publishTarget)
     {
-        resource.Annotations.Add(new LinkedConstructAnnotation { EnvironmentResource = environmentResource, Resource = resource, LinkedConstruct = sourceConstruct, PublishTarget = publishTarget });
+        resource.Annotations.Add(new AWSLinkedObjectsAnnotation { EnvironmentResource = environmentResource, Resource = resource, Construct = sourceConstruct, PublishTarget = publishTarget });
 
         var relatedAnnotations = resource.Annotations.OfType<ResourceRelationshipAnnotation>();
         foreach (var relatedAnnotation in relatedAnnotations)
         {
-            if (relatedAnnotation.Type != "Reference" || !relatedAnnotation.Resource.TryGetLastAnnotation<LinkedConstructAnnotation>(out var targetLinkedConstructAnnotation))
+            if (relatedAnnotation.Type != "Reference" || !relatedAnnotation.Resource.TryGetLastAnnotation<AWSLinkedObjectsAnnotation>(out var targetLinkedAnnotation))
                 continue;
 
-            sourceConstruct.Node.AddDependency(targetLinkedConstructAnnotation.LinkedConstruct);
+            sourceConstruct.Node.AddDependency(targetLinkedAnnotation.Construct);
         }
     }
 

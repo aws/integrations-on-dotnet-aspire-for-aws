@@ -50,11 +50,11 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
         };
         publishAnnotation.Config.PropsCfnExpressGatewayServicePropsCallback?.Invoke(fargateServiceProps);
         environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(fargateServiceProps);
-        ProcessRelationShips(environment, fargateServiceProps, projectResource);
+        ProcessRelationShips(fargateServiceProps, projectResource);
 
         var fargateService = new CfnExpressGatewayService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
         publishAnnotation.Config.ConstructCfnExpressGatewayServiceCallback?.Invoke(fargateService);
-        ApplyLinkedConstructAnnotation(environment, projectResource, fargateService, this);
+        ApplyAWSLinkedObjectsAnnotation(environment, projectResource, fargateService, this);
 
         _ = new CfnOutput(environment.CDKStack, "ExpressGatewayEndpoint", new CfnOutputProps
         {
@@ -96,7 +96,7 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
         return result;
     }
 
-    private void ProcessRelationShips(AWSCDKEnvironmentResource environmentResource, CfnExpressGatewayServiceProps props, ApplicationModel.IResource resource)
+    private void ProcessRelationShips(CfnExpressGatewayServiceProps props, ApplicationModel.IResource resource)
     {
         var primaryContainer = props.PrimaryContainer as ExpressGatewayContainerProperty;
         if (primaryContainer == null)
@@ -136,7 +136,7 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
         foreach (var linkAnnotation in allLinkReferences)
         {
             var results =
-                linkAnnotation.PublishTarget.GetAllReferences(linkAnnotation.Resource, linkAnnotation.LinkedConstruct);
+                linkAnnotation.PublishTarget.GetAllReferences(linkAnnotation.Resource, linkAnnotation.Construct);
 
             if (results.EnvironmentVariables != null)
             {
@@ -147,7 +147,10 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
                 }));
             }
 
-            linkAnnotation.PublishTarget.ApplyReferenceSecurityGroup(linkAnnotation, environmentResource.DefaultsProvider.GetDefaultECSClusterSecurityGroup());
+            if (linkAnnotation.PublishTarget.ReferenceRequiresSecurityGroup())
+            {
+                linkAnnotation.PublishTarget.ApplyReferenceSecurityGroup(linkAnnotation, linkAnnotation.EnvironmentResource.DefaultsProvider.GetDefaultECSClusterSecurityGroup());
+            }
         }
 
         primaryContainer.Environment = environmentVariables.ToArray();

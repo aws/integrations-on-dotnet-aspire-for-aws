@@ -56,6 +56,6 @@ public partial class CDKDefaultsProvider
         if (props.CacheParameterGroupName == null) // TODO: Figure out of this hardcoded is okay
             props.CacheParameterGroupName = "default.valkey8.cluster.on";// environment.DeploymentConstructProvider.GetDefaultElastiCacheCfnParameterGroup().Ref;
         if (props.SecurityGroupIds == null)
-            props.SecurityGroupIds = new[] { GetDefaultElastiCacheSecurityGroup().SecurityGroupId };
+            props.SecurityGroupIds = new[] { GetDefaultElastiCacheNodeClusterSecurityGroup().SecurityGroupId };
     }    
 }

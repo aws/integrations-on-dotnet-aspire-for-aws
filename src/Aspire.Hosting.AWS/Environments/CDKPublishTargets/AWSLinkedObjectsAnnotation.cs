@@ -10,7 +10,7 @@ namespace Aspire.Hosting.AWS.Environments.CDKPublishTargets;
 /// This annotation is used for being able to find the CDK construct for the Aspire resource.
 /// </summary>
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-public class LinkedConstructAnnotation : IResourceAnnotation
+public class AWSLinkedObjectsAnnotation : IResourceAnnotation
 {
     public required AWSCDKEnvironmentResource EnvironmentResource { get; init; }
     
@@ -19,7 +19,7 @@ public class LinkedConstructAnnotation : IResourceAnnotation
     /// <summary>
     /// The CDK construct that will be deployed for the Aspire Resource.
     /// </summary>
-    public required Construct LinkedConstruct { get; init; }
+    public required Construct Construct { get; init; }
 
     public required IAWSPublishTarget PublishTarget { get; init; }
 }

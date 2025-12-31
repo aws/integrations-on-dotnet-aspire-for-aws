@@ -62,7 +62,7 @@ internal class ECSFargateServicePublishTarget(ITarballContainerImageBuilder imag
 
         var fargateService = new FargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
         publishAnnotation.Config.ConstructFargateServiceCallback?.Invoke(fargateService);
-        ApplyLinkedConstructAnnotation(environment, projectResource, fargateService, this);
+        ApplyAWSLinkedObjectsAnnotation(environment, projectResource, fargateService, this);
 
         await ApplyDeploymentTagAsync(environment, projectResource, fargateService, cancellationToken);
     }

@@ -10,6 +10,7 @@ using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
 using Aspire.Hosting.AWS.Environments.CDKDefaults;
+using Amazon.CDK.AWS.EC2;
 
 namespace Aspire.Hosting.AWS.Environments.CDKPublishTargets;
 
@@ -44,7 +45,7 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
 
         var function = new Function(environment.CDKStack, $"Function-{lambdaFunction.Name}", functionProps);
         publishAnnotation.Config.ConstructFunctionCallback?.Invoke(function);
-        ApplyLinkedConstructAnnotation(environment, lambdaFunction, function, this);
+        ApplyAWSLinkedObjectsAnnotation(environment, lambdaFunction, function, this);
 
         await ApplyDeploymentTagAsync(environment, lambdaFunction, function, cancellationToken);
     }
@@ -74,15 +75,40 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
     private void ProcessRelationShips(FunctionProps props, IResource resource)
     {
         var environmentVariables = props.Environment ?? new Dictionary<string, string>();
-        var allReferences = GetAllReferences(resource);
-        foreach (var reference in allReferences)
+        var allLinkReferences = GetAllReferencesLink(resource);
+        foreach (var linkAnnotation in allLinkReferences)
         {
-            if (reference.EnvironmentVariables != null)
+            var results =
+                linkAnnotation.PublishTarget.GetAllReferences(linkAnnotation.Resource, linkAnnotation.Construct);
+
+            if (results.EnvironmentVariables != null)
             {
-                foreach (var kvp in reference.EnvironmentVariables)
+                foreach (var kvp in results.EnvironmentVariables)
                 {
                     environmentVariables[kvp.Key] = kvp.Value;
                 }
+            }
+
+            if (results.SubnetIds != null && results.SubnetIds.Count > 0)
+            {
+            }
+
+            if (linkAnnotation.PublishTarget.ReferenceRequiresVPC())
+            {
+                if (linkAnnotation.PublishTarget.ReferenceRequiresSecurityGroup())
+                {
+                    //var securityGroup = new SecurityGroup(
+                    //    linkAnnotation.EnvironmentResource.CDKStack,
+                    //    $"SG-{linkAnnotation.Resource.Name}-{resource.Name}",
+                    //    new Amazon.CDK.AWS.EC2.SecurityGroupProps
+                    //    {
+                    //        Vpc = linkAnnotation.EnvironmentResource.DefaultsProvider.GetDefaultVPC(),
+                    //        Description = $"Security group for linking {resource.Name} to {linkAnnotation.Resource.Name}",
+                    //        AllowAllOutbound = true
+                    //    });
+                    linkAnnotation.PublishTarget.ApplyReferenceSecurityGroup(linkAnnotation, linkAnnotation.EnvironmentResource.DefaultsProvider.GetDefaultECSClusterSecurityGroup());
+                }
+
             }
         }
 

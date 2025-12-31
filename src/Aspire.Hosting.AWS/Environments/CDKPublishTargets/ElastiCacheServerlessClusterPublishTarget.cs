@@ -40,7 +40,7 @@ internal class ElastiCacheServerlessClusterPublishTarget(ILogger<ElastiCacheServ
         // Apply construct-level customizations
         publishAnnotation.Config.ConstructCfnServerlessCacheCallback?.Invoke(cluster);
 
-        ApplyLinkedConstructAnnotation(environment, resource, cluster, this);
+        ApplyAWSLinkedObjectsAnnotation(environment, resource, cluster, this);
 
         return Task.CompletedTask;
     }
@@ -82,12 +82,31 @@ internal class ElastiCacheServerlessClusterPublishTarget(ILogger<ElastiCacheServ
             }
         }        
 
+        if (cacheConstruct.SubnetIds != null)
+        {
+            result.SubnetIds = new List<string>();
+            foreach (var subnetId in cacheConstruct.SubnetIds)
+            {
+                result.SubnetIds.Add(subnetId);
+            }
+        }
+
         return result;
     }
-    
-    public override void ApplyReferenceSecurityGroup(LinkedConstructAnnotation linkedAnnotation, ISecurityGroup securityGroup)
+
+    public override bool ReferenceRequiresVPC()
     {
-        var elastiCacheSecurityGroup = linkedAnnotation.EnvironmentResource.DefaultsProvider.GetDefaultElastiCacheSecurityGroup();
+        return true;
+    }
+
+    public override bool ReferenceRequiresSecurityGroup()
+    {
+        return true;
+    }
+
+    public override void ApplyReferenceSecurityGroup(AWSLinkedObjectsAnnotation linkedAnnotation, ISecurityGroup securityGroup)
+    {
+        var elastiCacheSecurityGroup = linkedAnnotation.EnvironmentResource.DefaultsProvider.GetDefaultElastiCacheServerlessClusterSecurityGroup();
         elastiCacheSecurityGroup.AddIngressRule(peer: securityGroup, connection: Port.Tcp(6379));
     }
 }

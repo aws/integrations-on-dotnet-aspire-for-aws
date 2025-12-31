@@ -148,28 +148,28 @@ public partial class CDKDefaultsProvider
         });
     }
     
-    private ISecurityGroup? _defaultElastiCacheSecurityGroup;
-    public ISecurityGroup GetDefaultElastiCacheSecurityGroup()
+    private ISecurityGroup? _defaultElastiCacheNodeClusterSecurityGroup;
+    public ISecurityGroup GetDefaultElastiCacheNodeClusterSecurityGroup()
     {
-        if (_defaultElastiCacheSecurityGroup == null)
+        if (_defaultElastiCacheNodeClusterSecurityGroup == null)
         {
             var definedDefault = FindDefaultConstructByAttribute<DefaultElastiCacheSecurityGroupAttribute, ISecurityGroup>();
             if (definedDefault != null)
             {
-                _defaultElastiCacheSecurityGroup = definedDefault;
+                _defaultElastiCacheNodeClusterSecurityGroup = definedDefault;
             }
             else
             {
-                _defaultElastiCacheSecurityGroup = CreateDefaultElastiCacheSecurityGroup();
+                _defaultElastiCacheNodeClusterSecurityGroup = CreateDefaultElastiCacheNodeClusterSecurityGroup();
             }
         }
 
-        return _defaultElastiCacheSecurityGroup;
+        return _defaultElastiCacheNodeClusterSecurityGroup;
     }    
 
-    protected virtual ISecurityGroup CreateDefaultElastiCacheSecurityGroup()
+    protected virtual ISecurityGroup CreateDefaultElastiCacheNodeClusterSecurityGroup()
     {
-        var defaultElastiCacheSecurityGroup = new SecurityGroup(EnvironmentResource.CDKStack, "DefaultElastiCacheSecurityGroup", new SecurityGroupProps
+        var defaultElastiCacheSecurityGroup = new SecurityGroup(EnvironmentResource.CDKStack, "DefaultElastiCacheNodeClusterSecurityGroup", new SecurityGroupProps
         {
             Vpc = GetDefaultVpc(),
             AllowAllOutbound = true
@@ -178,7 +178,37 @@ public partial class CDKDefaultsProvider
         defaultElastiCacheSecurityGroup.AddIngressRule(Peer.AnyIpv4(), Port.Tcp(ElasticCacheNodeClusterPort), "Allow Redis access");
         return defaultElastiCacheSecurityGroup;
     }
-    
+
+    private ISecurityGroup? _defaultElastiCacheServerlessClusterSecurityGroup;
+    public ISecurityGroup GetDefaultElastiCacheServerlessClusterSecurityGroup()
+    {
+        if (_defaultElastiCacheServerlessClusterSecurityGroup == null)
+        {
+            var definedDefault = FindDefaultConstructByAttribute<DefaultElastiCacheSecurityGroupAttribute, ISecurityGroup>();
+            if (definedDefault != null)
+            {
+                _defaultElastiCacheServerlessClusterSecurityGroup = definedDefault;
+            }
+            else
+            {
+                _defaultElastiCacheServerlessClusterSecurityGroup = CreateDefaultElastiCacheServerlessClusterSecurityGroup();
+            }
+        }
+
+        return _defaultElastiCacheServerlessClusterSecurityGroup;
+    }
+
+    protected virtual ISecurityGroup CreateDefaultElastiCacheServerlessClusterSecurityGroup()
+    {
+        var defaultElastiCacheSecurityGroup = new SecurityGroup(EnvironmentResource.CDKStack, "DefaultElastiCacheServerlessClusterSecurityGroup", new SecurityGroupProps
+        {
+            Vpc = GetDefaultVpc(),
+            AllowAllOutbound = true
+        });
+
+        return defaultElastiCacheSecurityGroup;
+    }
+
     private IRole? _defaultECSExpressExecutionRole;
     public IRole GetDefaultECSExpressExecutionRole()
     {

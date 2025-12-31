@@ -23,7 +23,7 @@ using Lambda.AppHost;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-var awsEnvironment = builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, app => new DeploymentStack(app, "DeploymentInfrastructure14"));
+var awsEnvironment = builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, app => new DeploymentStack(app, "DeploymentInfrastructure15"));
 var deploymentStack = awsEnvironment.Resource.EnvironmentStack;
 var deploymentTag = "v" + DateTime.UtcNow.ToString("yyyyMMddHHmmss");
 
@@ -34,11 +34,11 @@ var localDevQueue = cdkStackResource.AddSQSQueue("LocalDevQueue");
 
 var cache = builder.AddRedis("cache");
 
-var frontend = builder.AddProject<Projects.Frontend>("Frontend")
-        .WithExternalHttpEndpoints()
-        .WithDeploymentImageTag(context => deploymentTag)
-        .WithReference(cache)
-        .WaitFor(cache);
+//var frontend = builder.AddProject<Projects.Frontend>("Frontend")
+//        .WithExternalHttpEndpoints()
+//        .WithDeploymentImageTag(context => deploymentTag)
+//        .WithReference(cache)
+//        .WaitFor(cache);
 
 
 // builder.AddProject<Projects.Backend>("backend")
@@ -47,27 +47,27 @@ var frontend = builder.AddProject<Projects.Frontend>("Frontend")
 //         .WithReference(cache)
 //         .WaitFor(cache);
 //
-// builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
-//         .WithDeploymentImageTag(context => deploymentTag)
-//         .PublishAsLambdaFunction(new PublishLambdaFunctionConfig
-//         {
-//             PropsFunctionCallback = props =>
-//             {
-//                 props.Vpc = awsEnvironment.Resource.DefaultsProvider.GetDefaultVpc();
-//                 props.SecurityGroups = new[] { awsEnvironment.Resource.DefaultsProvider.GetDefaultElastiCacheSecurityGroup() };
-//             },
-//             ConstructFunctionCallback = construct =>
-//             {
-//                 construct.AddEventSource(new SqsEventSource(deploymentStack.LambdaQueue, new SqsEventSourceProps
-//                 {
-//                     BatchSize = 5,
-//                     Enabled = true
-//                 }));
-//             }
-//         })
-//         .WithReference(cache)
-//         .WithReference(awsSdkConfig)
-//         .WithSQSEventSource(localDevQueue);
+builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
+        .WithDeploymentImageTag(context => deploymentTag)
+        .PublishAsLambdaFunction(new PublishLambdaFunctionConfig
+        {
+            //PropsFunctionCallback = props =>
+            //{
+            //    props.Vpc = awsEnvironment.Resource.DefaultsProvider.GetDefaultVpc();
+            //    props.SecurityGroups = new[] { awsEnvironment.Resource.DefaultsProvider.GetDefaultElastiCacheSecurityGroup() };
+            //},
+            ConstructFunctionCallback = construct =>
+            {
+                construct.AddEventSource(new SqsEventSource(deploymentStack.LambdaQueue, new SqsEventSourceProps
+                {
+                    BatchSize = 5,
+                    Enabled = true
+                }));
+            }
+        })
+        .WithReference(cache)
+        .WithReference(awsSdkConfig)
+        .WithSQSEventSource(localDevQueue);
 
 builder.Build().Run();
  

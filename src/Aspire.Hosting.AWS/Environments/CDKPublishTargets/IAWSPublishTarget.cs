@@ -19,7 +19,11 @@ public interface IAWSPublishTarget
 
     GetReferencesResult GetAllReferences(IResource resource, IConstruct resourceConstruct);
 
-    void ApplyReferenceSecurityGroup(LinkedConstructAnnotation linkedAnnotation, ISecurityGroup securityGroup);
+    bool ReferenceRequiresVPC();
+
+    bool ReferenceRequiresSecurityGroup();
+
+    void ApplyReferenceSecurityGroup(AWSLinkedObjectsAnnotation linkedAnnotation, ISecurityGroup securityGroup);
 
     IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource);
 }
@@ -42,4 +46,6 @@ public class GetReferencesResult
     public IDictionary<string, string>? EnvironmentVariables { get; set; }
     
     public IList<string>? SecurityGroupsIds { get; set; }
+
+    public IList<string>? SubnetIds { get; set; }
 }
