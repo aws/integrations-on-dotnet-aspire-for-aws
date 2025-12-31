@@ -61,36 +61,18 @@ internal class ElastiCacheServerlessClusterPublishTarget(ILogger<ElastiCacheServ
         return IsDefaultPublishTargetMatchResult.NO_MATCH;
     }
 
-    public override GetReferencesResult GetAllReferences(IResource resource, IConstruct resourceConstruct)
+    public override GetReferencesResult GetReferences(AWSLinkedObjectsAnnotation linkedAnnotation)
     {
         var result = new GetReferencesResult();
-        if (resourceConstruct is not CfnServerlessCache cacheConstruct)
+        if (linkedAnnotation.Construct is not CfnServerlessCache cacheConstruct)
             return result;
 
         result.EnvironmentVariables = new Dictionary<string, string>();
 
-        var key = $"ConnectionStrings__{resource.Name}";
+        var key = $"ConnectionStrings__{linkedAnnotation.Resource.Name}";
         var endpoint = $"{Token.AsString(cacheConstruct.AttrEndpointAddress)}:{Token.AsString(cacheConstruct.AttrEndpointPort)},ssl=True";
         result.EnvironmentVariables[key] = endpoint;
         
-        if (cacheConstruct.SecurityGroupIds != null)
-        {
-            result.SecurityGroupsIds = new List<string>();
-            foreach (var securityGroupId in cacheConstruct.SecurityGroupIds)
-            {
-                result.SecurityGroupsIds.Add(securityGroupId);
-            }
-        }        
-
-        if (cacheConstruct.SubnetIds != null)
-        {
-            result.SubnetIds = new List<string>();
-            foreach (var subnetId in cacheConstruct.SubnetIds)
-            {
-                result.SubnetIds.Add(subnetId);
-            }
-        }
-
         return result;
     }
 

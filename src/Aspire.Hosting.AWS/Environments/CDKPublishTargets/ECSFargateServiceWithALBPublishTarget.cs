@@ -76,10 +76,10 @@ internal class ECSFargateServiceWithALBPublishTarget(ITarballContainerImageBuild
         return IsDefaultPublishTargetMatchResult.NO_MATCH;
     }
 
-    public override GetReferencesResult GetAllReferences(IResource resource, IConstruct resourceConstruct)
+    public override GetReferencesResult GetReferences(AWSLinkedObjectsAnnotation linkedAnnotation)
     {
         var result = new GetReferencesResult();
-        if (resourceConstruct is not ApplicationLoadBalancedFargateService albFargateConstruct)
+        if (linkedAnnotation.Construct is not ApplicationLoadBalancedFargateService albFargateConstruct)
             return result;
 
         result.EnvironmentVariables = new Dictionary<string, string>();
@@ -88,7 +88,7 @@ internal class ECSFargateServiceWithALBPublishTarget(ITarballContainerImageBuild
         {
             string protocol = listener.Port == 443 ? "https" : "http";
 
-            var key = $"services__{resource.Name}__{protocol}__0";
+            var key = $"services__{linkedAnnotation.Resource.Name}__{protocol}__0";
             var endpoint = $"{protocol}://{Token.AsString(albFargateConstruct.LoadBalancer.LoadBalancerDnsName)}:{Token.AsString(listener.Port)}/";
             result.EnvironmentVariables[key] = endpoint;
         }
@@ -104,43 +104,33 @@ internal class ECSFargateServiceWithALBPublishTarget(ITarballContainerImageBuild
         }
         
         var environmentVariables = props.TaskImageOptions.Environment;
-        HashSet<string> securityGroupIds = new HashSet<string>();
-        if (props.SecurityGroups != null)
-        {
-            foreach (var securityGroup in props.SecurityGroups)
-            {
-                securityGroupIds.Add(securityGroup.SecurityGroupId);
-            }
-        }
         
-        var allReferences = GetAllReferences(resource);
-        foreach (var reference in allReferences)
+        ISecurityGroup? referenceSecurityGroup = null;
+        var linkReferences = GetAllReferencesLinks(resource);
+        foreach (var linkAnnotation in linkReferences)
         {
-            if (reference.EnvironmentVariables != null)
+            var results =
+                linkAnnotation.PublishTarget.GetReferences(linkAnnotation);
+            
+            if (results.EnvironmentVariables != null)
             {
-                foreach (var kvp in reference.EnvironmentVariables)
+                foreach (var kvp in results.EnvironmentVariables)
                 {
                     environmentVariables[kvp.Key] = kvp.Value;
                 }
             }
-            if (reference.SecurityGroupsIds != null)
+            
+            if (linkAnnotation.PublishTarget.ReferenceRequiresSecurityGroup())
             {
-                foreach (var securityGroupId in reference.SecurityGroupsIds)
+                if (referenceSecurityGroup == null)
                 {
-                    securityGroupIds.Add(securityGroupId);
+                    referenceSecurityGroup = CreateEmptyReferenceSecurityGroup(linkAnnotation.EnvironmentResource, resource);
+                    AppendSecurityGroup(props, x => x.SecurityGroups, (x, v) => x.SecurityGroups = v, referenceSecurityGroup);
                 }
-            }            
+   
+                linkAnnotation.PublishTarget.ApplyReferenceSecurityGroup(linkAnnotation, referenceSecurityGroup);
+            }              
         }
-        
-        var securityGroups = new List<ISecurityGroup>();
-        var securityGroupsIdsList = securityGroupIds.ToList();
-        for (var i = 0; i < securityGroupsIdsList.Count; i++)
-        {
-            var securityGroup =
-                SecurityGroup.FromSecurityGroupId(environmentResource.CDKStack, $"Reference-{resource.Name}-{i}", securityGroupsIdsList[i]);
-            securityGroups.Add(securityGroup);
-        }
-        props.SecurityGroups = securityGroups.ToArray();        
     }    
 }
     

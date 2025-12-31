@@ -17,7 +17,7 @@ public interface IAWSPublishTarget
 
     Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation publishAnnotation, CancellationToken cancellationToken);
 
-    GetReferencesResult GetAllReferences(IResource resource, IConstruct resourceConstruct);
+    GetReferencesResult GetReferences(AWSLinkedObjectsAnnotation linkedAnnotation);
 
     bool ReferenceRequiresVPC();
 
@@ -34,18 +34,14 @@ public class IsDefaultPublishTargetMatchResult
 
     public static readonly IsDefaultPublishTargetMatchResult NO_MATCH = new IsDefaultPublishTargetMatchResult { IsMatch = false };
 
-    public bool IsMatch { get; set; }
+    public bool IsMatch { get; init; }
 
-    public IResourceAnnotation? PublishTargetAnnotation { get; set; }
+    public IResourceAnnotation? PublishTargetAnnotation { get; init; }
 
-    public int Rank { get; set; } = DEFAULT_MATCH_RANK;
+    public int Rank { get; init; } = DEFAULT_MATCH_RANK;
 }
 
 public class GetReferencesResult
 {
     public IDictionary<string, string>? EnvironmentVariables { get; set; }
-    
-    public IList<string>? SecurityGroupsIds { get; set; }
-
-    public IList<string>? SubnetIds { get; set; }
 }

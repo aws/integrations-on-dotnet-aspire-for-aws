@@ -81,15 +81,15 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
         return IsDefaultPublishTargetMatchResult.NO_MATCH;
     }
 
-    public override GetReferencesResult GetAllReferences(IResource resource, IConstruct resourceConstruct)
+    public override GetReferencesResult GetReferences(AWSLinkedObjectsAnnotation linkedAnnotation)
     {
         var result = new GetReferencesResult();
-        if (resourceConstruct is not CfnExpressGatewayService fargateExpressConstruct)
+        if (linkedAnnotation.Construct is not CfnExpressGatewayService fargateExpressConstruct)
             return result;
 
         result.EnvironmentVariables = new Dictionary<string, string>();
 
-        var key = $"services__{resource.Name}__https__0";
+        var key = $"services__{linkedAnnotation.Resource.Name}__https__0";
         var endpoint = Fn.Join("", ["https://", Fn.GetAtt(fargateExpressConstruct.LogicalId, "Endpoint").ToString(), "/"]);
         result.EnvironmentVariables[key] = endpoint;
 
@@ -101,19 +101,6 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
         var primaryContainer = props.PrimaryContainer as ExpressGatewayContainerProperty;
         if (primaryContainer == null)
             throw new InvalidDataException("PrimaryContainer must be set in CfnExpressGatewayServiceProps and of type ExpressGatewayContainerProperty");
-
-        ExpressGatewayServiceNetworkConfigurationProperty? networkConfiguration;
-        if (props.NetworkConfiguration != null)
-        {
-            networkConfiguration = props.NetworkConfiguration as ExpressGatewayServiceNetworkConfigurationProperty;
-            if (networkConfiguration == null)
-                throw new InvalidDataException("NetworkConfiguration must be set in CfnExpressGatewayServiceProps and of type ExpressGatewayServiceNetworkConfigurationProperty");
-        }
-        else
-        {
-            networkConfiguration = new ExpressGatewayServiceNetworkConfigurationProperty();
-            props.NetworkConfiguration = networkConfiguration;
-        }
         
         var environmentVariables = new List<IKeyValuePairProperty>();
 
@@ -123,20 +110,11 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
             environmentVariables.AddRange(existingKvp);
         }
         
-        var securityGroupIdSet = new HashSet<string>();
-        if (networkConfiguration.SecurityGroups != null)
-        {
-            foreach (var securityGroup in networkConfiguration.SecurityGroups)
-            {
-                securityGroupIdSet.Add(securityGroup);
-            }
-        }
-        
-        var allLinkReferences = GetAllReferencesLink(resource);
+        var allLinkReferences = GetAllReferencesLinks(resource);
         foreach (var linkAnnotation in allLinkReferences)
         {
             var results =
-                linkAnnotation.PublishTarget.GetAllReferences(linkAnnotation.Resource, linkAnnotation.Construct);
+                linkAnnotation.PublishTarget.GetReferences(linkAnnotation);
 
             if (results.EnvironmentVariables != null)
             {
@@ -154,7 +132,6 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
         }
 
         primaryContainer.Environment = environmentVariables.ToArray();
-        networkConfiguration.SecurityGroups = securityGroupIdSet.ToArray();
     }
 }
     

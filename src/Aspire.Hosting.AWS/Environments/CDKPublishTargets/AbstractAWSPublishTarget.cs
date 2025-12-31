@@ -20,7 +20,7 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
     public abstract Type PublishTargetAnnotation { get; }
 
     public abstract Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation publishAnnotation, CancellationToken cancellationToken);
-    public abstract GetReferencesResult GetAllReferences(IResource resource, IConstruct resourceConstruct);
+    public abstract GetReferencesResult GetReferences(AWSLinkedObjectsAnnotation linkedAnnotation);
     public abstract IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource);
 
     public virtual bool ReferenceRequiresVPC()
@@ -38,24 +38,7 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
         
     }
 
-    protected IList<GetReferencesResult> GetAllReferences(IResource resource)
-    {
-        var references = new List<GetReferencesResult>();
-        var relatedAnnotations = resource.Annotations.OfType<ResourceRelationshipAnnotation>();
-        
-        foreach (var relatedAnnotation in relatedAnnotations)
-        {
-            if (relatedAnnotation.Type != "Reference" || !relatedAnnotation.Resource.TryGetLastAnnotation<AWSLinkedObjectsAnnotation>(out var targetLinkedAnnotation))
-                continue;            
-            
-            var result = targetLinkedAnnotation.PublishTarget.GetAllReferences(relatedAnnotation.Resource, targetLinkedAnnotation.Construct);
-            references.Add(result);
-        }
-
-        return references;
-    }
-
-    protected IList<AWSLinkedObjectsAnnotation> GetAllReferencesLink(IResource resource)
+    protected IList<AWSLinkedObjectsAnnotation> GetAllReferencesLinks(IResource resource)
     {
         var links = new List<AWSLinkedObjectsAnnotation>();
         
@@ -101,5 +84,36 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
                 Tags.Of(scope).Add(environment.DefaultsProvider.DeploymentTagName, tag);
             }
         }
+    }
+
+    protected ISecurityGroup CreateEmptyReferenceSecurityGroup(AWSCDKEnvironmentResource environmentResource, IResource resource)
+    {
+        return new SecurityGroup(
+            environmentResource.CDKStack,
+            $"{resource.Name}-Ref",
+            new SecurityGroupProps
+            {
+                Vpc = environmentResource.DefaultsProvider.GetDefaultVpc(),
+                Description = $"Security group for linking {resource.Name} to Aspire References",
+                AllowAllOutbound = true
+            });
+    }
+
+    protected void AppendSecurityGroup<T>(T construct, Func<T, ISecurityGroup[]?> getter, Action<T, ISecurityGroup[]> setter, ISecurityGroup securityGroup)
+    {
+        var securityGroups = getter(construct);
+        
+        if (securityGroups == null)
+        {
+            securityGroups = new ISecurityGroup[] { securityGroup };
+        }
+        else
+        {
+            var securityGroupList =  securityGroups.ToList();
+            securityGroupList.Add(securityGroup);
+            securityGroups = securityGroups.ToArray();
+        }
+        
+        setter(construct, securityGroups);
     }
 }

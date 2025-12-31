@@ -39,7 +39,7 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
             Code = Code.FromAsset(lambdaFunctionAnnotation.DeploymentBundlePath!),
             Handler = lambdaFunctionAnnotation.Handler
         };
-        ProcessRelationShips(functionProps, lambdaFunction);
+        ProcessRelationShips(environment, functionProps, lambdaFunction);
         publishAnnotation.Config.PropsFunctionCallback?.Invoke(functionProps);
         environment.DefaultsProvider.ApplyLambdaFunctionDefaults(functionProps, lambdaFunction);
 
@@ -67,19 +67,20 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
         return IsDefaultPublishTargetMatchResult.NO_MATCH;
     }
 
-    public override GetReferencesResult GetAllReferences(IResource resource, IConstruct resourceConstruct)
+    public override GetReferencesResult GetReferences(AWSLinkedObjectsAnnotation linkedAnnotation)
     {
         return new GetReferencesResult();
     }
 
-    private void ProcessRelationShips(FunctionProps props, IResource resource)
+    private void ProcessRelationShips(AWSCDKEnvironmentResource environmentResource, FunctionProps props, IResource resource)
     {
+        ISecurityGroup? referenceSecurityGroup = null;
         var environmentVariables = props.Environment ?? new Dictionary<string, string>();
-        var allLinkReferences = GetAllReferencesLink(resource);
+        var allLinkReferences = GetAllReferencesLinks(resource);
         foreach (var linkAnnotation in allLinkReferences)
         {
             var results =
-                linkAnnotation.PublishTarget.GetAllReferences(linkAnnotation.Resource, linkAnnotation.Construct);
+                linkAnnotation.PublishTarget.GetReferences(linkAnnotation);
 
             if (results.EnvironmentVariables != null)
             {
@@ -89,26 +90,20 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
                 }
             }
 
-            if (results.SubnetIds != null && results.SubnetIds.Count > 0)
+            if (linkAnnotation.PublishTarget.ReferenceRequiresVPC() && props.Vpc == null)
             {
-            }
-
-            if (linkAnnotation.PublishTarget.ReferenceRequiresVPC())
-            {
+                props.Vpc = linkAnnotation.EnvironmentResource.DefaultsProvider.GetDefaultVpc();
+                
                 if (linkAnnotation.PublishTarget.ReferenceRequiresSecurityGroup())
                 {
-                    //var securityGroup = new SecurityGroup(
-                    //    linkAnnotation.EnvironmentResource.CDKStack,
-                    //    $"SG-{linkAnnotation.Resource.Name}-{resource.Name}",
-                    //    new Amazon.CDK.AWS.EC2.SecurityGroupProps
-                    //    {
-                    //        Vpc = linkAnnotation.EnvironmentResource.DefaultsProvider.GetDefaultVPC(),
-                    //        Description = $"Security group for linking {resource.Name} to {linkAnnotation.Resource.Name}",
-                    //        AllowAllOutbound = true
-                    //    });
-                    linkAnnotation.PublishTarget.ApplyReferenceSecurityGroup(linkAnnotation, linkAnnotation.EnvironmentResource.DefaultsProvider.GetDefaultECSClusterSecurityGroup());
-                }
-
+                    if (referenceSecurityGroup == null)
+                    {
+                        referenceSecurityGroup = CreateEmptyReferenceSecurityGroup(environmentResource, resource);
+                        AppendSecurityGroup(props, x => x.SecurityGroups, (x, v) => x.SecurityGroups = v, referenceSecurityGroup);
+                    }
+   
+                    linkAnnotation.PublishTarget.ApplyReferenceSecurityGroup(linkAnnotation, referenceSecurityGroup);
+                }                
             }
         }
 

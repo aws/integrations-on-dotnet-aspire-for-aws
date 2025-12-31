@@ -53,26 +53,17 @@ internal class ElastiCacheNodeClusterPublishTarget(ILogger<ElastiCacheNodeCluste
         return IsDefaultPublishTargetMatchResult.NO_MATCH;
     }
 
-    public override GetReferencesResult GetAllReferences(IResource resource, IConstruct resourceConstruct)
+    public override GetReferencesResult GetReferences(AWSLinkedObjectsAnnotation linkedAnnotation)
     {
         var result = new GetReferencesResult();
-        if (resourceConstruct is not CfnReplicationGroup cacheConstruct)
+        if (linkedAnnotation.Construct is not CfnReplicationGroup cacheConstruct)
             return result;
 
         result.EnvironmentVariables = new Dictionary<string, string>();
 
-        var key = $"ConnectionStrings__{resource.Name}";
+        var key = $"ConnectionStrings__{linkedAnnotation.Resource.Name}";
         var endpoint = $"{Token.AsString(cacheConstruct.AttrPrimaryEndPointAddress)}:{Token.AsString(cacheConstruct.AttrPrimaryEndPointPort)}";
         result.EnvironmentVariables[key] = endpoint;
-
-        if (cacheConstruct.SecurityGroupIds != null)
-        {
-            result.SecurityGroupsIds = new List<string>();
-            foreach (var securityGroupId in cacheConstruct.SecurityGroupIds)
-            {
-                result.SecurityGroupsIds.Add(securityGroupId);
-            }
-        }
 
         return result;
     }
