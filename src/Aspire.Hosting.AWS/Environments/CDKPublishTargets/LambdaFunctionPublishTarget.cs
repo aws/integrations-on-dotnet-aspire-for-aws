@@ -91,7 +91,7 @@ public class PublishLambdaFunctionConfig
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 internal class PublishLambdaFunctionAnnotation : IAWSPublishTargetAnnotation
 {
-    public PublishLambdaFunctionConfig Config { get; init; } = new PublishLambdaFunctionConfig();
+    public PublishLambdaFunctionConfig Config { get; set; } = new ();
 }
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]

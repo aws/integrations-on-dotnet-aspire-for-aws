@@ -104,5 +104,5 @@ public class PublishElastiCacheServerlessClusterConfig
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 internal class PublishElasticCacheServerlessClusterAnnotation : IAWSPublishTargetAnnotation
 {
-    public PublishElastiCacheServerlessClusterConfig Config { get; init; } = new PublishElastiCacheServerlessClusterConfig();
+    public PublishElastiCacheServerlessClusterConfig Config { get; set; } = new ();
 }

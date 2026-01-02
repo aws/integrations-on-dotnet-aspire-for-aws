@@ -115,7 +115,7 @@ public class PublishECSFargateServiceWithALBConfig
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 internal class PublishCDKECSFargateServiceWithALBAnnotation : IAWSPublishTargetAnnotation
 {
-    public PublishECSFargateServiceWithALBConfig Config { get; init; } = new PublishECSFargateServiceWithALBConfig();
+    public PublishECSFargateServiceWithALBConfig Config { get; set; } = new ();
 }
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]

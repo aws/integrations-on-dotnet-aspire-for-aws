@@ -80,5 +80,5 @@ public class PublishElastiCacheNodeClusterConfig
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 internal class PublishElasticCacheNodeClusterAnnotation : IAWSPublishTargetAnnotation
 {
-    public PublishElastiCacheNodeClusterConfig Config { get; init; } = new PublishElastiCacheNodeClusterConfig();
+    public PublishElastiCacheNodeClusterConfig Config { get; set; } = new ();
 }
