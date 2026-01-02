@@ -86,9 +86,10 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
         }
     }
 
-    protected ISecurityGroup CreateEmptyReferenceSecurityGroup(AWSCDKEnvironmentResource environmentResource, IResource resource)
+    protected ISecurityGroup CreateEmptyReferenceSecurityGroup<T>(AWSCDKEnvironmentResource environmentResource, 
+        IResource resource, T construct, Func<T, ISecurityGroup[]?> getter, Action<T, ISecurityGroup[]> setter)
     {
-        return new SecurityGroup(
+        var securityGroup = new SecurityGroup(
             environmentResource.CDKStack,
             $"{resource.Name}-Ref",
             new SecurityGroupProps
@@ -97,9 +98,13 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
                 Description = $"Security group for linking {resource.Name} to Aspire References",
                 AllowAllOutbound = true
             });
+        
+        AppendSecurityGroup(construct, getter, setter, securityGroup);
+        
+        return securityGroup;
     }
 
-    protected void AppendSecurityGroup<T>(T construct, Func<T, ISecurityGroup[]?> getter, Action<T, ISecurityGroup[]> setter, ISecurityGroup securityGroup)
+    private void AppendSecurityGroup<T>(T construct, Func<T, ISecurityGroup[]?> getter, Action<T, ISecurityGroup[]> setter, ISecurityGroup securityGroup)
     {
         var securityGroups = getter(construct);
         
@@ -116,4 +121,41 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
         
         setter(construct, securityGroups);
     }
+    
+    protected virtual void ProcessRelationShips(AbstractCDKConstructReferencePoints referencePoints, ApplicationModel.IResource resource)
+    {
+        var environmentVariables = referencePoints.EnvironmentVariables;
+         
+        var allLinkReferences = GetAllReferencesLinks(resource);
+        foreach (var linkAnnotation in allLinkReferences)
+        {
+            var results =
+                linkAnnotation.PublishTarget.GetReferences(linkAnnotation);
+
+            if (environmentVariables != null && results.EnvironmentVariables != null)
+            {
+                foreach (var kvp in results.EnvironmentVariables)
+                    environmentVariables[kvp.Key] = kvp.Value;  
+            }
+
+            if (linkAnnotation.PublishTarget.ReferenceRequiresVPC())
+            {
+                referencePoints.Vpc = linkAnnotation.EnvironmentResource.DefaultsProvider.GetDefaultVpc();
+            }
+
+            if (linkAnnotation.PublishTarget.ReferenceRequiresSecurityGroup())
+            {
+                if (referencePoints.ReferenceSecurityGroup == null)
+                    throw new InvalidDataException(
+                        $"Reference for {linkAnnotation.Resource.Name} requires a security group but isn't defined for {resource.Name}");
+                
+                linkAnnotation.PublishTarget.ApplyReferenceSecurityGroup(linkAnnotation, referencePoints.ReferenceSecurityGroup);
+            }
+        }
+
+        if (environmentVariables != null)
+        {
+            referencePoints.EnvironmentVariables = environmentVariables;
+        }
+    }    
 }

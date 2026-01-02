@@ -39,7 +39,14 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
             Code = Code.FromAsset(lambdaFunctionAnnotation.DeploymentBundlePath!),
             Handler = lambdaFunctionAnnotation.Handler
         };
-        ProcessRelationShips(environment, functionProps, lambdaFunction);
+
+        var referencePoints = new FunctionPropsReferencePoints(
+            functionProps,
+            () => CreateEmptyReferenceSecurityGroup(environment, resource, functionProps, x => x.SecurityGroups,
+                (x, v) => x.SecurityGroups = v));
+
+        ProcessRelationShips(referencePoints, lambdaFunction);
+        
         publishAnnotation.Config.PropsFunctionCallback?.Invoke(functionProps);
         environment.DefaultsProvider.ApplyLambdaFunctionDefaults(functionProps, lambdaFunction);
 
@@ -71,44 +78,6 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
     {
         return new GetReferencesResult();
     }
-
-    private void ProcessRelationShips(AWSCDKEnvironmentResource environmentResource, FunctionProps props, IResource resource)
-    {
-        ISecurityGroup? referenceSecurityGroup = null;
-        var environmentVariables = props.Environment ?? new Dictionary<string, string>();
-        var allLinkReferences = GetAllReferencesLinks(resource);
-        foreach (var linkAnnotation in allLinkReferences)
-        {
-            var results =
-                linkAnnotation.PublishTarget.GetReferences(linkAnnotation);
-
-            if (results.EnvironmentVariables != null)
-            {
-                foreach (var kvp in results.EnvironmentVariables)
-                {
-                    environmentVariables[kvp.Key] = kvp.Value;
-                }
-            }
-
-            if (linkAnnotation.PublishTarget.ReferenceRequiresVPC() && props.Vpc == null)
-            {
-                props.Vpc = linkAnnotation.EnvironmentResource.DefaultsProvider.GetDefaultVpc();
-                
-                if (linkAnnotation.PublishTarget.ReferenceRequiresSecurityGroup())
-                {
-                    if (referenceSecurityGroup == null)
-                    {
-                        referenceSecurityGroup = CreateEmptyReferenceSecurityGroup(environmentResource, resource);
-                        AppendSecurityGroup(props, x => x.SecurityGroups, (x, v) => x.SecurityGroups = v, referenceSecurityGroup);
-                    }
-   
-                    linkAnnotation.PublishTarget.ApplyReferenceSecurityGroup(linkAnnotation, referenceSecurityGroup);
-                }                
-            }
-        }
-
-        props.Environment = environmentVariables;
-    }
 }
     
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
@@ -123,4 +92,30 @@ public class PublishLambdaFunctionConfig
 internal class PublishLambdaFunctionAnnotation : IAWSPublishTargetAnnotation
 {
     public PublishLambdaFunctionConfig Config { get; init; } = new PublishLambdaFunctionConfig();
+}
+
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+internal class FunctionPropsReferencePoints(FunctionProps props, Func<ISecurityGroup> securityGroupFactory) : AbstractCDKConstructReferencePoints
+{
+    ISecurityGroup? _referenceSecurityGroup;
+    public override IDictionary<string, string>? EnvironmentVariables
+    {
+        get => props.Environment ?? new Dictionary<string, string>();
+        set => props.Environment = value ??  new Dictionary<string, string>();
+    }
+
+    public override ISecurityGroup? ReferenceSecurityGroup
+    {
+        get
+        {
+            _referenceSecurityGroup ??= securityGroupFactory();
+            return _referenceSecurityGroup;
+        }
+    }
+
+    public override IVpc? Vpc
+    {
+        get => props.Vpc; 
+        set => props.Vpc = value;
+    }
 }

@@ -44,7 +44,8 @@ internal class ECSFargateServicePublishTarget(ITarballContainerImageBuilder imag
             Image = ContainerImage.FromTarball(imageTarballPath),
             Environment = new Dictionary<string, string>()
         };
-        ProcessRelationShipsEnvironmentVariables(containerDefinitionProps, projectResource);
+        ProcessRelationShips(new ContainerDefinitionPropsReferencePoints(containerDefinitionProps), projectResource);
+
         publishAnnotation.Config.PropsContainerDefinitionCallback?.Invoke(containerDefinitionProps);
         environment.DefaultsProvider.ApplyECSFargateServiceDefaults(projectResource.Name, containerDefinitionProps);
 
@@ -58,7 +59,9 @@ internal class ECSFargateServicePublishTarget(ITarballContainerImageBuilder imag
         };
         publishAnnotation.Config.PropsFargateServiceCallback?.Invoke(fargateServiceProps);
         environment.DefaultsProvider.ApplyECSFargateServiceDefaults(fargateServiceProps);
-        ProcessRelationShipsSecurityGroups(fargateServiceProps, projectResource);
+        ProcessRelationShips(new FargateServicePropsReferencePoints(
+            () => CreateEmptyReferenceSecurityGroup(environment, projectResource, fargateServiceProps, x => x.SecurityGroups, (x, v) => x.SecurityGroups = v)), 
+            resource);
 
         var fargateService = new FargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
         publishAnnotation.Config.ConstructFargateServiceCallback?.Invoke(fargateService);
@@ -87,49 +90,6 @@ internal class ECSFargateServicePublishTarget(ITarballContainerImageBuilder imag
     {
         return new GetReferencesResult();
     }
-
-    private void ProcessRelationShipsEnvironmentVariables(ContainerDefinitionProps props, ApplicationModel.IResource resource)
-    {
-        var environmentVariables = props.Environment ?? new Dictionary<string, string>();
-        
-        var linkReferences = GetAllReferencesLinks(resource);
-        foreach (var linkAnnotation in linkReferences)
-        {
-            var results = linkAnnotation.PublishTarget.GetReferences(linkAnnotation);
-            if (results.EnvironmentVariables != null)
-            {
-                foreach (var kvp in results.EnvironmentVariables)
-                {
-                    environmentVariables[kvp.Key] = kvp.Value;
-                }
-            }
-        }
-
-        props.Environment = environmentVariables;
-    }
-    
-    private void ProcessRelationShipsSecurityGroups(FargateServiceProps props, ApplicationModel.IResource resource)
-    {
-        ISecurityGroup? referenceSecurityGroup = null;
-
-        var linkReferences = GetAllReferencesLinks(resource);
-        foreach (var linkAnnotation in linkReferences)
-        {
-            var results =
-                linkAnnotation.PublishTarget.GetReferences(linkAnnotation);
-            
-            if (linkAnnotation.PublishTarget.ReferenceRequiresSecurityGroup())
-            {
-                if (referenceSecurityGroup == null)
-                {
-                    referenceSecurityGroup = CreateEmptyReferenceSecurityGroup(linkAnnotation.EnvironmentResource, resource);
-                    AppendSecurityGroup(props, x => x.SecurityGroups, (x, v) => x.SecurityGroups = v, referenceSecurityGroup);
-                }
-   
-                linkAnnotation.PublishTarget.ApplyReferenceSecurityGroup(linkAnnotation, referenceSecurityGroup);
-            }              
-        }
-    }    
 }
     
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
@@ -152,4 +112,29 @@ public class PublishECSFargateServiceConfig
 internal class PublishECSFargateServiceAnnotation : IAWSPublishTargetAnnotation
 {
     public PublishECSFargateServiceConfig Config { get; init; } = new PublishECSFargateServiceConfig();
+}
+
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+internal class ContainerDefinitionPropsReferencePoints(ContainerDefinitionProps props) : AbstractCDKConstructReferencePoints
+{
+    public override IDictionary<string, string>? EnvironmentVariables
+    {
+        get => props.Environment ?? new Dictionary<string, string>();
+        set => props.Environment = value ??  new Dictionary<string, string>();
+    }
+}
+
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+internal class FargateServicePropsReferencePoints(Func<ISecurityGroup> securityGroupFactory) : AbstractCDKConstructReferencePoints
+{
+    ISecurityGroup? _referenceSecurityGroup;
+    
+    public override ISecurityGroup? ReferenceSecurityGroup
+    {
+        get
+        {
+            _referenceSecurityGroup ??= securityGroupFactory();
+            return _referenceSecurityGroup;
+        }
+    }
 }

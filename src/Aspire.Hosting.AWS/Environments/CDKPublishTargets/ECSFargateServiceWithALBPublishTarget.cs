@@ -49,7 +49,11 @@ internal class ECSFargateServiceWithALBPublishTarget(ITarballContainerImageBuild
         };
         publishAnnotation.Config.PropsApplicationLoadBalancedFargateServiceCallback?.Invoke(fargateServiceProps);
         environment.DefaultsProvider.ApplyECSFargateServiceWithALBDefaults(fargateServiceProps);
-        ProcessRelationShips(environment, fargateServiceProps, projectResource);
+        
+        var referencePoints = new ApplicationLoadBalancedFargateServicePropsReferencePoints(
+            fargateServiceProps,
+                () => CreateEmptyReferenceSecurityGroup(environment, projectResource, fargateServiceProps, x => x.SecurityGroups, (x, v) => x.SecurityGroups = v));
+        ProcessRelationShips(referencePoints, projectResource);
 
         var fargateService = new ApplicationLoadBalancedFargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
         publishAnnotation.Config.ConstructApplicationLoadBalancedFargateServiceCallback?.Invoke(fargateService);
@@ -95,43 +99,6 @@ internal class ECSFargateServiceWithALBPublishTarget(ITarballContainerImageBuild
 
         return result;
     }
-    
-    private void ProcessRelationShips(AWSCDKEnvironmentResource environmentResource, ApplicationLoadBalancedFargateServiceProps props, ApplicationModel.IResource resource)
-    {
-        if (props.TaskImageOptions?.Environment == null)
-        {
-            throw new InvalidOperationException("TaskImageOptions.Environment must be set for the ApplicationLoadBalancedFargateServiceProps");
-        }
-        
-        var environmentVariables = props.TaskImageOptions.Environment;
-        
-        ISecurityGroup? referenceSecurityGroup = null;
-        var linkReferences = GetAllReferencesLinks(resource);
-        foreach (var linkAnnotation in linkReferences)
-        {
-            var results =
-                linkAnnotation.PublishTarget.GetReferences(linkAnnotation);
-            
-            if (results.EnvironmentVariables != null)
-            {
-                foreach (var kvp in results.EnvironmentVariables)
-                {
-                    environmentVariables[kvp.Key] = kvp.Value;
-                }
-            }
-            
-            if (linkAnnotation.PublishTarget.ReferenceRequiresSecurityGroup())
-            {
-                if (referenceSecurityGroup == null)
-                {
-                    referenceSecurityGroup = CreateEmptyReferenceSecurityGroup(linkAnnotation.EnvironmentResource, resource);
-                    AppendSecurityGroup(props, x => x.SecurityGroups, (x, v) => x.SecurityGroups = v, referenceSecurityGroup);
-                }
-   
-                linkAnnotation.PublishTarget.ApplyReferenceSecurityGroup(linkAnnotation, referenceSecurityGroup);
-            }              
-        }
-    }    
 }
     
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
@@ -149,4 +116,46 @@ public class PublishECSFargateServiceWithALBConfig
 internal class PublishCDKECSFargateServiceWithALBAnnotation : IAWSPublishTargetAnnotation
 {
     public PublishECSFargateServiceWithALBConfig Config { get; init; } = new PublishECSFargateServiceWithALBConfig();
+}
+
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+internal class ApplicationLoadBalancedFargateServicePropsReferencePoints(ApplicationLoadBalancedFargateServiceProps props, Func<ISecurityGroup> securityGroupFactory) : AbstractCDKConstructReferencePoints
+{
+    ISecurityGroup? _referenceSecurityGroup;
+    public override IDictionary<string, string>? EnvironmentVariables
+    {
+        get
+        {
+            if (props.TaskImageOptions?.Environment == null)
+            {
+                throw new InvalidOperationException("TaskImageOptions.Environment must be set for the ApplicationLoadBalancedFargateServiceProps");
+            }
+            
+            return props.TaskImageOptions.Environment;
+        }
+        set
+        {
+            if (props.TaskImageOptions?.Environment == null)
+            {
+                throw new InvalidOperationException("TaskImageOptions.Environment must be set for the ApplicationLoadBalancedFargateServiceProps");
+            }
+
+            if (value != null)
+            {
+                foreach (var kvp in value)
+                {
+                    props.TaskImageOptions.Environment[kvp.Key] = kvp.Value;
+                }                
+            }
+        }
+    }
+    
+    public override ISecurityGroup? ReferenceSecurityGroup
+    {
+        get
+        {
+            _referenceSecurityGroup ??= securityGroupFactory();
+            return _referenceSecurityGroup;
+        }
+    }
 }

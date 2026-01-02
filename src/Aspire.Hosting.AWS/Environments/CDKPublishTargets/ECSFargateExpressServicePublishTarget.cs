@@ -9,6 +9,7 @@ using Aspire.Hosting.ApplicationModel;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
+using Amazon.CDK.AWS.EC2;
 using Aspire.Hosting.AWS.Environments.CDKDefaults;
 using Aspire.Hosting.AWS.Environments.Services;
 using static Amazon.CDK.AWS.ECS.CfnExpressGatewayService;
@@ -50,7 +51,11 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
         };
         publishAnnotation.Config.PropsCfnExpressGatewayServicePropsCallback?.Invoke(fargateServiceProps);
         environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(fargateServiceProps);
-        ProcessRelationShips(fargateServiceProps, projectResource);
+        
+        var referencePoints = new CfnExpressGatewayServicePropsReferencePoints(
+            fargateServiceProps,
+            environment.DefaultsProvider.GetDefaultECSClusterSecurityGroup());
+        ProcessRelationShips(referencePoints, projectResource);
 
         var fargateService = new CfnExpressGatewayService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
         publishAnnotation.Config.ConstructCfnExpressGatewayServiceCallback?.Invoke(fargateService);
@@ -95,44 +100,6 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
 
         return result;
     }
-
-    private void ProcessRelationShips(CfnExpressGatewayServiceProps props, ApplicationModel.IResource resource)
-    {
-        var primaryContainer = props.PrimaryContainer as ExpressGatewayContainerProperty;
-        if (primaryContainer == null)
-            throw new InvalidDataException("PrimaryContainer must be set in CfnExpressGatewayServiceProps and of type ExpressGatewayContainerProperty");
-        
-        var environmentVariables = new List<IKeyValuePairProperty>();
-
-        var existingKvp = primaryContainer.Environment as IKeyValuePairProperty[];
-        if (existingKvp != null)
-        {
-            environmentVariables.AddRange(existingKvp);
-        }
-        
-        var allLinkReferences = GetAllReferencesLinks(resource);
-        foreach (var linkAnnotation in allLinkReferences)
-        {
-            var results =
-                linkAnnotation.PublishTarget.GetReferences(linkAnnotation);
-
-            if (results.EnvironmentVariables != null)
-            {
-                environmentVariables.AddRange(results.EnvironmentVariables.Select(x => new KeyValuePairProperty
-                {
-                    Name = x.Key,
-                    Value = x.Value
-                }));
-            }
-
-            if (linkAnnotation.PublishTarget.ReferenceRequiresSecurityGroup())
-            {
-                linkAnnotation.PublishTarget.ApplyReferenceSecurityGroup(linkAnnotation, linkAnnotation.EnvironmentResource.DefaultsProvider.GetDefaultECSClusterSecurityGroup());
-            }
-        }
-
-        primaryContainer.Environment = environmentVariables.ToArray();
-    }
 }
     
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
@@ -147,4 +114,47 @@ public class PublishECSFargateExpressServiceConfig
 internal class PublishECSFargateServiceExpressAnnotation : IAWSPublishTargetAnnotation
 {
     public PublishECSFargateExpressServiceConfig Config { get; init; } = new PublishECSFargateExpressServiceConfig();
+}
+
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+internal class CfnExpressGatewayServicePropsReferencePoints(CfnExpressGatewayServiceProps props, ISecurityGroup securityGroup) : AbstractCDKConstructReferencePoints
+{
+    public override IDictionary<string, string>? EnvironmentVariables
+    {
+        get
+        {
+            var primaryContainer = props.PrimaryContainer as ExpressGatewayContainerProperty;
+            if (primaryContainer == null)
+                throw new InvalidDataException("PrimaryContainer must be set in CfnExpressGatewayServiceProps and of type ExpressGatewayContainerProperty");
+        
+            var existingKvp = primaryContainer.Environment as IKeyValuePairProperty[] ?? [];
+            
+            var environmentVariables = new Dictionary<string, string>();
+            foreach (var kvp in existingKvp)
+            {
+                environmentVariables[kvp.Name] =  kvp.Value;
+            }
+            
+            return environmentVariables;
+        }
+        set
+        {
+            var primaryContainer = props.PrimaryContainer as ExpressGatewayContainerProperty;
+            if (primaryContainer == null)
+                throw new InvalidDataException("PrimaryContainer must be set in CfnExpressGatewayServiceProps and of type ExpressGatewayContainerProperty");
+            
+            var list = new List<IKeyValuePairProperty>();
+            if (value != null)
+            {
+                foreach (var kvp in value)
+                {
+                    list.Add(new KeyValuePairProperty{ Name = kvp.Key, Value = kvp.Value });
+                }
+            }
+            
+            primaryContainer.Environment = list.ToArray();
+        }
+    }
+    
+    public override ISecurityGroup? ReferenceSecurityGroup  => securityGroup;
 }
