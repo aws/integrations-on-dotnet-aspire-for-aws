@@ -119,41 +119,12 @@ public partial class CDKDefaultsProvider
         });
     }
     
-    private CfnParameterGroup? _defaultElastiCacheCfnParameterGroup;
-    public CfnParameterGroup GetDefaultElastiCacheCfnParameterGroup()
-    {
-        if (_defaultElastiCacheCfnParameterGroup == null)
-        {
-            var definedDefault = FindDefaultConstructByAttribute<DefaultElastiCacheCfnParameterGroupAttribute, CfnParameterGroup>();
-            if (definedDefault != null)
-            {
-                _defaultElastiCacheCfnParameterGroup = definedDefault;
-            }
-            else
-            {
-                _defaultElastiCacheCfnParameterGroup = CreateDefaultElastiCacheCfnParameterGroup();
-            }
-        }
-
-        return _defaultElastiCacheCfnParameterGroup;
-    }    
-
-    protected virtual CfnParameterGroup CreateDefaultElastiCacheCfnParameterGroup()
-    {
-        return new CfnParameterGroup(EnvironmentResource.CDKStack, "DefaultElastiCacheParameterGroup", new CfnParameterGroupProps
-        {
-            CacheParameterGroupFamily = ElasticCacheNodeClusterParameterGroupFamily,
-            Description = ElasticCacheNodeClusterParameterGroupDescription,
-            Properties = ElasticCacheNodeClusterParameterGroupProperties
-        });
-    }
-    
     private ISecurityGroup? _defaultElastiCacheNodeClusterSecurityGroup;
     public ISecurityGroup GetDefaultElastiCacheNodeClusterSecurityGroup()
     {
         if (_defaultElastiCacheNodeClusterSecurityGroup == null)
         {
-            var definedDefault = FindDefaultConstructByAttribute<DefaultElastiCacheSecurityGroupAttribute, ISecurityGroup>();
+            var definedDefault = FindDefaultConstructByAttribute<DefaultElastiCacheNodeSecurityGroupAttribute, ISecurityGroup>();
             if (definedDefault != null)
             {
                 _defaultElastiCacheNodeClusterSecurityGroup = definedDefault;
@@ -175,7 +146,7 @@ public partial class CDKDefaultsProvider
             AllowAllOutbound = true
         });
 
-        defaultElastiCacheSecurityGroup.AddIngressRule(Peer.AnyIpv4(), Port.Tcp(ElasticCacheNodeClusterPort), "Allow Redis access");
+        //defaultElastiCacheSecurityGroup.AddIngressRule(Peer.AnyIpv4(), Port.Tcp(ElasticCacheNodeClusterPort), "Allow Redis access");
         return defaultElastiCacheSecurityGroup;
     }
 
@@ -184,7 +155,7 @@ public partial class CDKDefaultsProvider
     {
         if (_defaultElastiCacheServerlessClusterSecurityGroup == null)
         {
-            var definedDefault = FindDefaultConstructByAttribute<DefaultElastiCacheSecurityGroupAttribute, ISecurityGroup>();
+            var definedDefault = FindDefaultConstructByAttribute<DefaultElastiCacheServerlessSecurityGroupAttribute, ISecurityGroup>();
             if (definedDefault != null)
             {
                 _defaultElastiCacheServerlessClusterSecurityGroup = definedDefault;
@@ -362,7 +333,13 @@ public class DefaultElastiCacheCfnParameterGroupAttribute : Attribute
 }
 
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
-public class DefaultElastiCacheSecurityGroupAttribute : Attribute
+public class DefaultElastiCacheNodeSecurityGroupAttribute : Attribute
+{
+
+}
+
+[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
+public class DefaultElastiCacheServerlessSecurityGroupAttribute : Attribute
 {
 
 }

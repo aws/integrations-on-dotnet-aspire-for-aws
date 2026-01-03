@@ -22,15 +22,11 @@ public partial class CDKDefaultsProvider
 
     public virtual string ElasticCacheNodeClusterSubnetGroupDescription => "Subnet group for ElastiCache Node Cluster";
 
-    public virtual string ElasticCacheNodeClusterParameterGroupFamily => "valkey8";
+    public virtual bool? ElasticCacheNodeClusterTransitEncryptionEnabled => true;
 
-    public virtual string ElasticCacheNodeClusterParameterGroupDescription => "Parameter group for Node Cluster";
+    public virtual bool? ElasticCacheNodeClusterAtRestEncryptionEnabled => true;
 
-    public virtual bool? ElasticCacheNodeClusterTransitEncryptionEnabled => false;
-
-    public virtual IDictionary<string, string>? ElasticCacheNodeClusterParameterGroupProperties => new Dictionary<string, string>
-    {
-    };
+    public virtual string ElasticCacheNodeClusterCacheParameterGroupName => "default.valkey8.cluster.on";
 
     protected internal virtual void ApplyCfnReplicationGroupPropsDefaults(CfnReplicationGroupProps props)
     {
@@ -50,11 +46,13 @@ public partial class CDKDefaultsProvider
             props.Port = ElasticCacheNodeClusterPort;
         if (props.TransitEncryptionEnabled == null)
             props.TransitEncryptionEnabled = ElasticCacheNodeClusterTransitEncryptionEnabled;
+        if (props.AtRestEncryptionEnabled == null)
+            props.AtRestEncryptionEnabled = ElasticCacheNodeClusterAtRestEncryptionEnabled;        
 
         if (props.CacheSubnetGroupName == null)
             props.CacheSubnetGroupName = GetDefaultElastiCacheCfnSubnetGroup().Ref;
-        if (props.CacheParameterGroupName == null) // TODO: Figure out of this hardcoded is okay
-            props.CacheParameterGroupName = "default.valkey8.cluster.on";// environment.DeploymentConstructProvider.GetDefaultElastiCacheCfnParameterGroup().Ref;
+        if (props.CacheParameterGroupName == null)
+            props.CacheParameterGroupName = ElasticCacheNodeClusterCacheParameterGroupName;
         if (props.SecurityGroupIds == null)
             props.SecurityGroupIds = new[] { GetDefaultElastiCacheNodeClusterSecurityGroup().SecurityGroupId };
     }    

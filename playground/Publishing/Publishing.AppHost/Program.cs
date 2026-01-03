@@ -23,7 +23,7 @@ using Lambda.AppHost;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-var awsEnvironment = builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, app => new DeploymentStack(app, "DeploymentInfrastructure15"));
+var awsEnvironment = builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, app => new DeploymentStack(app, "DeploymentInfrastructure17"));
 var deploymentStack = awsEnvironment.Resource.EnvironmentStack;
 var deploymentTag = "v" + DateTime.UtcNow.ToString("yyyyMMddHHmmss");
 
@@ -32,7 +32,11 @@ var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.US
 var cdkStackResource = builder.AddAWSCDKStack("AWSLambdaPlaygroundResources");
 var localDevQueue = cdkStackResource.AddSQSQueue("LocalDevQueue");
 
-var cache = builder.AddRedis("cache");
+var cache = builder.AddRedis("cache")
+    .PublishAsElasticCacheNodeCluster(new PublishElastiCacheNodeClusterConfig()
+    {
+        AssumeConnectionStringClusterMode = true
+    });
 
 //var frontend = builder.AddProject<Projects.Frontend>("Frontend")
 //        .WithExternalHttpEndpoints()
@@ -51,11 +55,6 @@ builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunctio
         .WithDeploymentImageTag(context => deploymentTag)
         .PublishAsLambdaFunction(new PublishLambdaFunctionConfig
         {
-            //PropsFunctionCallback = props =>
-            //{
-            //    props.Vpc = awsEnvironment.Resource.DefaultsProvider.GetDefaultVpc();
-            //    props.SecurityGroups = new[] { awsEnvironment.Resource.DefaultsProvider.GetDefaultElastiCacheSecurityGroup() };
-            //},
             ConstructFunctionCallback = construct =>
             {
                 construct.AddEventSource(new SqsEventSource(deploymentStack.LambdaQueue, new SqsEventSourceProps

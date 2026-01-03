@@ -1,5 +1,6 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
+using Amazon.CDK;
 using Amazon.CDK.AWS.Lambda;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Lambda;
@@ -11,10 +12,14 @@ public partial class CDKDefaultsProvider
 {
     public virtual double? LambdaFunctionMemorySize => 512;
 
+    public virtual int LambdaFunctionTimeout => 30;
+
     protected internal virtual void ApplyLambdaFunctionDefaults(FunctionProps props, LambdaProjectResource lambdaProjectResource)
     {
         if (!props.MemorySize.HasValue)
             props.MemorySize = LambdaFunctionMemorySize;
+        if (props.Timeout == null)
+            props.Timeout = Duration.Seconds(LambdaFunctionTimeout);
 
         if (props.Runtime == null)
         {
