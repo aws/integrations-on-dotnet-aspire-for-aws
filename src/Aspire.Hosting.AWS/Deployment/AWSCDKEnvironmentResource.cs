@@ -1,12 +1,19 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
+using Amazon.CDK;
+using Amazon.CloudFormation;
+using Amazon.Runtime;
+using Amazon.Runtime.Credentials;
+using Amazon.SecurityToken;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.AWS.Deployment.CDKDefaults;
 using Aspire.Hosting.Pipelines;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics.CodeAnalysis;
-using Aspire.Hosting.AWS.Deployment.CDKDefaults;
 using App = Amazon.CDK.App;
 using AppProps = Amazon.CDK.AppProps;
+using Environment = System.Environment;
+using Resource = Aspire.Hosting.ApplicationModel.Resource;
 using Stack = Amazon.CDK.Stack;
 
 namespace Aspire.Hosting.AWS.Deployment;
@@ -113,23 +120,98 @@ public abstract class AWSCDKEnvironmentResource : Resource
 
         return outputPath;
     }
+
+    protected Amazon.CDK.IEnvironment GetCDKEnvironment()
+    {
+        var environment = new Amazon.CDK.Environment();
+
+        if (AWSSDKConfig?.Region != null)
+        {
+            environment.Region = AWSSDKConfig.Region.SystemName;
+        }
+        else
+        {
+            try
+            {
+                environment.Region = FallbackRegionFactory.GetRegionEndpoint()?.SystemName;
+            }
+            catch { }
+        }
+
+        AWSCredentials? awsCredentials = null;
+        if (AWSSDKConfig?.Profile != null)
+        {
+            var config = AWSSDKConfig.CreateServiceConfig<AmazonCloudFormationConfig>();
+            awsCredentials = DefaultAWSCredentialsIdentityResolver.GetCredentials(config);
+        }
+        else
+        {
+            try
+            {
+                awsCredentials = DefaultAWSCredentialsIdentityResolver.GetCredentials();
+            }
+            catch { }
+        }
+
+        if (environment.Region != null && awsCredentials != null)
+        {
+            var stsConfig = new AmazonSecurityTokenServiceConfig
+            {
+                RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(environment.Region),
+                DefaultAWSCredentials = awsCredentials
+            };
+            var stsClient = new AmazonSecurityTokenServiceClient(stsConfig);
+
+            var callerIdentityResponse = stsClient.GetCallerIdentityAsync(new Amazon.SecurityToken.Model.GetCallerIdentityRequest()).GetAwaiter().GetResult();
+            environment.Account = callerIdentityResponse.Account;
+        }
+
+        return environment;
+    }
 }
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
     where T : Stack 
 {
-    public AWSCDKEnvironmentResource(string name, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, Func<App, T> stackFactory)
+    Func<App, IStackProps, T> _stackFactory;
+    public AWSCDKEnvironmentResource(string name, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, Func<App, IStackProps, T> stackFactory)
         : base(name, cdkDefaultsProviderFactory)
     {
-        EnvironmentStack = stackFactory(CDKApp);
-        var stacks = CDKApp.Node.Children
-            .OfType<Stack>()
-            .ToList();
+        _stackFactory = stackFactory;
     }
 
+    T? _environmentStack;
+    public T EnvironmentStack 
+    {
+        get
+        {
+            if (_environmentStack == null)
+            {
+                var props = new StackProps();
+                props.Env = GetCDKEnvironment();
+                try
+                {
+                    _environmentStack = _stackFactory(CDKApp, props);
+                }
+                catch (Exception ex)
+                {
+                    if (ex.Message.Contains("Configure \"env\" with an account and region"))
+                    {
+                        throw new InvalidOperationException(
+                            "CDK Stack is using constructs that require the account and region information during publishing. " +
+                            "Ensure either there is a default AWS credentials and region configured for the environment or use " +
+                            "the AddAWSSDKConfig extension method to create an SDK config and then call WithReference on " +
+                            "the AddAWSCDKEnvironment return with the SDK config.");
+                    }
 
-    public T EnvironmentStack {get; private set;}
+                    throw;
+                }
+            }
+
+            return _environmentStack;
+        }
+    }
 
     internal override Stack CDKStack => this.EnvironmentStack;
 }

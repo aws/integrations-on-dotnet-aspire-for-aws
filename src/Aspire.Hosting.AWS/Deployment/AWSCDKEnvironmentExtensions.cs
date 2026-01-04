@@ -12,6 +12,7 @@ using Aspire.Hosting.AWS.Deployment.Services;
 using Aspire.Hosting.AWS.Lambda;
 using App = Amazon.CDK.App;
 using Stack = Amazon.CDK.Stack;
+using Amazon.CDK;
 
 namespace Aspire.Hosting;
 
@@ -49,7 +50,7 @@ public static partial class AWSCDKEnvironmentExtensions
     {
         builder.AddEnvironmentServices();
 
-        var env = new AWSCDKEnvironmentResource<Stack>(name, cdkDefaultsProviderFactory, app => new Stack(app, name));
+        var env = new AWSCDKEnvironmentResource<Stack>(name, cdkDefaultsProviderFactory, (app, props) => new Stack(app, name, props));
 
         if (builder.ExecutionContext.IsRunMode)
         {
@@ -71,7 +72,7 @@ public static partial class AWSCDKEnvironmentExtensions
     /// <param name="stackFactory">Func to provide a custom CDK stack with it's own resources. The Aspire provisioned resource will be added to this CDK stack.</param>
     /// <returns></returns>
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    public static IResourceBuilder<AWSCDKEnvironmentResource<T>> AddAWSCDKEnvironment<T>(this IDistributedApplicationBuilder builder, [ResourceName] string name, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, Func<App, T> stackFactory)
+    public static IResourceBuilder<AWSCDKEnvironmentResource<T>> AddAWSCDKEnvironment<T>(this IDistributedApplicationBuilder builder, [ResourceName] string name, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, Func<App, IStackProps, T> stackFactory)
         where T : Stack
     {
         builder.AddEnvironmentServices();
@@ -85,7 +86,25 @@ public static partial class AWSCDKEnvironmentExtensions
 
         return builder.AddResource(env);
     }
-    
+
+    /// <summary>
+    /// Add a reference to an AWS SDK configuration to the AWSCDKEnvironmentResource. This will be used to configure
+    /// where the Aspire AppHost is deployed to. During publishing the AWS SDK information is can be necessary when
+    /// the provided CDK stack uses constructs that need the AWS SDK config information. Using an account's default VPC
+    /// is an example of needing the AWS SDK config information.
+    /// </summary>
+    /// <param name="builder">An <see cref="IResourceBuilder{T}"/> for <see cref="IResourceWithEnvironment"/></param>
+    /// <param name="awsSdkConfig">The AWS SDK configuration</param>
+    /// <returns></returns>
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+    public static IResourceBuilder<AWSCDKEnvironmentResource<T>> WithReference<T>(this IResourceBuilder<AWSCDKEnvironmentResource<T>> builder, IAWSSDKConfig awsSdkConfig)
+        where T : Stack
+    {
+        builder.WithAnnotation(new SDKResourceAnnotation(awsSdkConfig));
+        builder.Resource.AWSSDKConfig = awsSdkConfig;
+        return builder;
+    }
+
     /// <summary>
     /// Deploy to AWS Elastic Container Service using the <a href="https://docs.aws.amazon.com/AmazonECS/latest/developerguide/express-service-overview.html">Express Mode</a>.
     /// Express mode deploys as an ECS service and a shared Application Load Balancer (ALB) across your Express mode services to route traffic to the service. 
