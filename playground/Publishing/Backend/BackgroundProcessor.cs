@@ -7,7 +7,7 @@ namespace Backend
     {
         IDatabase _db;
         
-        public BackgroundProcessor(IConnectionMultiplexer mp, /*FrontendApiClient frontendApiClient*/)
+        public BackgroundProcessor(IConnectionMultiplexer mp /*FrontendApiClient frontendApiClient*/)
         {
             _db = mp.GetDatabase();
         }

@@ -116,7 +116,7 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
         {
             var securityGroupList =  securityGroups.ToList();
             securityGroupList.Add(securityGroup);
-            securityGroups = securityGroups.ToArray();
+            securityGroups = securityGroupList.ToArray();
         }
         
         setter(construct, securityGroups);
@@ -143,12 +143,8 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
                 referencePoints.Vpc = linkAnnotation.EnvironmentResource.DefaultsProvider.GetDefaultVpc();
             }
 
-            if (linkAnnotation.PublishTarget.ReferenceRequiresSecurityGroup())
+            if (linkAnnotation.PublishTarget.ReferenceRequiresSecurityGroup() && referencePoints.ReferenceSecurityGroup != null)
             {
-                if (referencePoints.ReferenceSecurityGroup == null)
-                    throw new InvalidDataException(
-                        $"Reference for {linkAnnotation.Resource.Name} requires a security group but isn't defined for {resource.Name}");
-                
                 linkAnnotation.PublishTarget.ApplyReferenceSecurityGroup(linkAnnotation, referencePoints.ReferenceSecurityGroup);
             }
         }
