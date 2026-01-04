@@ -1,9 +1,5 @@
 ﻿using Amazon.CDK;
-using Amazon.CDK.AWS.EC2;
-using Amazon.CDK.AWS.ECS;
-using Amazon.CDK.AWS.ElastiCache;
 using Amazon.CDK.AWS.SQS;
-using Aspire.Hosting.AWS.Environments;
 using Constructs;
 
 namespace Lambda.AppHost;

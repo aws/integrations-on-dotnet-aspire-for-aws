@@ -5,7 +5,7 @@ using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS;
 using Aspire.Hosting.AWS.CDK;
 using Aspire.Hosting.AWS.CloudFormation;
-using Aspire.Hosting.AWS.Environments;
+using Aspire.Hosting.AWS.Deployment;
 using Constructs;
 using Environment = System.Environment;
 
