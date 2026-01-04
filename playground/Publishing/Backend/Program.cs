@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 var builder = Host.CreateApplicationBuilder(args)
     .AddServiceDefaults();
 
+builder.AddRedisClient("cache");
 builder.Services.AddHostedService<BackgroundProcessor>();
 builder.Services.AddHttpClient<FrontendApiClient>(client =>
     {

@@ -1,14 +1,17 @@
 ﻿using Microsoft.Extensions.Hosting;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using StackExchange.Redis;
 
 namespace Backend
 {
-    internal class BackgroundProcessor(FrontendApiClient frontendApiClient) : BackgroundService
+    internal class BackgroundProcessor : BackgroundService
     {
+        IDatabase _db;
+        
+        public BackgroundProcessor(IConnectionMultiplexer mp, /*FrontendApiClient frontendApiClient*/)
+        {
+            _db = mp.GetDatabase();
+        }
+        
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             long printLine = 0;
@@ -20,9 +23,12 @@ namespace Backend
                     printLine = 0;
 
                 Console.WriteLine($"Print line: {printLine}");
+                
+                var processedMessages = await _db.StringIncrementAsync("printlines", printLine);
+                Console.WriteLine($"Lines printed: {printLine}");                
 
-                var data = await frontendApiClient.GetFrontendDataAsync(cancellationToken: stoppingToken);
-                Console.WriteLine($"Data from frontend: {data}");
+                //var data = await frontendApiClient.GetFrontendDataAsync(cancellationToken: stoppingToken);
+                //Console.WriteLine($"Data from frontend: {data}");
             }
         }
     }

@@ -32,41 +32,37 @@ var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.US
 var cdkStackResource = builder.AddAWSCDKStack("AWSLambdaPlaygroundResources");
 var localDevQueue = cdkStackResource.AddSQSQueue("LocalDevQueue");
 
-var cache = builder.AddRedis("cache")
-    .PublishAsElasticCacheNodeCluster(new PublishElastiCacheNodeClusterConfig()
-    {
-        AssumeConnectionStringClusterMode = true
-    });
+var cache = builder.AddRedis("cache");
 
-//var frontend = builder.AddProject<Projects.Frontend>("Frontend")
-//        .WithExternalHttpEndpoints()
-//        .WithDeploymentImageTag(context => deploymentTag)
-//        .WithReference(cache)
-//        .WaitFor(cache);
-
-
-// builder.AddProject<Projects.Backend>("backend")
+// var frontend = builder.AddProject<Projects.Frontend>("Frontend")
+//         .WithExternalHttpEndpoints()
 //         .WithDeploymentImageTag(context => deploymentTag)
-//         .WithReference(frontend)
 //         .WithReference(cache)
 //         .WaitFor(cache);
-//
-builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
+
+
+builder.AddProject<Projects.Backend>("backend")
         .WithDeploymentImageTag(context => deploymentTag)
-        .PublishAsLambdaFunction(new PublishLambdaFunctionConfig
-        {
-            ConstructFunctionCallback = construct =>
-            {
-                construct.AddEventSource(new SqsEventSource(deploymentStack.LambdaQueue, new SqsEventSourceProps
-                {
-                    BatchSize = 5,
-                    Enabled = true
-                }));
-            }
-        })
+        //.WithReference(frontend)
         .WithReference(cache)
-        .WithReference(awsSdkConfig)
-        .WithSQSEventSource(localDevQueue);
+        .WaitFor(cache);
+
+// builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
+//         .WithDeploymentImageTag(context => deploymentTag)
+//         .PublishAsLambdaFunction(new PublishLambdaFunctionConfig
+//         {
+//             ConstructFunctionCallback = construct =>
+//             {
+//                 construct.AddEventSource(new SqsEventSource(deploymentStack.LambdaQueue, new SqsEventSourceProps
+//                 {
+//                     BatchSize = 5,
+//                     Enabled = true
+//                 }));
+//             }
+//         })
+//         .WithReference(cache)
+//         .WithReference(awsSdkConfig)
+//         .WithSQSEventSource(localDevQueue);
 
 builder.Build().Run();
  
