@@ -5,7 +5,6 @@ using Amazon.CloudFormation;
 using Amazon.Runtime;
 using Amazon.Runtime.Credentials;
 using Amazon.SecurityToken;
-using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Deployment.CDKDefaults;
 using Aspire.Hosting.Pipelines;
 using Microsoft.Extensions.DependencyInjection;
