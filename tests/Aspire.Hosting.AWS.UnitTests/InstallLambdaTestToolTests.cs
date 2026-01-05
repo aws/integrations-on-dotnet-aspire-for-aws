@@ -149,7 +149,7 @@ public class InstallLambdaTestToolTests
 
         public IList<Tuple<string, string>> CommandsExecuted { get; } = new List<Tuple<string, string>>();
 
-        public Task<IProcessCommandService.RunProcessAndCaptureStdOutResult> RunProcessAndCaptureOuputAsync(ILogger logger, string path, string arguments, string? workingDirectory, CancellationToken cancellationToken)
+        public Task<IProcessCommandService.RunProcessAndCaptureStdOutResult> RunProcessAndCaptureOutputAsync(ILogger logger, string path, string arguments, string? workingDirectory, CancellationToken cancellationToken)
         {
             if (CallCount == results.Length)
             {
@@ -184,6 +184,11 @@ public class InstallLambdaTestToolTests
                 Assert.Equal("dotnet", CommandsExecuted[i].Item1);
                 Assert.Equal(commandArguments[i], CommandsExecuted[i].Item2);
             }
+        }
+
+        public IProcessCommandService.RunProcessAndCaptureStdOutResult RunCDKProcess(ILogger logger, LogLevel logLevel, string arguments, string workingDirectory, IDictionary<string, string>? environmentVariables = null)
+        {
+            throw new NotImplementedException();
         }
     }
 }

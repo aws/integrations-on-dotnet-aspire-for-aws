@@ -23,7 +23,7 @@ internal class CDKDeployStep(IProcessCommandService processCommandService, ILogg
 {
     public async Task ExecuteCDKDeployAsync(PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken = default)
     {
-        using var cfClient = GetCloudFormationClient(environment);
+        using var cfClient = environment.GetCloudFormationClient();
 
         await ExecuteCDKDeployCLIAsync(cfClient, context, model, environment, cancellationToken);
         await LogOutputParametersAsync(cfClient, context, environment, cancellationToken);
@@ -96,33 +96,6 @@ internal class CDKDeployStep(IProcessCommandService processCommandService, ILogg
         {
             logger.LogError(ex, "Failed to log Stack output parameters");
             await step.FailAsync($"Failed to log Stack output parameters: {ex}", cancellationToken);
-        }
-    }
-
-    private static AmazonCloudFormationClient GetCloudFormationClient(AWSCDKEnvironmentResource environment)
-    {
-        try
-        {
-            AmazonCloudFormationClient client;
-            if (environment.AWSSDKConfig != null)
-            {
-                var config = environment.AWSSDKConfig.CreateServiceConfig<AmazonCloudFormationConfig>();
-
-                var awsCredentials = DefaultAWSCredentialsIdentityResolver.GetCredentials(config);
-                client = new AmazonCloudFormationClient(awsCredentials, config);
-            }
-            else
-            {
-                client = new AmazonCloudFormationClient();
-            }
-
-            client.BeforeRequestEvent += SdkUtilities.ConfigureUserAgentString;
-
-            return client;
-        }
-        catch (Exception e)
-        {
-            throw new AWSProvisioningException("Failed to construct AWS CloudFormation service client to provision AWS resources.", e);
         }
     }
 }

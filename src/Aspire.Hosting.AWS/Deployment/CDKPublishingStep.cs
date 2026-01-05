@@ -37,7 +37,7 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
             ApplyDefaultPublishTargetAnnotations(model, environment);
             await ProcessResources(context, step, model, environment, cancellationToken);
 
-            var assembly = environment.CDKApp.Synth();
+            environment.CDKApp.Synth();
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -49,6 +49,16 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to synthesize CDK application");
+
+            if (environment.CDKContextGenerationLog == null)
+            {
+                logger.LogDebug("No CDK context generation was run before synthesizing the application.");
+            }
+            else
+            {
+                logger.LogDebug("Console out from generating the CDK context used to synthesize the application:\n{CDKContextLog}", environment.CDKContextGenerationLog);
+            }
+
             await step.FailAsync($"Failed to synthesize CDK application: {ex}", cancellationToken);
         }
     }

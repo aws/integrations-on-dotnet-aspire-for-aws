@@ -22,4 +22,6 @@ public class DeploymentStack : Stack
 
     [DefaultVpc]
     public IVpc DefaultVpc { get; private set; }
+
+    
 }

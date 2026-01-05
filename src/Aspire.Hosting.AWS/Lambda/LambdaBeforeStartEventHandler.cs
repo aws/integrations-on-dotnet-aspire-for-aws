@@ -154,7 +154,7 @@ internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> log
                 commandLineArgument += " --allow-downgrade";
             }
 
-            var result = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", commandLineArgument, null, cancellationToken);
+            var result = await processCommandService.RunProcessAndCaptureOutputAsync(logger, "dotnet", commandLineArgument, null, cancellationToken);
             if (result.ExitCode == 0)
             {
                 if (!string.IsNullOrEmpty(installedVersion))
@@ -199,7 +199,7 @@ internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> log
 
     private async Task<string> GetCurrentInstalledVersionAsync(CancellationToken cancellationToken)
     {
-        var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", "lambda-test-tool info --format json", null, cancellationToken);
+        var results = await processCommandService.RunProcessAndCaptureOutputAsync(logger, "dotnet", "lambda-test-tool info --format json", null, cancellationToken);
         if (results.ExitCode != 0)
         {
             return string.Empty;
@@ -227,7 +227,7 @@ internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> log
 
     internal async Task<string> GetCurrentInstallPathAsync(CancellationToken cancellationToken)
     {
-        var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", "lambda-test-tool info --format json", null, cancellationToken);
+        var results = await processCommandService.RunProcessAndCaptureOutputAsync(logger, "dotnet", "lambda-test-tool info --format json", null, cancellationToken);
         if (results.ExitCode != 0)
         {
             return string.Empty;
@@ -257,7 +257,7 @@ internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> log
     {
         try
         {
-            var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", $"msbuild \"{projectPath}\" -nologo -v:q -getProperty:AssemblyName", null, cancellationToken);
+            var results = await processCommandService.RunProcessAndCaptureOutputAsync(logger, "dotnet", $"msbuild \"{projectPath}\" -nologo -v:q -getProperty:AssemblyName", null, cancellationToken);
             if (results.ExitCode != 0)
             {
                 return string.Empty;
@@ -277,7 +277,7 @@ internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> log
     {
         try
         {
-            var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", $"msbuild \"{projectPath}\" -nologo -v:q -getProperty:TargetFramework", null, cancellationToken);
+            var results = await processCommandService.RunProcessAndCaptureOutputAsync(logger, "dotnet", $"msbuild \"{projectPath}\" -nologo -v:q -getProperty:TargetFramework", null, cancellationToken);
             if (results.ExitCode != 0)
             {
                 return string.Empty;

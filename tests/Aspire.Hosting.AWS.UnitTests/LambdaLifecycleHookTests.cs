@@ -22,7 +22,7 @@ public class LambdaBeforeStartEventHandlerTests
         string jsonOutput = JsonNode.Parse($"{{ \"InstallPath\": \"{expectedInstallPath.Replace("\\", "\\\\")}\" }}")!.ToJsonString();
 
         _processCommandService
-            .Setup(s => s.RunProcessAndCaptureOuputAsync(
+            .Setup(s => s.RunProcessAndCaptureOutputAsync(
                 _logger.Object,
                 "dotnet",
                 "lambda-test-tool info --format json",
@@ -44,7 +44,7 @@ public class LambdaBeforeStartEventHandlerTests
     {
         // Arrange
         _processCommandService
-            .Setup(s => s.RunProcessAndCaptureOuputAsync(
+            .Setup(s => s.RunProcessAndCaptureOutputAsync(
                 It.IsAny<ILogger>(),
                 "dotnet",
                 "lambda-test-tool info --format json",
@@ -66,7 +66,7 @@ public class LambdaBeforeStartEventHandlerTests
     {
         // Arrange
         _processCommandService
-            .Setup(s => s.RunProcessAndCaptureOuputAsync(
+            .Setup(s => s.RunProcessAndCaptureOutputAsync(
                 It.IsAny<ILogger>(),
                 "dotnet",
                 "lambda-test-tool info --format json",
@@ -89,7 +89,7 @@ public class LambdaBeforeStartEventHandlerTests
         // Arrange
         string expectedAssemblyName = "MyTestAssembly";
         _processCommandService
-            .Setup(s => s.RunProcessAndCaptureOuputAsync(
+            .Setup(s => s.RunProcessAndCaptureOutputAsync(
                 It.IsAny<ILogger>(),
                 "dotnet",
                 It.Is<string>(args => args.Contains("-getProperty:AssemblyName")),
@@ -112,7 +112,7 @@ public class LambdaBeforeStartEventHandlerTests
     {
         // Arrange
         _processCommandService
-            .Setup(s => s.RunProcessAndCaptureOuputAsync(
+            .Setup(s => s.RunProcessAndCaptureOutputAsync(
                 It.IsAny<ILogger>(),
                 "dotnet",
                 It.Is<string>(args => args.Contains("-getProperty:AssemblyName")),
@@ -136,7 +136,7 @@ public class LambdaBeforeStartEventHandlerTests
         // Arrange
         string expectedTargetFramework = "net6.0";
         _processCommandService
-            .Setup(s => s.RunProcessAndCaptureOuputAsync(
+            .Setup(s => s.RunProcessAndCaptureOutputAsync(
                 It.IsAny<ILogger>(),
                 "dotnet",
                 It.Is<string>(args => args.Contains("-getProperty:TargetFramework")),
@@ -159,7 +159,7 @@ public class LambdaBeforeStartEventHandlerTests
     {
         // Arrange
         _processCommandService
-            .Setup(s => s.RunProcessAndCaptureOuputAsync(
+            .Setup(s => s.RunProcessAndCaptureOutputAsync(
                 It.IsAny<ILogger>(),
                 "dotnet",
                 It.Is<string>(args => args.Contains("-getProperty:TargetFramework")),

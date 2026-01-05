@@ -28,7 +28,7 @@ internal class DefaultTarballContainerImageBuilder(ILogger<DefaultTarballContain
             arguments = $"-c \"{dockerSaveCommand}\"";
         }
 
-        var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, shellCommand, arguments, Environment.CurrentDirectory, cancellationToken);
+        var results = await processCommandService.RunProcessAndCaptureOutputAsync(logger, shellCommand, arguments, Environment.CurrentDirectory, cancellationToken);
         if (results.ExitCode != 0)
         {
             logger.LogError("Failed to save container image {ImageTag} as tarball for publish assets. Exit Code: {ExitCode}, Output: {Output}", imageTag, results.ExitCode, results.Output);
