@@ -46,11 +46,11 @@ public static partial class AWSCDKEnvironmentExtensions
     /// <param name="cdkDefaultsProviderFactory">The DefaultProvider is used configure the default choices used when deploying resources.</param>
     /// <returns></returns>
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    public static IResourceBuilder<AWSCDKEnvironmentResource<Stack>> AddAWSCDKEnvironment(this IDistributedApplicationBuilder builder, [ResourceName] string name, CDKDefaultsProviderFactory cdkDefaultsProviderFactory)
+    public static IResourceBuilder<AWSCDKEnvironmentResource<Stack>> AddAWSCDKEnvironment(this IDistributedApplicationBuilder builder, [ResourceName] string name, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, IAWSSDKConfig? awsSdkConfg = null)
     {
         builder.AddEnvironmentServices();
 
-        var env = new AWSCDKEnvironmentResource<Stack>(name, cdkDefaultsProviderFactory, (app, props) => new Stack(app, name, props));
+        var env = new AWSCDKEnvironmentResource<Stack>(name, cdkDefaultsProviderFactory, (app, props) => new Stack(app, name, props), awsSdkConfg);
 
         if (builder.ExecutionContext.IsRunMode)
         {
@@ -72,12 +72,12 @@ public static partial class AWSCDKEnvironmentExtensions
     /// <param name="stackFactory">Func to provide a custom CDK stack with it's own resources. The Aspire provisioned resource will be added to this CDK stack.</param>
     /// <returns></returns>
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    public static IResourceBuilder<AWSCDKEnvironmentResource<T>> AddAWSCDKEnvironment<T>(this IDistributedApplicationBuilder builder, [ResourceName] string name, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, Func<App, IStackProps, T> stackFactory)
+    public static IResourceBuilder<AWSCDKEnvironmentResource<T>> AddAWSCDKEnvironment<T>(this IDistributedApplicationBuilder builder, [ResourceName] string name, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, Func<App, IStackProps, T> stackFactory, IAWSSDKConfig? awsSdkConfg = null)
         where T : Stack
     {
         builder.AddEnvironmentServices();
 
-        var env = new AWSCDKEnvironmentResource<T>(name, cdkDefaultsProviderFactory, stackFactory);
+        var env = new AWSCDKEnvironmentResource<T>(name, cdkDefaultsProviderFactory, stackFactory, awsSdkConfg);
 
         if (builder.ExecutionContext.IsRunMode)
         {
@@ -85,24 +85,6 @@ public static partial class AWSCDKEnvironmentExtensions
         }
 
         return builder.AddResource(env);
-    }
-
-    /// <summary>
-    /// Add a reference to an AWS SDK configuration to the AWSCDKEnvironmentResource. This will be used to configure
-    /// where the Aspire AppHost is deployed to. During publishing the AWS SDK information is can be necessary when
-    /// the provided CDK stack uses constructs that need the AWS SDK config information. Using an account's default VPC
-    /// is an example of needing the AWS SDK config information.
-    /// </summary>
-    /// <param name="builder">An <see cref="IResourceBuilder{T}"/> for <see cref="IResourceWithEnvironment"/></param>
-    /// <param name="awsSdkConfig">The AWS SDK configuration</param>
-    /// <returns></returns>
-    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    public static IResourceBuilder<AWSCDKEnvironmentResource<T>> WithReference<T>(this IResourceBuilder<AWSCDKEnvironmentResource<T>> builder, IAWSSDKConfig awsSdkConfig)
-        where T : Stack
-    {
-        builder.WithAnnotation(new SDKResourceAnnotation(awsSdkConfig));
-        builder.Resource.AWSSDKConfig = awsSdkConfig;
-        return builder;
     }
 
     /// <summary>

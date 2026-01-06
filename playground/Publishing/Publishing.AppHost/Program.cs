@@ -21,47 +21,46 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.USWest2);
 
-var awsEnvironment = builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new DeploymentStack(app, "DeploymentInfrastructure18", props))
-                            .WithReference(awsSdkConfig);
+var awsEnvironment = builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new DeploymentStack(app, "DeploymentInfrastructure19", props), awsSdkConfig);
 
 var deploymentStack = awsEnvironment.Resource.EnvironmentStack;
 var deploymentTag = "v" + DateTime.UtcNow.ToString("yyyyMMddHHmmss");
 
 
-//var cdkStackResource = builder.AddAWSCDKStack("AWSLambdaPlaygroundResources");
-//var localDevQueue = cdkStackResource.AddSQSQueue("LocalDevQueue");
+var cdkStackResource = builder.AddAWSCDKStack("AWSLambdaPlaygroundResources");
+var localDevQueue = cdkStackResource.AddSQSQueue("LocalDevQueue");
 
 var cache = builder.AddRedis("cache");
 
-//var frontend = builder.AddProject<Projects.Frontend>("Frontend")
-//        .WithExternalHttpEndpoints()
-//        .WithDeploymentImageTag(context => deploymentTag)
-//        .WithReference(cache)
-//        .WaitFor(cache);
+var frontend = builder.AddProject<Projects.Frontend>("Frontend")
+        .WithExternalHttpEndpoints()
+        .WithDeploymentImageTag(context => deploymentTag)
+        .WithReference(cache)
+        .WaitFor(cache);
 
 
-//builder.AddProject<Projects.Backend>("backend")
-//        .WithDeploymentImageTag(context => deploymentTag)
-//        .WithReference(frontend)
-//        .WithReference(cache)
-//        .WaitFor(cache);
+builder.AddProject<Projects.Backend>("backend")
+        .WithDeploymentImageTag(context => deploymentTag)
+        .WithReference(frontend)
+        .WithReference(cache)
+        .WaitFor(cache);
 
-//builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
-//        .WithDeploymentImageTag(context => deploymentTag)
-//        .PublishAsLambdaFunction(new PublishLambdaFunctionConfig
-//        {
-//            ConstructFunctionCallback = construct =>
-//            {
-//                construct.AddEventSource(new SqsEventSource(deploymentStack.LambdaQueue, new SqsEventSourceProps
-//                {
-//                    BatchSize = 5,
-//                    Enabled = true
-//                }));
-//            }
-//        })
-//        .WithReference(cache)
-//        .WithReference(awsSdkConfig)
-//        .WithSQSEventSource(localDevQueue);
+builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
+        .WithDeploymentImageTag(context => deploymentTag)
+        .PublishAsLambdaFunction(new PublishLambdaFunctionConfig
+        {
+            ConstructFunctionCallback = construct =>
+            {
+                construct.AddEventSource(new SqsEventSource(deploymentStack.LambdaQueue, new SqsEventSourceProps
+                {
+                    BatchSize = 5,
+                    Enabled = true
+                }));
+            }
+        })
+        .WithReference(cache)
+        .WithReference(awsSdkConfig)
+        .WithSQSEventSource(localDevQueue);
 
 builder.Build().Run();
  

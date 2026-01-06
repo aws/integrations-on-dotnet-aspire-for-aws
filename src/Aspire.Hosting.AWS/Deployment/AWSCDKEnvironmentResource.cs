@@ -31,16 +31,17 @@ public abstract class AWSCDKEnvironmentResource : Resource
     internal const string CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE = "AWS_ASPIRE_CONTEXT_GENERATION_PATH";
 
     /// <summary>
-    /// Configuration for creating service clients from the AWS .NET SDK.
+    /// Gets the configuration for creating service clients from the AWS .NET SDK.
     /// </summary>
-    public IAWSSDKConfig? AWSSDKConfig { get; set; }
+    public IAWSSDKConfig? AWSSDKConfig { get; }
 
     public CDKDefaultsProvider DefaultsProvider { get; }
 
-    protected AWSCDKEnvironmentResource(string name, CDKDefaultsProviderFactory cdkDefaultsProviderFactory)
+    protected AWSCDKEnvironmentResource(string name, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, IAWSSDKConfig? awsSdkConfg)
     : base(name)
     {
         DefaultsProvider = cdkDefaultsProviderFactory.Create(this);
+        AWSSDKConfig = awsSdkConfg;
 
         Annotations.Add(new PipelineStepAnnotation(ConfigurePublishPipelineStep));
         Annotations.Add(new PipelineStepAnnotation(ConfigureDeployPipelineStep));
@@ -239,8 +240,8 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
 {
     Func<App, IStackProps, T> _stackFactory;
 
-    public AWSCDKEnvironmentResource(string name, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, Func<App, IStackProps, T> stackFactory)
-        : base(name, cdkDefaultsProviderFactory)
+    public AWSCDKEnvironmentResource(string name, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, Func<App, IStackProps, T> stackFactory, IAWSSDKConfig? awsSdkConfg)
+        : base(name, cdkDefaultsProviderFactory, awsSdkConfg)
     {
         _stackFactory = stackFactory;
     }
@@ -265,8 +266,8 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
                         throw new InvalidOperationException(
                             "CDK Stack is using constructs that require the account and region information during publishing. " +
                             "Ensure either there is a default AWS credentials and region configured for the environment or use " +
-                            "the AddAWSSDKConfig extension method to create an SDK config and then call WithReference on " +
-                            "the AddAWSCDKEnvironment return with the SDK config.");
+                            "the AddAWSSDKConfig extension method to create an SDK config and pass the sdk config in with " +
+                            "the AddAWSCDKEnvironment method as a method parameter.");
                     }
 
                     throw;

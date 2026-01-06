@@ -49,5 +49,12 @@ public partial class CDKDefaultsProvider
             var defaultSecurityGroup = GetDefaultECSClusterSecurityGroup();
             props.SecurityGroups = new[] { defaultSecurityGroup };
         }
+
+        // If there are no private subnets then the service is going in public subnets and so needs assigned IP addresses
+        // to pull the image from ECR.
+        if (GetDefaultVpc().PrivateSubnets == null || GetDefaultVpc().PrivateSubnets.Length == 0)
+        {
+            props.AssignPublicIp = true;
+        }
     }    
 }

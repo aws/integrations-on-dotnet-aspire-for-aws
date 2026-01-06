@@ -21,7 +21,11 @@ public partial class CDKDefaultsProvider
 
         if (props.SubnetIds == null)
         {
-            props.SubnetIds = GetDefaultVpc().PrivateSubnets.Select(s => s.SubnetId).ToArray();
+            var subnets = GetDefaultVpc().PrivateSubnets.Select(s => s.SubnetId);
+            if (!subnets.Any())
+                subnets = GetDefaultVpc().PublicSubnets.Select(s => s.SubnetId);
+
+            props.SubnetIds = subnets.Take(2).ToArray();
         }
 
         if (props.SecurityGroupIds == null)
