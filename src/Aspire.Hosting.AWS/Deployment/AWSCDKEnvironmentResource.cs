@@ -35,11 +35,14 @@ public abstract class AWSCDKEnvironmentResource : Resource
     /// </summary>
     public IAWSSDKConfig? AWSSDKConfig { get; }
 
+    protected bool IsPublishMode { get; }
+
     public CDKDefaultsProvider DefaultsProvider { get; }
 
-    protected AWSCDKEnvironmentResource(string name, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, IAWSSDKConfig? awsSdkConfg)
+    protected AWSCDKEnvironmentResource(string name, bool isPublishMode, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, IAWSSDKConfig? awsSdkConfg)
     : base(name)
     {
+        IsPublishMode = isPublishMode;
         DefaultsProvider = cdkDefaultsProviderFactory.Create(this);
         AWSSDKConfig = awsSdkConfg;
 
@@ -56,17 +59,19 @@ public abstract class AWSCDKEnvironmentResource : Resource
             {
                 var appProps = new AppProps();
 
-                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE)))
+                if (IsPublishMode)
                 {
-                    appProps.Outdir = DetermineOutputDirectory();
-                }
+                    if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE)))
+                    {
+                        appProps.Outdir = DetermineOutputDirectory();
+                    }
 
-                var cdkContext = GetCDKContext();
-                if (cdkContext != null)
-                {
-                    appProps.Context = cdkContext;
+                    var cdkContext = GetCDKContext();
+                    if (cdkContext != null)
+                    {
+                        appProps.Context = cdkContext;
+                    }
                 }
-
 
                 _cdkApp = new App(appProps);
             }
@@ -240,8 +245,8 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
 {
     Func<App, IStackProps, T> _stackFactory;
 
-    public AWSCDKEnvironmentResource(string name, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, Func<App, IStackProps, T> stackFactory, IAWSSDKConfig? awsSdkConfg)
-        : base(name, cdkDefaultsProviderFactory, awsSdkConfg)
+    internal AWSCDKEnvironmentResource(string name, bool isPublishMode, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, Func<App, IStackProps, T> stackFactory, IAWSSDKConfig? awsSdkConfg)
+        : base(name, isPublishMode, cdkDefaultsProviderFactory, awsSdkConfg)
     {
         _stackFactory = stackFactory;
     }

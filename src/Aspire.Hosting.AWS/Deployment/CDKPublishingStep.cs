@@ -88,7 +88,8 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
                 if (annotation == null)
                 {
                     if (resource is not AWSCDKEnvironmentResource &&
-                        resource is not StackResource)
+                        resource is not StackResource && 
+                        resource is not ParameterResource)
                     {
                         logger.LogInformation("Resource \"{ResourceName}\" of type \"{ResourceType}\" has no AWS publish target and will not be included in CDK stack.", resource.Name, resource.GetType().Namespace + "." + resource.GetType().Name);
                     }

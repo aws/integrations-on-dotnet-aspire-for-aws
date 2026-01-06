@@ -50,7 +50,7 @@ public static partial class AWSCDKEnvironmentExtensions
     {
         builder.AddEnvironmentServices();
 
-        var env = new AWSCDKEnvironmentResource<Stack>(name, cdkDefaultsProviderFactory, (app, props) => new Stack(app, name, props), awsSdkConfg);
+        var env = new AWSCDKEnvironmentResource<Stack>(name, builder.ExecutionContext.IsPublishMode, cdkDefaultsProviderFactory, (app, props) => new Stack(app, name, props), awsSdkConfg);
 
         if (builder.ExecutionContext.IsRunMode)
         {
@@ -77,7 +77,7 @@ public static partial class AWSCDKEnvironmentExtensions
     {
         builder.AddEnvironmentServices();
 
-        var env = new AWSCDKEnvironmentResource<T>(name, cdkDefaultsProviderFactory, stackFactory, awsSdkConfg);
+        var env = new AWSCDKEnvironmentResource<T>(name, builder.ExecutionContext.IsPublishMode, cdkDefaultsProviderFactory, stackFactory, awsSdkConfg);
 
         if (builder.ExecutionContext.IsRunMode)
         {
