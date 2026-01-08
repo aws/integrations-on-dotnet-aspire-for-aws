@@ -27,6 +27,8 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
         var step = await context.ReportingStep.CreateTaskAsync($"Synthesizing CDK Application", cancellationToken);
         try
         {
+            logger.LogDebug("Starting synthesis of CDK application for environment {EnvironmentName}", environment.Name);
+            logger.LogDebug("Capture of output from CDK context generation:\n{CDKContextLog}", environment.CDKContextGenerationLog);
             InitializePublishTargetMapping(environment);
 
             var outputPath = environment.CDKApp.Outdir;
@@ -140,7 +142,7 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to prepare {ProjectName} for {ResourceType}.", resource.Name, publishTarget.PublishTargetName);
-                await activityTask.FailAsync($"Failed to prepare {resource.Name} for ECS Fargate: {ex}", cancellationToken);
+                await activityTask.FailAsync($"Failed to prepare {resource.Name} for {publishTarget.PublishTargetName}: {ex}", cancellationToken);
                 throw;
             }
         }

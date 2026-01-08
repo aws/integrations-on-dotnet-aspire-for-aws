@@ -249,6 +249,11 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
         : base(name, isPublishMode, cdkDefaultsProviderFactory, awsSdkConfg)
     {
         _stackFactory = stackFactory;
+
+        if (Environment.GetEnvironmentVariable(CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE) != null)
+        {
+            LoadEnvironmentStack();
+        }
     }
 
     T? _environmentStack;
@@ -258,28 +263,33 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
         {
             if (_environmentStack == null)
             {
-                var props = new StackProps();
-                props.Env = GetCDKEnvironment();
-                try
-                {
-                    _environmentStack = _stackFactory(CDKApp, props);
-                }
-                catch (Exception ex)
-                {
-                    if (ex.Message.Contains("Configure \"env\" with an account and region"))
-                    {
-                        throw new InvalidOperationException(
-                            "CDK Stack is using constructs that require the account and region information during publishing. " +
-                            "Ensure either there is a default AWS credentials and region configured for the environment or use " +
-                            "the AddAWSSDKConfig extension method to create an SDK config and pass the sdk config in with " +
-                            "the AddAWSCDKEnvironment method as a method parameter.");
-                    }
-
-                    throw;
-                }
+                LoadEnvironmentStack();
             }
 
-            return _environmentStack;
+            return _environmentStack!;
+        }
+    }
+
+    private void LoadEnvironmentStack()
+    {
+        var props = new StackProps();
+        props.Env = GetCDKEnvironment();
+        try
+        {
+            _environmentStack = _stackFactory(CDKApp, props);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Configure \"env\" with an account and region"))
+            {
+                throw new InvalidOperationException(
+                    "CDK Stack is using constructs that require the account and region information during publishing. " +
+                    "Ensure either there is a default AWS credentials and region configured for the environment or use " +
+                    "the AddAWSSDKConfig extension method to create an SDK config and pass the sdk config in with " +
+                    "the AddAWSCDKEnvironment method as a method parameter.");
+            }
+
+            throw;
         }
     }
 

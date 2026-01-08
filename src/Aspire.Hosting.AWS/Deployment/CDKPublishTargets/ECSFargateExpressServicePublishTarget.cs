@@ -61,7 +61,7 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
             publishAnnotation.Config.ConstructCfnExpressGatewayServiceCallback?.Invoke(fargateService);
             ApplyAWSLinkedObjectsAnnotation(environment, projectResource, fargateService, this);
 
-            _ = new CfnOutput(environment.CDKStack, "ExpressGatewayEndpoint", new CfnOutputProps
+            _ = new CfnOutput(environment.CDKStack, $"{resource.Name}-ExpressGatewayEndpoint", new CfnOutputProps
             {
                 Description = "Endpoint for the ECS Express Gateway Service",
                 Value = Fn.Join("", ["https://", Fn.GetAtt(fargateService.LogicalId, "Endpoint").ToString(), "/"])
