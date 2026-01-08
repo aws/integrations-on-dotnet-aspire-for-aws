@@ -6,13 +6,14 @@
     <PackageTags>aspire integration hosting aws</PackageTags>
     <Description>Add support for provisioning AWS application resources and configuring the AWS SDK for .NET.</Description>
     <NoWarn>$(NoWarn);CS8002</NoWarn> <!-- AWS CDK packages are not signed -->
-    <Version>9.3.0</Version>
+    <Version>11.0.0</Version>
     <PackageReadmeFile>docs\README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting" />
     <PackageReference Include="Aspire.Hosting.Redis" />
+    <PackageReference Include="Aspire.Hosting.Valkey" />
     <PackageReference Include="Amazon.CDK.Lib" />
     <PackageReference Include="AWSSDK.Core" />
     <PackageReference Include="AWSSDK.CloudFormation" />

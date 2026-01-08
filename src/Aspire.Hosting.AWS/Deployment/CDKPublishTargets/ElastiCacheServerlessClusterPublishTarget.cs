@@ -47,7 +47,7 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
 
         public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
         {
-            if (resource is RedisResource &&
+            if ((resource is RedisResource || resource is ValkeyResource) &&
                 cdkDefaultsProvider.DefaultRedisResourcePublishTarget == CDKDefaultsProvider.RedisResourcePublishTarget.ElastiCacheServerlessCluster
                )
             {

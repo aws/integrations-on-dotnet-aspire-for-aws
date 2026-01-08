@@ -163,7 +163,25 @@ public static partial class AWSCDKEnvironmentExtensions
 
         return builder;
     }
-    
+
+    [Experimental(AWS.Constants.ASPIREAWSPUBLISHERS001)]
+    public static IResourceBuilder<ValkeyResource> PublishAsElasticCacheNodeCluster(this IResourceBuilder<ValkeyResource> builder, PublishElastiCacheNodeClusterConfig? config = null)
+    {
+        var annotation = new PublishElasticCacheNodeClusterAnnotation { Config = config ?? new PublishElastiCacheNodeClusterConfig() };
+        builder.Resource.Annotations.Add(annotation);
+
+        return builder;
+    }
+
+    [Experimental(AWS.Constants.ASPIREAWSPUBLISHERS001)]
+    public static IResourceBuilder<ValkeyResource> PublishAsElasticCacheServerlessCluster(this IResourceBuilder<ValkeyResource> builder, PublishElastiCacheServerlessClusterConfig? config = null)
+    {
+        var annotation = new PublishElasticCacheServerlessClusterAnnotation { Config = config ?? new PublishElastiCacheServerlessClusterConfig() };
+        builder.Resource.Annotations.Add(annotation);
+
+        return builder;
+    }
+
     /// <summary>
     /// Deploy project as to AWS Lambda as a function.
     /// The CDK <a href="https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda.Function.html">Function</a> construct is used to create the Lambda function.

@@ -26,11 +26,10 @@ var awsEnvironment = builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFact
 var deploymentStack = awsEnvironment.Resource.EnvironmentStack;
 var deploymentTag = "v" + DateTime.UtcNow.ToString("yyyyMMddHHmmss");
 
-
 var cdkStackResource = builder.AddAWSCDKStack("AWSLambdaPlaygroundResources");
 var localDevQueue = cdkStackResource.AddSQSQueue("LocalDevQueue");
 
-var cache = builder.AddRedis("cache");
+var cache = builder.AddValkey("cache");
 
 var frontend = builder.AddProject<Projects.Frontend>("Frontend")
         .WithExternalHttpEndpoints()
