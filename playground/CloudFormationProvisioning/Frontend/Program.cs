@@ -1,6 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Amazon.DynamoDBv2;
+using Amazon.SecretsManager;
 using Amazon.SimpleNotificationService;
 using Amazon.SQS;
 using Frontend.Components;
@@ -12,6 +13,7 @@ builder.AddServiceDefaults();
 builder.Services.AddAWSService<IAmazonDynamoDB>(); 
 builder.Services.AddAWSService<IAmazonSQS>();
 builder.Services.AddAWSService<IAmazonSimpleNotificationService>();
+builder.Services.AddAWSService<IAmazonSecretsManager>();
 
 // Configuring messaging using the AWS.Messaging library.
 builder.Services.AddAWSMessageBus(messageBuilder =>
