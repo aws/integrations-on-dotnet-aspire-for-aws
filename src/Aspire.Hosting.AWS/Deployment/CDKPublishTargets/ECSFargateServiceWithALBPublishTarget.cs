@@ -40,14 +40,14 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
                 Environment = new Dictionary<string, string>()
             };
 
-            publishAnnotation.Config.PropsApplicationLoadBalancedTaskImageOptionsCallback?.Invoke(taskImageOptions);
+            publishAnnotation.Config.PropsApplicationLoadBalancedTaskImageOptionsCallback?.Invoke(CreatePublishingContext(environment), taskImageOptions);
             environment.DefaultsProvider.ApplyECSFargateServiceWithALBDefaults(taskImageOptions);
 
             var fargateServiceProps = new ApplicationLoadBalancedFargateServiceProps
             {
                 TaskImageOptions = taskImageOptions
             };
-            publishAnnotation.Config.PropsApplicationLoadBalancedFargateServiceCallback?.Invoke(fargateServiceProps);
+            publishAnnotation.Config.PropsApplicationLoadBalancedFargateServiceCallback?.Invoke(CreatePublishingContext(environment), fargateServiceProps);
             environment.DefaultsProvider.ApplyECSFargateServiceWithALBDefaults(fargateServiceProps);
 
             var referencePoints = new ApplicationLoadBalancedFargateServicePropsReferencePoints(
@@ -56,7 +56,7 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
             ProcessRelationShips(referencePoints, projectResource);
 
             var fargateService = new ApplicationLoadBalancedFargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
-            publishAnnotation.Config.ConstructApplicationLoadBalancedFargateServiceCallback?.Invoke(fargateService);
+            publishAnnotation.Config.ConstructApplicationLoadBalancedFargateServiceCallback?.Invoke(CreatePublishingContext(environment), fargateService);
             ApplyAWSLinkedObjectsAnnotation(environment, projectResource, fargateService, this);
 
             await ApplyDeploymentTagAsync(environment, projectResource, fargateService.Service, cancellationToken);
@@ -149,11 +149,11 @@ namespace Aspire.Hosting.AWS.Deployment
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
     public class PublishECSFargateServiceWithALBConfig
     {
-        public Action<ApplicationLoadBalancedTaskImageOptions>? PropsApplicationLoadBalancedTaskImageOptionsCallback { get; set; }
+        public PublishCallback<ApplicationLoadBalancedTaskImageOptions>? PropsApplicationLoadBalancedTaskImageOptionsCallback { get; set; }
 
-        public Action<ApplicationLoadBalancedFargateServiceProps>? PropsApplicationLoadBalancedFargateServiceCallback { get; set; }
+        public PublishCallback<ApplicationLoadBalancedFargateServiceProps>? PropsApplicationLoadBalancedFargateServiceCallback { get; set; }
 
-        public Action<ApplicationLoadBalancedFargateService>? ConstructApplicationLoadBalancedFargateServiceCallback { get; set; }
+        public PublishCallback<ApplicationLoadBalancedFargateService>? ConstructApplicationLoadBalancedFargateServiceCallback { get; set; }
 
     }
 

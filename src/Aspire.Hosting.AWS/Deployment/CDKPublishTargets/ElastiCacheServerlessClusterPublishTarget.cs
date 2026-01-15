@@ -30,7 +30,7 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
             var serverlessCacheProps = new CfnServerlessCacheProps();
 
             //// Apply custom configuration
-            publishAnnotation.Config.PropsCfnServerlessCacheCallback?.Invoke(serverlessCacheProps);
+            publishAnnotation.Config.PropsCfnServerlessCacheCallback?.Invoke(CreatePublishingContext(environment), serverlessCacheProps);
 
             // Apply defaults from provider
             environment.DefaultsProvider.ApplyCfnServerlessCachePropsDefaults(serverlessCacheProps, resource);
@@ -38,7 +38,7 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
             var cluster = new CfnServerlessCache(environment.CDKStack, $"ElastiCache-{resource.Name}", serverlessCacheProps);
 
             // Apply construct-level customizations
-            publishAnnotation.Config.ConstructCfnServerlessCacheCallback?.Invoke(cluster);
+            publishAnnotation.Config.ConstructCfnServerlessCacheCallback?.Invoke(CreatePublishingContext(environment), cluster);
 
             ApplyAWSLinkedObjectsAnnotation(environment, resource, cluster, this);
 
@@ -99,9 +99,9 @@ namespace Aspire.Hosting.AWS.Deployment
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
     public class PublishElastiCacheServerlessClusterConfig
     {
-        public Action<CfnServerlessCacheProps>? PropsCfnServerlessCacheCallback { get; set; }
+        public PublishCallback<CfnServerlessCacheProps>? PropsCfnServerlessCacheCallback { get; set; }
 
-        public Action<CfnServerlessCache>? ConstructCfnServerlessCacheCallback { get; set; }
+        public PublishCallback<CfnServerlessCache>? ConstructCfnServerlessCacheCallback { get; set; }
     }
 
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]

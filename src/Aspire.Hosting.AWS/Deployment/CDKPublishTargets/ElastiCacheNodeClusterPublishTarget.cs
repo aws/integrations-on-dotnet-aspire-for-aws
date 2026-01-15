@@ -28,11 +28,11 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
                                     ?? throw new InvalidOperationException($"Annotation for resource {resource.Name} is not a valid {nameof(PublishElasticCacheNodeClusterAnnotation)}.");
 
             var clusterProps = new CfnReplicationGroupProps();
-            publishAnnotation.Config.PropsCfnReplicationGroupCallback?.Invoke(clusterProps);
+            publishAnnotation.Config.PropsCfnReplicationGroupCallback?.Invoke(CreatePublishingContext(environment), clusterProps);
             environment.DefaultsProvider.ApplyCfnReplicationGroupPropsDefaults(clusterProps);
 
             var cluster = new CfnReplicationGroup(environment.CDKStack, $"ElastiCache-{resource.Name}", clusterProps);
-            publishAnnotation.Config.ConstructCfnReplicationGroupCallback?.Invoke(cluster);
+            publishAnnotation.Config.ConstructCfnReplicationGroupCallback?.Invoke(CreatePublishingContext(environment), cluster);
             ApplyAWSLinkedObjectsAnnotation(environment, resource, cluster, this);
 
             return Task.CompletedTask;
@@ -126,9 +126,9 @@ namespace Aspire.Hosting.AWS.Deployment
         /// </remarks>
         public bool? AssumeConnectionStringClusterMode { get; set; }
 
-        public Action<CfnReplicationGroupProps>? PropsCfnReplicationGroupCallback { get; set; }
+        public PublishCallback<CfnReplicationGroupProps>? PropsCfnReplicationGroupCallback { get; set; }
 
-        public Action<CfnReplicationGroup>? ConstructCfnReplicationGroupCallback { get; set; }
+        public PublishCallback<CfnReplicationGroup>? ConstructCfnReplicationGroupCallback { get; set; }
     }
 
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]

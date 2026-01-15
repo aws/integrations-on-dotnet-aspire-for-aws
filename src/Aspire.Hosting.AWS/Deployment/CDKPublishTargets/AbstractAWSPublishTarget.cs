@@ -23,6 +23,11 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
     public abstract GetReferencesResult GetReferences(AWSLinkedObjectsAnnotation linkedAnnotation);
     public abstract IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource);
 
+    protected CDKPublishTargetContext CreatePublishingContext(AWSCDKEnvironmentResource environment)
+    {
+        return new CDKPublishTargetContext(environment.CDKStack, environment.DefaultsProvider);
+    }
+
     public virtual bool ReferenceRequiresVPC()
     {
         return false;

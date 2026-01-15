@@ -47,11 +47,11 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
 
             ProcessRelationShips(referencePoints, lambdaFunction);
 
-            publishAnnotation.Config.PropsFunctionCallback?.Invoke(functionProps);
+            publishAnnotation.Config.PropsFunctionCallback?.Invoke(CreatePublishingContext(environment), functionProps);
             environment.DefaultsProvider.ApplyLambdaFunctionDefaults(functionProps, lambdaFunction);
 
             var function = new Function(environment.CDKStack, $"Function-{lambdaFunction.Name}", functionProps);
-            publishAnnotation.Config.ConstructFunctionCallback?.Invoke(function);
+            publishAnnotation.Config.ConstructFunctionCallback?.Invoke(CreatePublishingContext(environment), function);
             ApplyAWSLinkedObjectsAnnotation(environment, lambdaFunction, function, this);
 
             await ApplyDeploymentTagAsync(environment, lambdaFunction, function, cancellationToken);
@@ -112,9 +112,9 @@ namespace Aspire.Hosting.AWS.Deployment
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
     public class PublishLambdaFunctionConfig
     {
-        public Action<FunctionProps>? PropsFunctionCallback { get; set; }
+        public PublishCallback<FunctionProps>? PropsFunctionCallback { get; set; }
 
-        public Action<Function>? ConstructFunctionCallback { get; set; }
+        public PublishCallback<Function>? ConstructFunctionCallback { get; set; }
     }
 
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]

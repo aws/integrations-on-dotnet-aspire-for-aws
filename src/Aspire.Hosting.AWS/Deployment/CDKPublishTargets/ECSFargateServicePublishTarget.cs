@@ -32,11 +32,11 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
 
             // Create Task Definition
             var fargateTaskDefinitionProps = new FargateTaskDefinitionProps();
-            publishAnnotation.Config.PropsFargateTaskDefinitionCallback?.Invoke(fargateTaskDefinitionProps);
+            publishAnnotation.Config.PropsFargateTaskDefinitionCallback?.Invoke(CreatePublishingContext(environment), fargateTaskDefinitionProps);
             environment.DefaultsProvider.ApplyECSFargateServiceDefaults(fargateTaskDefinitionProps);
 
             var taskDef = new FargateTaskDefinition(environment.CDKStack, $"TaskDefinition-{projectResource.Name}", fargateTaskDefinitionProps);
-            publishAnnotation.Config.ConstructFargateTaskDefinitionCallback?.Invoke(taskDef);
+            publishAnnotation.Config.ConstructFargateTaskDefinitionCallback?.Invoke(CreatePublishingContext(environment), taskDef);
 
             // Create Container Definition
             var containerDefinitionProps = new ContainerDefinitionProps
@@ -46,25 +46,25 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
             };
             ProcessRelationShips(new ContainerDefinitionPropsReferencePoints(containerDefinitionProps), projectResource);
 
-            publishAnnotation.Config.PropsContainerDefinitionCallback?.Invoke(containerDefinitionProps);
+            publishAnnotation.Config.PropsContainerDefinitionCallback?.Invoke(CreatePublishingContext(environment), containerDefinitionProps);
             environment.DefaultsProvider.ApplyECSFargateServiceDefaults(projectResource.Name, containerDefinitionProps);
 
             var containerDefinition = taskDef.AddContainer($"Container-{projectResource.Name}", containerDefinitionProps);
-            publishAnnotation.Config.ConstructContainerDefinitionCallback?.Invoke(containerDefinition);
+            publishAnnotation.Config.ConstructContainerDefinitionCallback?.Invoke(CreatePublishingContext(environment), containerDefinition);
 
             // Create Fargate Service
             var fargateServiceProps = new FargateServiceProps
             {
                 TaskDefinition = taskDef,
             };
-            publishAnnotation.Config.PropsFargateServiceCallback?.Invoke(fargateServiceProps);
+            publishAnnotation.Config.PropsFargateServiceCallback?.Invoke(CreatePublishingContext(environment), fargateServiceProps);
             environment.DefaultsProvider.ApplyECSFargateServiceDefaults(fargateServiceProps);
             ProcessRelationShips(new FargateServicePropsReferencePoints(
                 () => CreateEmptyReferenceSecurityGroup(environment, projectResource, fargateServiceProps, x => x.SecurityGroups, (x, v) => x.SecurityGroups = v)),
                 resource);
 
             var fargateService = new FargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
-            publishAnnotation.Config.ConstructFargateServiceCallback?.Invoke(fargateService);
+            publishAnnotation.Config.ConstructFargateServiceCallback?.Invoke(CreatePublishingContext(environment), fargateService);
             ApplyAWSLinkedObjectsAnnotation(environment, projectResource, fargateService, this);
 
             await ApplyDeploymentTagAsync(environment, projectResource, fargateService, cancellationToken);
@@ -123,17 +123,17 @@ namespace Aspire.Hosting.AWS.Deployment
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
     public class PublishECSFargateServiceConfig
     {
-        public Action<ContainerDefinitionProps>? PropsContainerDefinitionCallback { get; set; }
+        public PublishCallback<ContainerDefinitionProps>? PropsContainerDefinitionCallback { get; set; }
 
-        public Action<ContainerDefinition>? ConstructContainerDefinitionCallback { get; set; }
+        public PublishCallback<ContainerDefinition>? ConstructContainerDefinitionCallback { get; set; }
 
-        public Action<FargateTaskDefinitionProps>? PropsFargateTaskDefinitionCallback { get; set; }
+        public PublishCallback<FargateTaskDefinitionProps>? PropsFargateTaskDefinitionCallback { get; set; }
 
-        public Action<FargateTaskDefinition>? ConstructFargateTaskDefinitionCallback { get; set; }
+        public PublishCallback<FargateTaskDefinition>? ConstructFargateTaskDefinitionCallback { get; set; }
 
-        public Action<FargateServiceProps>? PropsFargateServiceCallback { get; set; }
+        public PublishCallback<FargateServiceProps>? PropsFargateServiceCallback { get; set; }
 
-        public Action<FargateService>? ConstructFargateServiceCallback { get; set; }
+        public PublishCallback<FargateService>? ConstructFargateServiceCallback { get; set; }
     }
 
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]

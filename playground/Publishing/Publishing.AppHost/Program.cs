@@ -16,14 +16,19 @@ using System.Diagnostics;
 #pragma warning disable CA2252 // This API requires opting into preview features
 #pragma warning disable ASPIREAWSPUBLISHERS001
 #pragma warning disable ASPIRECOMPUTE001
+#pragma warning disable ASPIREINTERACTION001
 
 var builder = DistributedApplication.CreateBuilder(args);
 
 var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.USWest2);
 
-var awsEnvironment = builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new DeploymentStack(app, "DeploymentInfrastructure19", props), awsSdkConfig);
 
-var deploymentStack = awsEnvironment.Resource.EnvironmentStack;
+
+builder.AddAWSCDKEnvironment("aws", 
+                                    CDKDefaultsProviderFactory.Preview_V1, 
+                                    (app, props) => new DeploymentStack(app, "DeploymentInfrastructure19", props), 
+                                    awsSdkConfig);
+
 var deploymentTag = "v" + DateTime.UtcNow.ToString("yyyyMMddHHmmss");
 
 var cdkStackResource = builder.AddAWSCDKStack("AWSLambdaPlaygroundResources");
@@ -48,9 +53,9 @@ builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunctio
         .WithDeploymentImageTag(context => deploymentTag)
         .PublishAsLambdaFunction(new PublishLambdaFunctionConfig
         {
-            ConstructFunctionCallback = construct =>
+            ConstructFunctionCallback = (ctx, construct) =>
             {
-                construct.AddEventSource(new SqsEventSource(deploymentStack.LambdaQueue, new SqsEventSourceProps
+                construct.AddEventSource(new SqsEventSource(ctx.GetDeploymentStack<DeploymentStack>().LambdaQueue, new SqsEventSourceProps
                 {
                     BatchSize = 5,
                     Enabled = true

@@ -256,27 +256,14 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
         }
     }
 
-    T? _environmentStack;
-    public T EnvironmentStack 
-    {
-        get
-        {
-            if (_environmentStack == null)
-            {
-                LoadEnvironmentStack();
-            }
-
-            return _environmentStack!;
-        }
-    }
-
+    private T? _stack;
     private void LoadEnvironmentStack()
     {
         var props = new StackProps();
         props.Env = GetCDKEnvironment();
         try
         {
-            _environmentStack = _stackFactory(CDKApp, props);
+            _stack = _stackFactory(CDKApp, props);
         }
         catch (Exception ex)
         {
@@ -293,7 +280,16 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
         }
     }
 
-    internal override Stack CDKStack => this.EnvironmentStack;
+    internal override Stack CDKStack
+    {
+        get
+        {
+            if (_stack == null)
+                LoadEnvironmentStack();
+            
+            return _stack!;
+        }
+    }
 
     protected override IDictionary<string, object>? GetCDKContext()
     {
@@ -352,8 +348,10 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
 
                     // Create a new CDK app instead of using the CDKApp property to avoid recussive calls to GetCDKContext.
                     var app = new App();
-                    var props = new StackProps();
-                    props.Env = cdkEnvironment;
+                    var props = new StackProps
+                    {
+                        Env = cdkEnvironment
+                    };
                     _stackFactory(app, props);
                     app.Synth();
 

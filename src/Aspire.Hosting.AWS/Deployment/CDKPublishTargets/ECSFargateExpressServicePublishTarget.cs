@@ -49,7 +49,7 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
                 PrimaryContainer = primaryContainer,
                 ServiceName = projectResource.Name
             };
-            publishAnnotation.Config.PropsCfnExpressGatewayServicePropsCallback?.Invoke(fargateServiceProps);
+            publishAnnotation.Config.PropsCfnExpressGatewayServicePropsCallback?.Invoke(CreatePublishingContext(environment), fargateServiceProps);
             environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(fargateServiceProps);
 
             var referencePoints = new CfnExpressGatewayServicePropsReferencePoints(
@@ -58,7 +58,7 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
             ProcessRelationShips(referencePoints, projectResource);
 
             var fargateService = new CfnExpressGatewayService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
-            publishAnnotation.Config.ConstructCfnExpressGatewayServiceCallback?.Invoke(fargateService);
+            publishAnnotation.Config.ConstructCfnExpressGatewayServiceCallback?.Invoke(CreatePublishingContext(environment), fargateService);
             ApplyAWSLinkedObjectsAnnotation(environment, projectResource, fargateService, this);
 
             _ = new CfnOutput(environment.CDKStack, $"{resource.Name}-ExpressGatewayEndpoint", new CfnOutputProps
@@ -151,9 +151,9 @@ namespace Aspire.Hosting.AWS.Deployment
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
     public class PublishECSFargateExpressServiceConfig
     {
-        public Action<CfnExpressGatewayServiceProps>? PropsCfnExpressGatewayServicePropsCallback { get; set; }
+        public PublishCallback<CfnExpressGatewayServiceProps>? PropsCfnExpressGatewayServicePropsCallback { get; set; }
 
-        public Action<CfnExpressGatewayService>? ConstructCfnExpressGatewayServiceCallback { get; set; }
+        public PublishCallback<CfnExpressGatewayService>? ConstructCfnExpressGatewayServiceCallback { get; set; }
     }
 
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
