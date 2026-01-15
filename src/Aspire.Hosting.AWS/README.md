@@ -146,7 +146,7 @@ Adding [AWS CDK](https://aws.amazon.com/cdk/) to the AppHost makes it possible t
 
 In the AppHost the `AddAWSCDK` methods is used to create a CDK Resources which will hold the constructs for describing the AWS resources.
 
-A number of methods are available to add common resources to the AppHost like S3 Buckets, DynamoDB Tables, SQS Queues, SNS Topics, Kinesis Streams and Cognito User Pools. These resources can be added either the CDK resource or a dedicated stack that can be created.
+A number of methods are available to add common resources to the AppHost like S3 Buckets, DynamoDB Tables, SQS Queues, SNS Topics, Kinesis Streams, Cognito User Pools, and AWS Secrets Manager secrets. These resources can be added either the CDK resource or a dedicated stack that can be created.
 
 ```csharp
 var stack = builder.AddAWSCDKStack("Stack");
@@ -167,6 +167,107 @@ var constuct = stack.AddConstruct("Construct", scope => new CustomConstruct(scop
 builder.AddProject<Projects.Frontend>("Frontend")
        .WithReference(construct, c => c.Url, "Url");
 ```
+
+## Managing Secrets with AWS Secrets Manager
+
+AWS Secrets Manager enables you to securely store and manage application secrets, database credentials, API keys, and other sensitive information. The integration provides methods to create and reference secrets in your .NET Aspire applications.
+
+### Adding Secrets
+
+You can add secrets to your CDK stack using the `AddSecret` method:
+
+```csharp
+var stack = builder.AddAWSCDKStack("Stack").WithReference(awsConfig);
+
+// Add a basic secret
+var apiKey = stack.AddSecret("ApiKey");
+
+// Add a secret with custom properties
+var customSecret = stack.AddSecret("CustomSecret", new SecretProps
+{
+    Description = "API authentication key for external service",
+    RemovalPolicy = RemovalPolicy.DESTROY
+});
+```
+
+### Generating Secrets Automatically
+```csharp
+// Generate a database password
+var dbSecret = stack.AddGeneratedSecret("DatabaseCredentials", new SecretStringGenerator
+{
+    SecretStringTemplate = "{\"username\":\"admin\"}",
+    GenerateStringKey = "password",
+    PasswordLength = 32,
+    ExcludeCharacters = "\"@/\\"
+}, "Database connection credentials");
+
+// Generate an API key
+var generatedApiKey = stack.AddGeneratedSecret("GeneratedApiKey", new SecretStringGenerator
+{
+    PasswordLength = 64,
+    ExcludePunctuation = true
+});
+```
+
+### Referencing Secrets in Projects
+1. **Using configuration sections** - Secret ARN and Name are added to IConfiguration:
+
+```csharp
+builder.AddProject<Projects.Frontend>("Frontend")
+    .WithReference(apiKey, "Secrets:Api")
+    .WithReference(dbSecret, "Secrets:Database");
+
+// In your application code, access via IConfiguration:
+// var secretArn = configuration["Secrets:Api:SecretArn"];
+// var secretName = configuration["Secrets:Api:SecretName"];
+```
+
+2. **Using direct environment variables**:
+
+```csharp
+builder.AddProject<Projects.Frontend>("Frontend")
+    .WithSecretReference(apiKey, "API_KEY_ARN");
+
+// In your application code:
+// var secretArn = Environment.GetEnvironmentVariable("API_KEY_ARN");
+```
+
+### Retrieving Secret Values
+
+In your application, use the AWS Secrets Manager SDK to retrieve secret values:
+
+```csharp
+using Amazon.SecretsManager;
+using Amazon.SecretsManager.Model;
+
+// Inject IAmazonSecretsManager in your service
+public class MyService
+{
+    private readonly IAmazonSecretsManager _secretsManager;
+    private readonly IConfiguration _configuration;
+
+    public MyService(IAmazonSecretsManager secretsManager, IConfiguration configuration)
+    {
+        _secretsManager = secretsManager;
+        _configuration = configuration;
+    }
+
+    public async Task<string> GetSecretValueAsync()
+    {
+        var secretArn = _configuration["Secrets:Api:SecretArn"];
+        
+        var request = new GetSecretValueRequest
+        {
+            SecretId = secretArn
+        };
+
+        var response = await _secretsManager.GetSecretValueAsync(request);
+        return response.SecretString;
+    }
+}
+```
+
+**Note:** Secrets Manager charges apply for secret storage and API calls. Consider caching secret values appropriately in your application.
 
 ## Integrating AWS Lambda Local Development
 
