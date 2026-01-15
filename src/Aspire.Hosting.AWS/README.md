@@ -168,11 +168,11 @@ builder.AddProject<Projects.Frontend>("Frontend")
        .WithReference(construct, c => c.Url, "Url");
 ```
 
-### Managing Secrets with AWS Secrets Manager
+## Managing Secrets with AWS Secrets Manager
 
 AWS Secrets Manager enables you to securely store and manage application secrets, database credentials, API keys, and other sensitive information. The integration provides methods to create and reference secrets in your .NET Aspire applications.
 
-#### Adding Secrets
+### Adding Secrets
 
 You can add secrets to your CDK stack using the `AddSecret` method:
 
@@ -190,10 +190,7 @@ var customSecret = stack.AddSecret("CustomSecret", new SecretProps
 });
 ```
 
-#### Generating Secrets Automatically
-
-For credentials that need auto-generated values, use the `AddGeneratedSecret` method:
-
+### Generating Secrets Automatically
 ```csharp
 // Generate a database password
 var dbSecret = stack.AddGeneratedSecret("DatabaseCredentials", new SecretStringGenerator
@@ -212,10 +209,7 @@ var generatedApiKey = stack.AddGeneratedSecret("GeneratedApiKey", new SecretStri
 });
 ```
 
-#### Referencing Secrets in Projects
-
-Secrets can be referenced in your projects in two ways:
-
+### Referencing Secrets in Projects
 1. **Using configuration sections** - Secret ARN and Name are added to IConfiguration:
 
 ```csharp
@@ -238,7 +232,7 @@ builder.AddProject<Projects.Frontend>("Frontend")
 // var secretArn = Environment.GetEnvironmentVariable("API_KEY_ARN");
 ```
 
-#### Retrieving Secret Values
+### Retrieving Secret Values
 
 In your application, use the AWS Secrets Manager SDK to retrieve secret values:
 

@@ -12,7 +12,6 @@ namespace Aspire.Hosting;
 /// </summary>
 public static class SecretsManagerResourceExtensions
 {
-
     private const string SecretArnOutputName = "SecretArn";
     private const string SecretNameOutputName = "SecretName";
 

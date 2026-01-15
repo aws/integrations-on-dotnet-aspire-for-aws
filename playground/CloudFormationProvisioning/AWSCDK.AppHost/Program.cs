@@ -37,6 +37,7 @@ builder.AddProject<Projects.Frontend>("frontend")
     .WithEnvironment("AWS__Resources__BucketName", customStack.GetOutput("BucketName")) // Reference a construct/stack output
     .WithEnvironment("AWS__Resources__ChatTopicArn", topic, t => t.TopicArn)
     .WithReference(customStack, s => s.Queue.QueueUrl, "QueueUrl", "AWS:Resources:Queue")
+    // Reference secrets - both configuration section and direct environment variable patterns
     .WithReference(apiSecret, "Secrets:Api")
     .WithReference(dbSecret, "Secrets:Database")
     .WithReference(secretsStack, s => s.DatabaseCredentials.SecretArn, "DbCredentialsArn", "Database:CredentialsArn")
