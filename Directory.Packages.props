@@ -13,7 +13,7 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
     <!-- AWS SDK for .NET dependencies -->
     <PackageVersion Include="AWSSDK.CloudFormation" Version="4.0.4.3" />
-    <PackageVersion Include="AWSSDK.Core" Version="4.0.1.1" />
+    <PackageVersion Include="AWSSDK.Core" Version="4.0.3.3" />
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.0.8.1" />
     <PackageVersion Include="AWSSDK.Lambda" Version="4.0.3.1" />
     <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.2.9" />
@@ -45,4 +45,5 @@
     <PackageVersion Include="JsonSchema.Net" Version="7.4.0" />
     <PackageVersion Include="Moq" Version="4.20.72" />
   </ItemGroup>
+
 </Project>
