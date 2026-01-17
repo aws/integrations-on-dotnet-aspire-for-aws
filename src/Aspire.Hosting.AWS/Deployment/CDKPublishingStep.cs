@@ -41,7 +41,7 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
 
             environment.CDKApp.Synth();
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !environment.Config.DisablePlatformCorrection)
             {
                 FixCDKAssetsFileForWindows(outputPath);
             }

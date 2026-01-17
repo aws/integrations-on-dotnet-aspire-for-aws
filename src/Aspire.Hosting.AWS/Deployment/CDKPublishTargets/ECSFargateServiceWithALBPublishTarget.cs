@@ -32,7 +32,7 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
             var publishAnnotation = annotation as PublishCDKECSFargateServiceWithALBAnnotation
                                     ?? throw new InvalidOperationException($"Annotation for resource {resource.Name} is not a valid {nameof(PublishCDKECSFargateServiceWithALBAnnotation)}.");
 
-            var imageTarballPath = await imageBuilder.BuildTarballImageAsync(projectResource, cancellationToken);
+            var imageTarballPath = await imageBuilder.CreateTarballImageAsync(projectResource, cancellationToken);
 
             var taskImageOptions = new ApplicationLoadBalancedTaskImageOptions
             {

@@ -32,7 +32,7 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
             var publishAnnotation = annotation as PublishECSFargateServiceExpressAnnotation
                                     ?? throw new InvalidOperationException($"Annotation for resource {resource.Name} is not a valid {nameof(PublishECSFargateServiceExpressAnnotation)}.");
 
-            var imageTarballPath = await imageBuilder.BuildTarballImageAsync(projectResource, cancellationToken);
+            var imageTarballPath = await imageBuilder.CreateTarballImageAsync(projectResource, cancellationToken);
 
             var asset = new TarballImageAsset(environment.CDKStack, $"ContainerTarBall-{projectResource.Name}", new TarballImageAssetProps
             {
