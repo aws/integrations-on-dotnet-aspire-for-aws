@@ -22,12 +22,10 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.USWest2);
 
-
-
 builder.AddAWSCDKEnvironment("aws", 
                                     CDKDefaultsProviderFactory.Preview_V1, 
                                     (app, props) => new DeploymentStack(app, "DeploymentInfrastructure19", props), 
-                                    awsSdkConfig);
+                                    new AWSCDKEnvironmentResourceConfig { AWSSDKConfig = awsSdkConfig });
 
 var deploymentTag = "v" + DateTime.UtcNow.ToString("yyyyMMddHHmmss");
 

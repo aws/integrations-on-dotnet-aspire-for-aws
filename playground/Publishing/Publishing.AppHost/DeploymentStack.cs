@@ -1,7 +1,7 @@
 ﻿using Amazon.CDK;
 using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.SQS;
-using Aspire.Hosting.AWS.Deployment.CDKDefaults;
+using Aspire.Hosting.AWS.Deployment;
 using Constructs;
 
 namespace Lambda.AppHost;
@@ -22,6 +22,4 @@ public class DeploymentStack : Stack
 
     [DefaultVpc]
     public IVpc DefaultVpc { get; private set; }
-
-    
 }

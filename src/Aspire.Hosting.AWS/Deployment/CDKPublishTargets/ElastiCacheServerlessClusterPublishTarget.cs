@@ -30,7 +30,7 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
             var serverlessCacheProps = new CfnServerlessCacheProps();
 
             //// Apply custom configuration
-            publishAnnotation.Config.PropsCfnServerlessCacheCallback?.Invoke(CreatePublishingContext(environment), serverlessCacheProps);
+            publishAnnotation.Config.PropsCfnServerlessCacheCallback?.Invoke(CreatePublishTargetContext(environment), serverlessCacheProps);
 
             // Apply defaults from provider
             environment.DefaultsProvider.ApplyCfnServerlessCachePropsDefaults(serverlessCacheProps, resource);
@@ -38,7 +38,7 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
             var cluster = new CfnServerlessCache(environment.CDKStack, $"ElastiCache-{resource.Name}", serverlessCacheProps);
 
             // Apply construct-level customizations
-            publishAnnotation.Config.ConstructCfnServerlessCacheCallback?.Invoke(CreatePublishingContext(environment), cluster);
+            publishAnnotation.Config.ConstructCfnServerlessCacheCallback?.Invoke(CreatePublishTargetContext(environment), cluster);
 
             ApplyAWSLinkedObjectsAnnotation(environment, resource, cluster, this);
 
@@ -61,9 +61,9 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
             return IsDefaultPublishTargetMatchResult.NO_MATCH;
         }
 
-        public override GetReferencesResult GetReferences(AWSLinkedObjectsAnnotation linkedAnnotation)
+        public override ReferenceConnectionInfo GetReferenceConnectionInfo(AWSLinkedObjectsAnnotation linkedAnnotation)
         {
-            var result = new GetReferencesResult();
+            var result = new ReferenceConnectionInfo();
             if (linkedAnnotation.Construct is not CfnServerlessCache cacheConstruct)
                 return result;
 

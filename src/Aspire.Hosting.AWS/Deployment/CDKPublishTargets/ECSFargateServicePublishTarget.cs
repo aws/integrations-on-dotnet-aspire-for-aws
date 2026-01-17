@@ -32,11 +32,11 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
 
             // Create Task Definition
             var fargateTaskDefinitionProps = new FargateTaskDefinitionProps();
-            publishAnnotation.Config.PropsFargateTaskDefinitionCallback?.Invoke(CreatePublishingContext(environment), fargateTaskDefinitionProps);
+            publishAnnotation.Config.PropsFargateTaskDefinitionCallback?.Invoke(CreatePublishTargetContext(environment), fargateTaskDefinitionProps);
             environment.DefaultsProvider.ApplyECSFargateServiceDefaults(fargateTaskDefinitionProps);
 
             var taskDef = new FargateTaskDefinition(environment.CDKStack, $"TaskDefinition-{projectResource.Name}", fargateTaskDefinitionProps);
-            publishAnnotation.Config.ConstructFargateTaskDefinitionCallback?.Invoke(CreatePublishingContext(environment), taskDef);
+            publishAnnotation.Config.ConstructFargateTaskDefinitionCallback?.Invoke(CreatePublishTargetContext(environment), taskDef);
 
             // Create Container Definition
             var containerDefinitionProps = new ContainerDefinitionProps
@@ -44,27 +44,27 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
                 Image = ContainerImage.FromTarball(imageTarballPath),
                 Environment = new Dictionary<string, string>()
             };
-            ProcessRelationShips(new ContainerDefinitionPropsReferencePoints(containerDefinitionProps), projectResource);
+            ProcessRelationShips(new ContainerDefinitionPropsConnectionPoints(containerDefinitionProps), projectResource);
 
-            publishAnnotation.Config.PropsContainerDefinitionCallback?.Invoke(CreatePublishingContext(environment), containerDefinitionProps);
+            publishAnnotation.Config.PropsContainerDefinitionCallback?.Invoke(CreatePublishTargetContext(environment), containerDefinitionProps);
             environment.DefaultsProvider.ApplyECSFargateServiceDefaults(projectResource.Name, containerDefinitionProps);
 
             var containerDefinition = taskDef.AddContainer($"Container-{projectResource.Name}", containerDefinitionProps);
-            publishAnnotation.Config.ConstructContainerDefinitionCallback?.Invoke(CreatePublishingContext(environment), containerDefinition);
+            publishAnnotation.Config.ConstructContainerDefinitionCallback?.Invoke(CreatePublishTargetContext(environment), containerDefinition);
 
             // Create Fargate Service
             var fargateServiceProps = new FargateServiceProps
             {
                 TaskDefinition = taskDef,
             };
-            publishAnnotation.Config.PropsFargateServiceCallback?.Invoke(CreatePublishingContext(environment), fargateServiceProps);
+            publishAnnotation.Config.PropsFargateServiceCallback?.Invoke(CreatePublishTargetContext(environment), fargateServiceProps);
             environment.DefaultsProvider.ApplyECSFargateServiceDefaults(fargateServiceProps);
-            ProcessRelationShips(new FargateServicePropsReferencePoints(
+            ProcessRelationShips(new FargateServicePropsConnectionPoints(
                 () => CreateEmptyReferenceSecurityGroup(environment, projectResource, fargateServiceProps, x => x.SecurityGroups, (x, v) => x.SecurityGroups = v)),
                 resource);
 
             var fargateService = new FargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
-            publishAnnotation.Config.ConstructFargateServiceCallback?.Invoke(CreatePublishingContext(environment), fargateService);
+            publishAnnotation.Config.ConstructFargateServiceCallback?.Invoke(CreatePublishTargetContext(environment), fargateService);
             ApplyAWSLinkedObjectsAnnotation(environment, projectResource, fargateService, this);
 
             await ApplyDeploymentTagAsync(environment, projectResource, fargateService, cancellationToken);
@@ -86,14 +86,14 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
             return IsDefaultPublishTargetMatchResult.NO_MATCH;
         }
 
-        public override GetReferencesResult GetReferences(AWSLinkedObjectsAnnotation linkedAnnotation)
+        public override ReferenceConnectionInfo GetReferenceConnectionInfo(AWSLinkedObjectsAnnotation linkedAnnotation)
         {
-            return new GetReferencesResult();
+            return new ReferenceConnectionInfo();
         }
     }
 
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    internal class ContainerDefinitionPropsReferencePoints(ContainerDefinitionProps props) : AbstractCDKConstructReferencePoints
+    internal class ContainerDefinitionPropsConnectionPoints(ContainerDefinitionProps props) : AbstractCDKConstructConnectionPoints
     {
         public override IDictionary<string, string>? EnvironmentVariables
         {
@@ -103,7 +103,7 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
     }
 
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    internal class FargateServicePropsReferencePoints(Func<ISecurityGroup> securityGroupFactory) : AbstractCDKConstructReferencePoints
+    internal class FargateServicePropsConnectionPoints(Func<ISecurityGroup> securityGroupFactory) : AbstractCDKConstructConnectionPoints
     {
         ISecurityGroup? _referenceSecurityGroup;
 

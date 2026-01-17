@@ -5,6 +5,9 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
 
+/// <summary>
+/// The interface for identifying AWS publish target annotations.
+/// </summary>
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 public interface IAWSPublishTargetAnnotation : IResourceAnnotation
 {

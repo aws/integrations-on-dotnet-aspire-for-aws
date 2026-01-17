@@ -4,13 +4,13 @@ using Amazon.CDK.AWS.EC2;
 namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
 
 /// <summary>
-/// To setup references across constructs environment variables and security groups have
-/// to be manipulated. Each CDK construct has a different way to set this reference points.
-/// The <see cref="AbstractCDKConstructReferencePoints"/> interface is used to provide a common
-/// API for setting the reference points.
+/// To setup connections across constructs, environment variables and security groups have
+/// to be manipulated. Each CDK construct has a different way to set this connection points.
+/// The <see cref="AbstractCDKConstructConnectionPoints"/> base class is used to provide a common
+/// API for setting the connection points.
 /// </summary>
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-public class AbstractCDKConstructReferencePoints
+public class AbstractCDKConstructConnectionPoints
 {
     /// <summary>
     /// Gets and sets the environment variables on the CDK construct. The

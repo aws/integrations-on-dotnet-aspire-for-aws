@@ -40,18 +40,18 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
                 Handler = lambdaFunctionAnnotation.Handler
             };
 
-            var referencePoints = new FunctionPropsReferencePoints(
+            var referencePoints = new FunctionPropsConnectionPoints(
                 functionProps,
                 () => CreateEmptyReferenceSecurityGroup(environment, resource, functionProps, x => x.SecurityGroups,
                     (x, v) => x.SecurityGroups = v));
 
             ProcessRelationShips(referencePoints, lambdaFunction);
 
-            publishAnnotation.Config.PropsFunctionCallback?.Invoke(CreatePublishingContext(environment), functionProps);
+            publishAnnotation.Config.PropsFunctionCallback?.Invoke(CreatePublishTargetContext(environment), functionProps);
             environment.DefaultsProvider.ApplyLambdaFunctionDefaults(functionProps, lambdaFunction);
 
             var function = new Function(environment.CDKStack, $"Function-{lambdaFunction.Name}", functionProps);
-            publishAnnotation.Config.ConstructFunctionCallback?.Invoke(CreatePublishingContext(environment), function);
+            publishAnnotation.Config.ConstructFunctionCallback?.Invoke(CreatePublishTargetContext(environment), function);
             ApplyAWSLinkedObjectsAnnotation(environment, lambdaFunction, function, this);
 
             await ApplyDeploymentTagAsync(environment, lambdaFunction, function, cancellationToken);
@@ -74,14 +74,14 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
             return IsDefaultPublishTargetMatchResult.NO_MATCH;
         }
 
-        public override GetReferencesResult GetReferences(AWSLinkedObjectsAnnotation linkedAnnotation)
+        public override ReferenceConnectionInfo GetReferenceConnectionInfo(AWSLinkedObjectsAnnotation linkedAnnotation)
         {
-            return new GetReferencesResult();
+            return new ReferenceConnectionInfo();
         }
     }
 
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    internal class FunctionPropsReferencePoints(FunctionProps props, Func<ISecurityGroup> securityGroupFactory) : AbstractCDKConstructReferencePoints
+    internal class FunctionPropsConnectionPoints(FunctionProps props, Func<ISecurityGroup> securityGroupFactory) : AbstractCDKConstructConnectionPoints
     {
         ISecurityGroup? _referenceSecurityGroup;
         public override IDictionary<string, string>? EnvironmentVariables

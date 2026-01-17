@@ -40,23 +40,23 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
                 Environment = new Dictionary<string, string>()
             };
 
-            publishAnnotation.Config.PropsApplicationLoadBalancedTaskImageOptionsCallback?.Invoke(CreatePublishingContext(environment), taskImageOptions);
+            publishAnnotation.Config.PropsApplicationLoadBalancedTaskImageOptionsCallback?.Invoke(CreatePublishTargetContext(environment), taskImageOptions);
             environment.DefaultsProvider.ApplyECSFargateServiceWithALBDefaults(taskImageOptions);
 
             var fargateServiceProps = new ApplicationLoadBalancedFargateServiceProps
             {
                 TaskImageOptions = taskImageOptions
             };
-            publishAnnotation.Config.PropsApplicationLoadBalancedFargateServiceCallback?.Invoke(CreatePublishingContext(environment), fargateServiceProps);
+            publishAnnotation.Config.PropsApplicationLoadBalancedFargateServiceCallback?.Invoke(CreatePublishTargetContext(environment), fargateServiceProps);
             environment.DefaultsProvider.ApplyECSFargateServiceWithALBDefaults(fargateServiceProps);
 
-            var referencePoints = new ApplicationLoadBalancedFargateServicePropsReferencePoints(
+            var referencePoints = new ApplicationLoadBalancedFargateServicePropsConnectionPoints(
                 fargateServiceProps,
                     () => CreateEmptyReferenceSecurityGroup(environment, projectResource, fargateServiceProps, x => x.SecurityGroups, (x, v) => x.SecurityGroups = v));
             ProcessRelationShips(referencePoints, projectResource);
 
             var fargateService = new ApplicationLoadBalancedFargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
-            publishAnnotation.Config.ConstructApplicationLoadBalancedFargateServiceCallback?.Invoke(CreatePublishingContext(environment), fargateService);
+            publishAnnotation.Config.ConstructApplicationLoadBalancedFargateServiceCallback?.Invoke(CreatePublishTargetContext(environment), fargateService);
             ApplyAWSLinkedObjectsAnnotation(environment, projectResource, fargateService, this);
 
             await ApplyDeploymentTagAsync(environment, projectResource, fargateService.Service, cancellationToken);
@@ -80,9 +80,9 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
             return IsDefaultPublishTargetMatchResult.NO_MATCH;
         }
 
-        public override GetReferencesResult GetReferences(AWSLinkedObjectsAnnotation linkedAnnotation)
+        public override ReferenceConnectionInfo GetReferenceConnectionInfo(AWSLinkedObjectsAnnotation linkedAnnotation)
         {
-            var result = new GetReferencesResult();
+            var result = new ReferenceConnectionInfo();
             if (linkedAnnotation.Construct is not ApplicationLoadBalancedFargateService albFargateConstruct)
                 return result;
 
@@ -102,7 +102,7 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
     }
 
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    internal class ApplicationLoadBalancedFargateServicePropsReferencePoints(ApplicationLoadBalancedFargateServiceProps props, Func<ISecurityGroup> securityGroupFactory) : AbstractCDKConstructReferencePoints
+    internal class ApplicationLoadBalancedFargateServicePropsConnectionPoints(ApplicationLoadBalancedFargateServiceProps props, Func<ISecurityGroup> securityGroupFactory) : AbstractCDKConstructConnectionPoints
     {
         ISecurityGroup? _referenceSecurityGroup;
         public override IDictionary<string, string>? EnvironmentVariables

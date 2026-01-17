@@ -8,6 +8,7 @@ using Amazon.SecurityToken;
 using Aspire.Hosting.AWS.Deployment.CDKDefaults;
 using Aspire.Hosting.AWS.Provisioning;
 using Aspire.Hosting.AWS.Utils.Internal;
+using Aspire.Hosting.AWS.Utils;
 using Aspire.Hosting.Pipelines;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,9 @@ namespace Aspire.Hosting.AWS.Deployment;
 
 #pragma warning disable ASPIREPUBLISHERS001
 
+/// <summary>
+/// The environment resource used to transform the resources defined in the Aspire AppHost into AWS CDK constructs and deploy them to AWS.
+/// </summary>
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 public abstract class AWSCDKEnvironmentResource : Resource
 {
@@ -31,26 +35,31 @@ public abstract class AWSCDKEnvironmentResource : Resource
     internal const string CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE = "AWS_ASPIRE_CONTEXT_GENERATION_PATH";
 
     /// <summary>
-    /// Gets the configuration for creating service clients from the AWS .NET SDK.
+    /// Gets the configuration for the <see cref="AWSCDKEnvironmentResource"/>.
     /// </summary>
-    public IAWSSDKConfig? AWSSDKConfig { get; }
+    public AWSCDKEnvironmentResourceConfig Config { get; }
 
     protected bool IsPublishMode { get; }
 
+    /// <summary>
+    /// Gets the <see cref="CDKDefaultsProvider"/> for the <see cref="AWSCDKEnvironmentResource"/>. The default provider is used to provide 
+    /// default values like memory sizes, cpu limits, expected ports, etc. for various AWS CDK constructs created as part of the Aspire deployment.
+    /// It also provides default CDK constructs like VPCs, ECS Clusters, Security Groups, etc. that can be shared across multiple resources.
+    /// </summary>
     public CDKDefaultsProvider DefaultsProvider { get; }
 
-    protected AWSCDKEnvironmentResource(string name, bool isPublishMode, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, IAWSSDKConfig? awsSdkConfg)
+    protected AWSCDKEnvironmentResource(string name, bool isPublishMode, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, AWSCDKEnvironmentResourceConfig? environmentResourceConfig)
     : base(name)
     {
         IsPublishMode = isPublishMode;
         DefaultsProvider = cdkDefaultsProviderFactory.Create(this);
-        AWSSDKConfig = awsSdkConfg;
+        Config = environmentResourceConfig ?? new AWSCDKEnvironmentResourceConfig();
 
         Annotations.Add(new PipelineStepAnnotation(ConfigurePublishPipelineStep));
         Annotations.Add(new PipelineStepAnnotation(ConfigureDeployPipelineStep));
     }
 
-    App? _cdkApp;
+    private App? _cdkApp;
     internal App CDKApp 
     { 
         get
@@ -61,6 +70,11 @@ public abstract class AWSCDKEnvironmentResource : Resource
 
                 if (IsPublishMode)
                 {
+                    // If CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE is set that means we are running in the forked mode to generate the CDK context.
+                    // In the fork mode we are creating the CDK is being synthed just to generate the context so we don't need to set the
+                    // output directory because it won't be the final output.
+                    //
+                    // See the override GetCDKContext method for more details about the fork mode and CDK context.
                     if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE)))
                     {
                         appProps.Outdir = DetermineOutputDirectory();
@@ -82,6 +96,11 @@ public abstract class AWSCDKEnvironmentResource : Resource
 
     protected virtual IDictionary<string, object>? GetCDKContext() => null;
 
+    /// <summary>
+    /// The CDK context comes from the CDK CLI and is what is used to resolve lookups like Vpc.FromLookup, etc.
+    /// 
+    /// See the override GetCDKContext method for more details about the fork mode and CDK context.
+    /// </summary>
     internal string? CDKContextGenerationLog
     {
         get; set;
@@ -130,6 +149,12 @@ public abstract class AWSCDKEnvironmentResource : Resource
         return deployStep;
     }
 
+    /// <summary>
+    /// We have to do our own searching through the commandline arguments parameters to find the output path because
+    /// we need it for creating the CDK app which might happen before the Aspire publish pipeline is created. It is
+    /// a quirk of CDK that the output path has to be set on the app itself.
+    /// </summary>
+    /// <returns></returns>
     private string DetermineOutputDirectory()
     {
         string? outputPath = null;
@@ -167,9 +192,9 @@ public abstract class AWSCDKEnvironmentResource : Resource
     {
         var environment = new Amazon.CDK.Environment();
 
-        if (AWSSDKConfig?.Region != null)
+        if (Config.AWSSDKConfig?.Region != null)
         {
-            environment.Region = AWSSDKConfig.Region.SystemName;
+            environment.Region = Config.AWSSDKConfig.Region.SystemName;
         }
         else
         {
@@ -181,9 +206,9 @@ public abstract class AWSCDKEnvironmentResource : Resource
         }
 
         AWSCredentials? awsCredentials = null;
-        if (AWSSDKConfig?.Profile != null)
+        if (Config.AWSSDKConfig?.Profile != null)
         {
-            var config = AWSSDKConfig.CreateServiceConfig<AmazonCloudFormationConfig>();
+            var config = Config.AWSSDKConfig.CreateServiceConfig<AmazonCloudFormationConfig>();
             awsCredentials = DefaultAWSCredentialsIdentityResolver.GetCredentials(config);
         }
         else
@@ -216,9 +241,9 @@ public abstract class AWSCDKEnvironmentResource : Resource
         try
         {
             AmazonCloudFormationClient client;
-            if (AWSSDKConfig != null)
+            if (Config.AWSSDKConfig != null)
             {
-                var config = AWSSDKConfig.CreateServiceConfig<AmazonCloudFormationConfig>();
+                var config = Config.AWSSDKConfig.CreateServiceConfig<AmazonCloudFormationConfig>();
 
                 var awsCredentials = DefaultAWSCredentialsIdentityResolver.GetCredentials(config);
                 client = new AmazonCloudFormationClient(awsCredentials, config);
@@ -239,17 +264,25 @@ public abstract class AWSCDKEnvironmentResource : Resource
     }
 }
 
+/// <summary>
+/// The environment resource used to transform the resources defined in the Aspire AppHost into AWS CDK constructs and deploy them to AWS.
+/// </summary>
+/// <typeparam name="T">The CDK Stack type to create for the environment. It can be used to define additional CDK constructs as part of deployment or override the default constructs that would be created by the CDKDefaultsProvider.</typeparam>
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
     where T : Stack 
 {
     Func<App, IStackProps, T> _stackFactory;
 
-    internal AWSCDKEnvironmentResource(string name, bool isPublishMode, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, Func<App, IStackProps, T> stackFactory, IAWSSDKConfig? awsSdkConfg)
-        : base(name, isPublishMode, cdkDefaultsProviderFactory, awsSdkConfg)
+    internal AWSCDKEnvironmentResource(string name, bool isPublishMode, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, Func<App, IStackProps, T> stackFactory, AWSCDKEnvironmentResourceConfig? environmentResourceConfig)
+        : base(name, isPublishMode, cdkDefaultsProviderFactory, environmentResourceConfig)
     {
         _stackFactory = stackFactory;
 
+        // Running in the fork mode so we need to force load the stack during the constructor
+        // so the CDK cli can validate it has all of the required information for the CDK context.
+        //
+        // See the override GetCDKContext method for more details about the fork mode and CDK context.
         if (Environment.GetEnvironmentVariable(CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE) != null)
         {
             LoadEnvironmentStack();
@@ -273,7 +306,7 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
                     "CDK Stack is using constructs that require the account and region information during publishing. " +
                     "Ensure either there is a default AWS credentials and region configured for the environment or use " +
                     "the AddAWSSDKConfig extension method to create an SDK config and pass the sdk config in with " +
-                    "the AddAWSCDKEnvironment method as a method parameter.");
+                    "the AddAWSCDKEnvironment method as part of the AWSCDKEnvironmentResourceConfig.");
             }
 
             throw;
@@ -366,63 +399,12 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
 
             var cdkContextJson = File.ReadAllText(cdkContextJsonTempPath);
             using var doc = JsonDocument.Parse(cdkContextJson);
-            var context = (IDictionary<string, object>)ConvertElement(doc.RootElement);
+            var context = (IDictionary<string, object>)doc.RootElement.ConvertToDotNetPrimitives();
             return context;
         }
         catch
         {
             return null;
-        }
-    }
-
-    /// <summary>
-    /// Utility method to convert a JsonElement into a dictionary/array/primitive object. If we don't
-    /// do this CDK will complain about unmapped types over JSII.
-    /// </summary>
-    /// <param name="element"></param>
-    /// <returns></returns>
-    /// <exception cref="NotSupportedException"></exception>
-    static object ConvertElement(JsonElement element)
-    {
-        switch (element.ValueKind)
-        {
-            case JsonValueKind.Object:
-                var dict = new Dictionary<string, object>();
-                foreach (var prop in element.EnumerateObject())
-                {
-                    dict[prop.Name] = ConvertElement(prop.Value);
-                }
-                return dict;
-
-            case JsonValueKind.Array:
-                var list = new List<object>();
-                foreach (var item in element.EnumerateArray())
-                {
-                    list.Add(ConvertElement(item));
-                }
-                return list.ToArray();
-
-            case JsonValueKind.String:
-                return element.GetString()!;
-
-            case JsonValueKind.Number:
-                // CDK context supports both int and double
-                if (element.TryGetInt64(out var l))
-                    return l;
-                return element.GetDouble();
-
-            case JsonValueKind.True:
-                return true;
-
-            case JsonValueKind.False:
-                return false;
-
-            case JsonValueKind.Null:
-            case JsonValueKind.Undefined:
-                return null!;
-
-            default:
-                throw new NotSupportedException($"Unsupported JSON token: {element.ValueKind}");
         }
     }
 }

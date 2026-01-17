@@ -28,11 +28,11 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
                                     ?? throw new InvalidOperationException($"Annotation for resource {resource.Name} is not a valid {nameof(PublishElasticCacheNodeClusterAnnotation)}.");
 
             var clusterProps = new CfnReplicationGroupProps();
-            publishAnnotation.Config.PropsCfnReplicationGroupCallback?.Invoke(CreatePublishingContext(environment), clusterProps);
+            publishAnnotation.Config.PropsCfnReplicationGroupCallback?.Invoke(CreatePublishTargetContext(environment), clusterProps);
             environment.DefaultsProvider.ApplyCfnReplicationGroupPropsDefaults(clusterProps);
 
             var cluster = new CfnReplicationGroup(environment.CDKStack, $"ElastiCache-{resource.Name}", clusterProps);
-            publishAnnotation.Config.ConstructCfnReplicationGroupCallback?.Invoke(CreatePublishingContext(environment), cluster);
+            publishAnnotation.Config.ConstructCfnReplicationGroupCallback?.Invoke(CreatePublishTargetContext(environment), cluster);
             ApplyAWSLinkedObjectsAnnotation(environment, resource, cluster, this);
 
             return Task.CompletedTask;
@@ -54,9 +54,9 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
             return IsDefaultPublishTargetMatchResult.NO_MATCH;
         }
 
-        public override GetReferencesResult GetReferences(AWSLinkedObjectsAnnotation linkedAnnotation)
+        public override ReferenceConnectionInfo GetReferenceConnectionInfo(AWSLinkedObjectsAnnotation linkedAnnotation)
         {
-            var result = new GetReferencesResult();
+            var result = new ReferenceConnectionInfo();
             if (linkedAnnotation.Construct is not CfnReplicationGroup cacheConstruct)
                 return result;
 
@@ -115,7 +115,7 @@ namespace Aspire.Hosting.AWS.Deployment
         /// <summary>
         /// When setting up connection strings for reference resources either the ConfigurationEndPoint
         /// or PrimaryEndPoint
-        /// <see cref="https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-elasticache-replicationgroup.html#aws-resource-elasticache-replicationgroup-return-values-fn--getatt">
+        /// <see href="https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-elasticache-replicationgroup.html#aws-resource-elasticache-replicationgroup-return-values-fn--getatt">
         /// CloudFormation return values</see> must be used depending on whether the
         /// cluster is configured for cluster mode or not. It is not possible from the CDK construct 
         /// to definitively determine whether cluster mode is enabled. When publishing to an ElastiCache

@@ -49,16 +49,16 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
                 PrimaryContainer = primaryContainer,
                 ServiceName = projectResource.Name
             };
-            publishAnnotation.Config.PropsCfnExpressGatewayServicePropsCallback?.Invoke(CreatePublishingContext(environment), fargateServiceProps);
+            publishAnnotation.Config.PropsCfnExpressGatewayServicePropsCallback?.Invoke(CreatePublishTargetContext(environment), fargateServiceProps);
             environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(fargateServiceProps);
 
-            var referencePoints = new CfnExpressGatewayServicePropsReferencePoints(
+            var referencePoints = new CfnExpressGatewayServicePropsConnectionPoints(
                 fargateServiceProps,
                 environment.DefaultsProvider.GetDefaultECSClusterSecurityGroup());
             ProcessRelationShips(referencePoints, projectResource);
 
             var fargateService = new CfnExpressGatewayService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
-            publishAnnotation.Config.ConstructCfnExpressGatewayServiceCallback?.Invoke(CreatePublishingContext(environment), fargateService);
+            publishAnnotation.Config.ConstructCfnExpressGatewayServiceCallback?.Invoke(CreatePublishTargetContext(environment), fargateService);
             ApplyAWSLinkedObjectsAnnotation(environment, projectResource, fargateService, this);
 
             _ = new CfnOutput(environment.CDKStack, $"{resource.Name}-ExpressGatewayEndpoint", new CfnOutputProps
@@ -86,9 +86,9 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
             return IsDefaultPublishTargetMatchResult.NO_MATCH;
         }
 
-        public override GetReferencesResult GetReferences(AWSLinkedObjectsAnnotation linkedAnnotation)
+        public override ReferenceConnectionInfo GetReferenceConnectionInfo(AWSLinkedObjectsAnnotation linkedAnnotation)
         {
-            var result = new GetReferencesResult();
+            var result = new ReferenceConnectionInfo();
             if (linkedAnnotation.Construct is not CfnExpressGatewayService fargateExpressConstruct)
                 return result;
 
@@ -103,7 +103,7 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
     }
 
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    internal class CfnExpressGatewayServicePropsReferencePoints(CfnExpressGatewayServiceProps props, ISecurityGroup securityGroup) : AbstractCDKConstructReferencePoints
+    internal class CfnExpressGatewayServicePropsConnectionPoints(CfnExpressGatewayServiceProps props, ISecurityGroup securityGroup) : AbstractCDKConstructConnectionPoints
     {
         public override IDictionary<string, string>? EnvironmentVariables
         {
