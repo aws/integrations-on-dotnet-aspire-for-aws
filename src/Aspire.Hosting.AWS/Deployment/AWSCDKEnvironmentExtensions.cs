@@ -30,7 +30,7 @@ public static partial class AWSCDKEnvironmentExtensions
         builder.Services.AddTransient<IAWSPublishTarget, ECSFargateExpressServicePublishTarget>();
         builder.Services.AddTransient<IAWSPublishTarget, ECSFargateServicePublishTarget>();
         builder.Services.AddTransient<IAWSPublishTarget, ECSFargateServiceWithALBPublishTarget>();
-        builder.Services.AddTransient<IAWSPublishTarget, ElastiCacheNodeClusterPublishTarget>();
+        builder.Services.AddTransient<IAWSPublishTarget, ElastiCacheProvisionClusterPublishTarget>();
         builder.Services.AddTransient<IAWSPublishTarget, ElastiCacheServerlessClusterPublishTarget>();
         builder.Services.AddTransient<IAWSPublishTarget, LambdaFunctionPublishTarget>();
     }
@@ -231,16 +231,16 @@ public static partial class AWSCDKEnvironmentExtensions
     /// Configures the <see cref="RedisResource"> to be published as an Amazon ElastiCache provisioned node cluster during deployment.
     /// </summary>
     /// <remarks>
-    /// For optimal AWS support Valkey will be used by default as the cluster engine. To use Redis as the cluster engine set a callback on the config's <see cref="PublishElastiCacheNodeClusterConfig.PropsCfnReplicationGroupCallback"/>
+    /// For optimal AWS support Valkey will be used by default as the cluster engine. To use Redis as the cluster engine set a callback on the config's <see cref="PublishElastiCacheProvisionClusterConfig.PropsCfnReplicationGroupCallback"/>
     /// property and modify the <see cref="Amazon.CDK.AWS.ElastiCache.CfnReplicationGroupProps.Engine"/> property.
     /// </remarks>
     /// <param name="builder">The resource builder for the resource to configure.</param>
     /// <param name="config">An optional configuration object for providing callbacks to customize the CDK props and construct.</param>
     /// <returns>The same resource builder instance for chaining additional configuration.</returns>
     [Experimental(AWS.Constants.ASPIREAWSPUBLISHERS001)]
-    public static IResourceBuilder<RedisResource> PublishAsElasticCacheNodeCluster(this IResourceBuilder<RedisResource> builder, PublishElastiCacheNodeClusterConfig? config = null)
+    public static IResourceBuilder<RedisResource> PublishAsElasticCacheNodeCluster(this IResourceBuilder<RedisResource> builder, PublishElastiCacheProvisionClusterConfig? config = null)
     {
-        var annotation = new PublishElasticCacheNodeClusterAnnotation { Config = config ?? new PublishElastiCacheNodeClusterConfig() };
+        var annotation = new PublishElasticCacheProvisionClusterAnnotation { Config = config ?? new PublishElastiCacheProvisionClusterConfig() };
         builder.Resource.Annotations.Add(annotation);
 
         return builder;
@@ -272,9 +272,9 @@ public static partial class AWSCDKEnvironmentExtensions
     /// <param name="config">An optional configuration object for providing callbacks to customize the CDK props and construct.</param>
     /// <returns>The same resource builder instance for chaining additional configuration.</returns>
     [Experimental(AWS.Constants.ASPIREAWSPUBLISHERS001)]
-    public static IResourceBuilder<ValkeyResource> PublishAsElasticCacheNodeCluster(this IResourceBuilder<ValkeyResource> builder, PublishElastiCacheNodeClusterConfig? config = null)
+    public static IResourceBuilder<ValkeyResource> PublishAsElasticCacheProvisionCluster(this IResourceBuilder<ValkeyResource> builder, PublishElastiCacheProvisionClusterConfig? config = null)
     {
-        var annotation = new PublishElasticCacheNodeClusterAnnotation { Config = config ?? new PublishElastiCacheNodeClusterConfig() };
+        var annotation = new PublishElasticCacheProvisionClusterAnnotation { Config = config ?? new PublishElastiCacheProvisionClusterConfig() };
         builder.Resource.Annotations.Add(annotation);
 
         return builder;

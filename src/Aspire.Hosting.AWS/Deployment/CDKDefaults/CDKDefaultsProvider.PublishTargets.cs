@@ -77,9 +77,19 @@ public partial class CDKDefaultsProvider
 
     public enum RedisResourcePublishTarget
     {
-        ElastiCacheNodeCluster,
+        /// <summary>
+        /// Creates an Amazon ElastiCache Provisioned Cluster to host the Redis or Valkey resource.
+        /// </summary>
+        ElastiCacheProvisionCluster,
+
+        /// <summary>
+        /// Creates an Amazon ElastiCache for Serverless Cluster to host the Redis or Valkey resource.
+        /// </summary>
         ElastiCacheServerlessCluster
     }
 
+    /// <summary>
+    /// The default publishing target to use when publishing <see cref="Aspire.Hosting.ApplicationModel.RedisResource">RedisResource</see> or <see cref="Aspire.Hosting.ApplicationModel.ValkeyResource">ValkeyResource</see>. The default value is <see cref="RedisResourcePublishTarget.ElastiCacheServerlessCluster"/>.
+    /// </summary>
     public virtual RedisResourcePublishTarget DefaultRedisResourcePublishTarget { get; set; } = RedisResourcePublishTarget.ElastiCacheServerlessCluster;
 }

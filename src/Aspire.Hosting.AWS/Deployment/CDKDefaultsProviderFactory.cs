@@ -12,7 +12,30 @@ namespace Aspire.Hosting.AWS.Deployment;
 public class CDKDefaultsProviderFactory(Func<AWSCDKEnvironmentResource, CDKDefaultsProvider> factory)
 {
     /// <summary>
-    /// Preview V1 implementation of the CDKDefaultsProvider.
+    /// Preview V1 of the AWS CDK defaults provider.
+    /// <para>Default Compute Services:</para>
+    /// <list type="table">
+    ///     <listheader>
+    ///         <term>Resource Type</term>
+    ///         <description>Default Compute Service</description>
+    ///     </listheader>
+    ///     <item>
+    ///         <term>Web Applications</term>
+    ///         <description>ECS Fargate Express Service</description>
+    ///     </item>
+    ///     <item>
+    ///         <term>Console Applications</term>
+    ///         <description>ECS Fargate Service</description>
+    ///     </item>
+    ///     <item>
+    ///         <term>Lambda Functions</term>
+    ///         <description>AWS Lambda</description>
+    ///     </item>
+    ///     <item>
+    ///         <term>Redis or Valkey Resource</term>
+    ///         <description>ElastiCache Serverless Cluster</description>
+    ///     </item>
+    /// </list>
     /// </summary>
     public static readonly CDKDefaultsProviderFactory Preview_V1 = new((environment) => new CDKDefaultsProviderPreviewV1(environment));
 

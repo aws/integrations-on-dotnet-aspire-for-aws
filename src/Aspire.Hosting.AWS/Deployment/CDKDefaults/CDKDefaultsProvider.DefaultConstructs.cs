@@ -112,35 +112,40 @@ public partial class CDKDefaultsProvider
     protected virtual CfnSubnetGroup CreateDefaultElastiCacheCfnSubnetGroup()
     {
         var subnetIds = GetDefaultVpc().PrivateSubnets.Select(s => s.SubnetId).ToArray();
+        if (!subnetIds.Any())
+            subnetIds = GetDefaultVpc().PublicSubnets.Select(s => s.SubnetId).ToArray();
+
+        subnetIds = subnetIds.Take(2).ToArray();
+
         return new CfnSubnetGroup(EnvironmentResource.CDKStack, "DefaultElastiCacheSubnetGroup", new CfnSubnetGroupProps
         {
-            Description = ElasticCacheNodeClusterSubnetGroupDescription,
+            Description = ElasticCacheProvisionClusterSubnetGroupDescription,
             SubnetIds = subnetIds
         });
     }
     
-    private ISecurityGroup? _defaultElastiCacheNodeClusterSecurityGroup;
-    public ISecurityGroup GetDefaultElastiCacheNodeClusterSecurityGroup()
+    private ISecurityGroup? _defaultElastiCacheProvisionClusterSecurityGroup;
+    public ISecurityGroup GetDefaultElastiCacheProvisionClusterSecurityGroup()
     {
-        if (_defaultElastiCacheNodeClusterSecurityGroup == null)
+        if (_defaultElastiCacheProvisionClusterSecurityGroup == null)
         {
             var definedDefault = FindDefaultConstructByAttribute<DefaultElastiCacheNodeSecurityGroupAttribute, ISecurityGroup>();
             if (definedDefault != null)
             {
-                _defaultElastiCacheNodeClusterSecurityGroup = definedDefault;
+                _defaultElastiCacheProvisionClusterSecurityGroup = definedDefault;
             }
             else
             {
-                _defaultElastiCacheNodeClusterSecurityGroup = CreateDefaultElastiCacheNodeClusterSecurityGroup();
+                _defaultElastiCacheProvisionClusterSecurityGroup = CreateDefaultElastiCacheProvisionClusterSecurityGroup();
             }
         }
 
-        return _defaultElastiCacheNodeClusterSecurityGroup;
+        return _defaultElastiCacheProvisionClusterSecurityGroup;
     }    
 
-    protected virtual ISecurityGroup CreateDefaultElastiCacheNodeClusterSecurityGroup()
+    protected virtual ISecurityGroup CreateDefaultElastiCacheProvisionClusterSecurityGroup()
     {
-        var defaultElastiCacheSecurityGroup = new SecurityGroup(EnvironmentResource.CDKStack, "DefaultElastiCacheNodeClusterSecurityGroup", new SecurityGroupProps
+        var defaultElastiCacheSecurityGroup = new SecurityGroup(EnvironmentResource.CDKStack, "DefaultElastiCacheProvisionClusterSecurityGroup", new SecurityGroupProps
         {
             Vpc = GetDefaultVpc(),
             AllowAllOutbound = true

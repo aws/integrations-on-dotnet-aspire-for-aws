@@ -6,12 +6,38 @@ namespace Aspire.Hosting.AWS.Deployment.CDKDefaults;
 
 public partial class CDKDefaultsProvider
 {
+    /// <summary>
+    /// Gets the default CPU value, in CPU units, for an AWS Fargate Express task definition.
+    /// </summary>
+    /// <remarks>
+    /// Default is 1024 CPU units (1 vCPU).
+    /// </remarks>
     public virtual double? ECSFargateExpressCpu => 1024;
 
+    /// <summary>
+    /// Gets the default memory size, in mebibytes (MiB), allocated for an AWS Fargate Express task.
+    /// </summary>
+    /// <remarks>
+    /// Default is 2048 MiB (2 GiB).
+    /// </remarks>
     public virtual double? ECSFargateExpressMiB => 2048;
 
+    /// <summary>
+    /// Gets the default container port used for ECS Fargate Express deployments.
+    /// </summary>
+    /// <remarks>
+    /// Default is port 8080.
+    /// </remarks>
     public virtual double? ECSFargateExpressContainerPort => 8080;
 
+    /// <summary>
+    /// Applies default values to the specified properties for configuring an AWS CloudFormation Express Gateway
+    /// service, if they are not already set.
+    /// </summary>
+    /// <param name="props">The properties object to which default values will be applied. Properties that are null or empty will be set to
+    /// recommended defaults for an Express Gateway service.</param>
+    /// <exception cref="InvalidDataException">Thrown if the <paramref name="props"/>.PrimaryContainer property is not set or is not of type <see
+    /// cref="CfnExpressGatewayService.ExpressGatewayContainerProperty"/>.</exception>
     protected internal virtual void ApplyCfnExpressGatewayServiceDefaults(CfnExpressGatewayServiceProps props)
     {
         if (props.Cluster == null)

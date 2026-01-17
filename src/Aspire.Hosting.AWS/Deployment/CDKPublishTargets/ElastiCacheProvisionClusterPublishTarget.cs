@@ -16,16 +16,16 @@ using IResource = Aspire.Hosting.ApplicationModel.IResource;
 namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
 {
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    internal class ElastiCacheNodeClusterPublishTarget(ILogger<ElastiCacheNodeClusterPublishTarget> logger) : AbstractAWSPublishTarget(logger)
+    internal class ElastiCacheProvisionClusterPublishTarget(ILogger<ElastiCacheProvisionClusterPublishTarget> logger) : AbstractAWSPublishTarget(logger)
     {
-        public override string PublishTargetName => "ElastiCache Node Cluster";
+        public override string PublishTargetName => "ElastiCache Provision Cluster";
 
-        public override Type PublishTargetAnnotation => typeof(PublishElasticCacheNodeClusterAnnotation);
+        public override Type PublishTargetAnnotation => typeof(PublishElasticCacheProvisionClusterAnnotation);
 
         public override Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
         {
-            var publishAnnotation = annotation as PublishElasticCacheNodeClusterAnnotation
-                                    ?? throw new InvalidOperationException($"Annotation for resource {resource.Name} is not a valid {nameof(PublishElasticCacheNodeClusterAnnotation)}.");
+            var publishAnnotation = annotation as PublishElasticCacheProvisionClusterAnnotation
+                                    ?? throw new InvalidOperationException($"Annotation for resource {resource.Name} is not a valid {nameof(PublishElasticCacheProvisionClusterAnnotation)}.");
 
             var clusterProps = new CfnReplicationGroupProps();
             publishAnnotation.Config.PropsCfnReplicationGroupCallback?.Invoke(CreatePublishTargetContext(environment), clusterProps);
@@ -41,13 +41,13 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
         public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
         {
             if ((resource is RedisResource || resource is ValkeyResource) &&
-                cdkDefaultsProvider.DefaultRedisResourcePublishTarget == CDKDefaultsProvider.RedisResourcePublishTarget.ElastiCacheNodeCluster
+                cdkDefaultsProvider.DefaultRedisResourcePublishTarget == CDKDefaultsProvider.RedisResourcePublishTarget.ElastiCacheProvisionCluster
                )
             {
                 return new IsDefaultPublishTargetMatchResult
                 {
                     IsMatch = true,
-                    PublishTargetAnnotation = new PublishElasticCacheNodeClusterAnnotation()
+                    PublishTargetAnnotation = new PublishElasticCacheProvisionClusterAnnotation()
                 };
             }
 
@@ -60,8 +60,8 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
             if (linkedAnnotation.Construct is not CfnReplicationGroup cacheConstruct)
                 return result;
 
-            if (!linkedAnnotation.Resource.TryGetLastAnnotation<PublishElasticCacheNodeClusterAnnotation>(out var publishAnnotation))
-                throw new InvalidDataException($"Missing PublishElasticCacheNodeClusterAnnotation for resource {linkedAnnotation.Resource.Name}.");
+            if (!linkedAnnotation.Resource.TryGetLastAnnotation<PublishElasticCacheProvisionClusterAnnotation>(out var publishAnnotation))
+                throw new InvalidDataException($"Missing {nameof(PublishElasticCacheProvisionClusterAnnotation)} for resource {linkedAnnotation.Resource.Name}.");
 
             result.EnvironmentVariables = new Dictionary<string, string>();
 
@@ -74,7 +74,7 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
 
                 // Log a message to the user since we are making an assumption that the user might need to change.
                 if (publishAnnotation.Config.AssumeConnectionStringClusterMode == null)
-                    logger.LogInformation("Generating connection string for resource {Resource} assuming cluster mode is enabled. If an error during deployment happens about attributes not found the {Property} property on {Config} might need to be set to false.", linkedAnnotation.Resource.Name, nameof(PublishElastiCacheNodeClusterConfig.AssumeConnectionStringClusterMode), nameof(PublishElastiCacheNodeClusterConfig));
+                    logger.LogInformation("Generating connection string for resource {Resource} assuming cluster mode is enabled. If an error during deployment happens about attributes not found the {Property} property on {Config} might need to be set to false.", linkedAnnotation.Resource.Name, nameof(PublishElastiCacheProvisionClusterConfig.AssumeConnectionStringClusterMode), nameof(PublishElastiCacheProvisionClusterConfig));
             }
             else
             {
@@ -101,7 +101,7 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
 
         public override void ApplyReferenceSecurityGroup(AWSLinkedObjectsAnnotation linkedAnnotation, ISecurityGroup securityGroup)
         {
-            var elastiCacheSecurityGroup = linkedAnnotation.EnvironmentResource.DefaultsProvider.GetDefaultElastiCacheNodeClusterSecurityGroup();
+            var elastiCacheSecurityGroup = linkedAnnotation.EnvironmentResource.DefaultsProvider.GetDefaultElastiCacheProvisionClusterSecurityGroup();
             elastiCacheSecurityGroup.AddIngressRule(peer: securityGroup, connection: Port.Tcp(6379));
         }
     }
@@ -110,7 +110,7 @@ namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
 namespace Aspire.Hosting.AWS.Deployment
 {
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    public class PublishElastiCacheNodeClusterConfig
+    public class PublishElastiCacheProvisionClusterConfig
     {
         /// <summary>
         /// When setting up connection strings for reference resources either the ConfigurationEndPoint
@@ -132,8 +132,8 @@ namespace Aspire.Hosting.AWS.Deployment
     }
 
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    internal class PublishElasticCacheNodeClusterAnnotation : IAWSPublishTargetAnnotation
+    internal class PublishElasticCacheProvisionClusterAnnotation : IAWSPublishTargetAnnotation
     {
-        public PublishElastiCacheNodeClusterConfig Config { get; set; } = new();
+        public PublishElastiCacheProvisionClusterConfig Config { get; set; } = new();
     }
 }
