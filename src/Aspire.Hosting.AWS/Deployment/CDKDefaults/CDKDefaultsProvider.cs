@@ -7,7 +7,7 @@ namespace Aspire.Hosting.AWS.Deployment.CDKDefaults;
 /// <summary>
 /// The base class for AWS CDK defaults providers. It provides overridable accessors and methods for all defaults values and constructs used
 /// during AWS CDK construct generation for Aspire resources. Users must use a version derived class or their own subsclass. The version derived
-/// class like <see cref="DefaultCDKDefaultsProviderV1"/> provides a locked snapshot of default values. As defaults evolve over time new 
+/// class like <see cref="CDKDefaultsProviderPreviewV1"/> provides a locked snapshot of default values. As defaults evolve over time new 
 /// versioned subclasses will be provided allowing users to opt in to the defaults when ready. 
 /// <para>
 /// Users may also create their own subclass to provide custom default values. This is useful when new versions have some changes that want to adopt
@@ -20,7 +20,7 @@ public abstract partial class CDKDefaultsProvider
     /// <summary>
     /// Gets the AWS CDK environment resource associated with this instance.
     /// </summary>
-    protected AWSCDKEnvironmentResource EnvironmentResource { get; }
+    private AWSCDKEnvironmentResource EnvironmentResource { get; }
 
     /// <summary>
     /// Creates a new instance of the <see cref="CDKDefaultsProvider"/> class.

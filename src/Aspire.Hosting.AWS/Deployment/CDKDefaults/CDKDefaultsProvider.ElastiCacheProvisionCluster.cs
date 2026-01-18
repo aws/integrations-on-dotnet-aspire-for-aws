@@ -28,7 +28,7 @@ public partial class CDKDefaultsProvider
     /// <remarks>
     /// Default is "8.2".
     /// </remarks>
-    public virtual string? ElasticCacheProvisionClusterEngineVersion => "8.2";
+    public virtual string ElasticCacheProvisionClusterEngineVersion => "8.2";
 
     /// <summary>
     /// Gets the cache node type used for the ElastiCache provision cluster.
@@ -36,7 +36,7 @@ public partial class CDKDefaultsProvider
     /// <remarks>
     /// Default is "cache.t3.micro".
     /// </remarks>
-    public virtual string? ElasticCacheProvisionClusterCacheNodeType => "cache.t3.micro";
+    public virtual string ElasticCacheProvisionClusterCacheNodeType => "cache.t3.micro";
 
     /// <summary>
     /// Gets the number of cache clusters in the ElastiCache provision cluster.
@@ -44,7 +44,7 @@ public partial class CDKDefaultsProvider
     /// <remarks>
     /// Default is 2.
     /// </remarks>
-    public virtual double? ElasticCacheProvisionClusterNumCacheClusters => 2;
+    public virtual double ElasticCacheProvisionClusterNumCacheClusters => 2;
 
     /// <summary>
     /// Gets a value indicating whether automatic failover is enabled for the ElastiCache provision cluster.
@@ -52,7 +52,7 @@ public partial class CDKDefaultsProvider
     /// <remarks>
     /// Default is true.
     /// </remarks>
-    public virtual bool? ElasticCacheProvisionClusterAutomaticFailoverEnabled => true;
+    public virtual bool ElasticCacheProvisionClusterAutomaticFailoverEnabled => true;
 
     /// <summary>
     /// Gets the default port number used for connecting to an Amazon ElastiCache provision cluster.

@@ -47,7 +47,7 @@ public partial class CDKDefaultsProvider
     /// </summary>
     /// <param name="projectName">The project name is used to create the log stream prefix.</param>
     /// <returns>The CDK LogDriver construct</returns>
-    public virtual LogDriver? CreateECSFargateServiceLogDriver(string projectName)
+    public virtual LogDriver CreateECSFargateServiceLogDriver(string projectName)
     {
         return LogDrivers.AwsLogs(new AwsLogDriverProps
         {

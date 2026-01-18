@@ -14,9 +14,12 @@ using System.Diagnostics.CodeAnalysis;
 using App = Amazon.CDK.App;
 using Stack = Amazon.CDK.Stack;
 
+#pragma warning disable IDE0130
+// ReSharper disable once CheckNamespace
 namespace Aspire.Hosting;
+#pragma warning restore IDE0130
 
-public static partial class AWSCDKEnvironmentExtensions
+public static class AWSCDKEnvironmentExtensions
 {
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
     private static void AddEnvironmentServices(this IDistributedApplicationBuilder builder)
@@ -36,7 +39,7 @@ public static partial class AWSCDKEnvironmentExtensions
     }
 
     /// <summary>
-    /// Adds the AWS CDK Aspire environment used to transform the resources defined in the Aspire AppHost into AWS CDK constructs during the publish
+    /// Adds the AWS CDK Aspire environment used to transform the resources defined in the Aspire AppHost into AWS CDK constructs during the publishing
     /// and deploy phases.
     /// <para>
     /// Node.js 22.x and AWS CDK must be installed on the machine running the deployment. For information installing AWS CDK after Node.js is installed <see href="https://docs.aws.amazon.com/cdk/v2/guide/getting-started.html"/>.
@@ -68,7 +71,7 @@ public static partial class AWSCDKEnvironmentExtensions
     /// }
     /// </code>
     /// <para>
-    /// The Aspire.Hosting.AWS.Deployment namespace attributes using the naming pattern "Default<resource>Attribute" to identify default resources in the CDK stack.
+    /// The Aspire.Hosting.AWS.Deployment namespace attributes using the naming pattern "Default&lt;resource&gt;Attribute" to identify default resources in the CDK stack.
     /// For example <see cref="Aspire.Hosting.AWS.Deployment.DefaultVpcAttribute"/> is used to identify the default VPC resource in the CDK stack.
     /// </para>
     /// <para>
@@ -101,7 +104,7 @@ public static partial class AWSCDKEnvironmentExtensions
     }
 
     /// <summary>
-    /// Adds the AWS CDK Aspire environment used to transform the resources defined in the Aspire AppHost into AWS CDK constructs during the publish
+    /// Adds the AWS CDK Aspire environment used to transform the resources defined in the Aspire AppHost into AWS CDK constructs during the publishing
     /// and deploy phases.
     /// <para>
     /// Node.js 22.x and AWS CDK must be installed on the machine running the deployment. For information installing AWS CDK after Node.js is installed <see href="https://docs.aws.amazon.com/cdk/v2/guide/getting-started.html"/>.
@@ -132,7 +135,7 @@ public static partial class AWSCDKEnvironmentExtensions
     /// }
     /// </code>
     /// <para>
-    /// The Aspire.Hosting.AWS.Deployment namespace attributes using the naming pattern "Default<resource>Attribute" to identify default resources in the CDK stack.
+    /// The Aspire.Hosting.AWS.Deployment namespace attributes using the naming pattern "Default&lt;resource&gt;Attribute" to identify default resources in the CDK stack.
     /// For example <see cref="Aspire.Hosting.AWS.Deployment.DefaultVpcAttribute"/> is used to identify the default VPC resource in the CDK stack.
     /// </para>
     /// <para>
@@ -146,7 +149,7 @@ public static partial class AWSCDKEnvironmentExtensions
     /// <param name="builder">The resource builder for the resource to configure.</param>
     /// <param name="name">The Aspire resource name also used as the CloudFormation stack name.</param>
     /// <param name="cdkDefaultsProviderFactory">The DefaultProvider is used configure the default choices used when deploying resources.</param>
-    /// <param name="stackFactory">Func to provide a custom CDK stack with it's own resources. The Aspire provisioned resource will be added to this CDK stack.</param>
+    /// <param name="stackFactory">Func to provide a custom CDK stack with its own resources. The Aspire provisioned resource will be added to this CDK stack.</param>
     /// <param name="environmentResourceConfig">Additional optional configuration for the environment. For example specifying the AWS SDK configuration.</param>
     /// <returns>The same resource builder instance for chaining additional configuration.</returns>
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
@@ -177,7 +180,7 @@ public static partial class AWSCDKEnvironmentExtensions
     /// <param name="builder">The resource builder for the resource to configure.</param>
     /// <param name="config">An optional configuration object for providing callbacks to customize the CDK props and construct.</param>
     /// <returns>The same resource builder instance for chaining additional configuration.</returns>
-    [Experimental(AWS.Constants.ASPIREAWSPUBLISHERS001)]
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
     public static IResourceBuilder<ProjectResource> PublishAsECSFargateExpressService(this IResourceBuilder<ProjectResource> builder, PublishECSFargateExpressServiceConfig? config = null)
     {
         var annotation = new PublishECSFargateServiceExpressAnnotation { Config = config ?? new PublishECSFargateExpressServiceConfig() };
@@ -196,7 +199,7 @@ public static partial class AWSCDKEnvironmentExtensions
     /// <param name="builder">The resource builder for the resource to configure.</param>
     /// <param name="config">An optional configuration object for providing callbacks to customize the CDK props and construct.</param>
     /// <returns>The same resource builder instance for chaining additional configuration.</returns>
-    [Experimental(AWS.Constants.ASPIREAWSPUBLISHERS001)]
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
     public static IResourceBuilder<ProjectResource> PublishAsECSFargateService(this IResourceBuilder<ProjectResource> builder, PublishECSFargateServiceConfig? config = null)
     {
         var annotation = new PublishECSFargateServiceAnnotation { Config = config ?? new PublishECSFargateServiceConfig() };
@@ -210,7 +213,7 @@ public static partial class AWSCDKEnvironmentExtensions
     /// <see href="https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_ecs_patterns.ApplicationLoadBalancedFargateService.html">
     /// ApplicationLoadBalancedFargateService</see> construct. This construct will create an ECS Fargate service fronted by an 
     /// Application Load Balancer (ALB) to distribute incoming traffic across multiple instances of the web application.
-    /// By default an HTTP endpoint will be provisioned.
+    /// By default, an HTTP endpoint will be provisioned.
     /// </summary>
     /// <remarks>
     /// Port 8080 is assumed to be the container port the web application listens on. This can be customized by adding a callback on the config's PropsApplicationLoadBalancedTaskImageOptionsCallback property.
@@ -218,7 +221,7 @@ public static partial class AWSCDKEnvironmentExtensions
     /// <param name="builder">The resource builder for the resource to configure.</param>
     /// <param name="config">An optional configuration object for providing callbacks to customize the CDK props and construct.</param>
     /// <returns>The same resource builder instance for chaining additional configuration.</returns>
-    [Experimental(AWS.Constants.ASPIREAWSPUBLISHERS001)]
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
     public static IResourceBuilder<ProjectResource> PublishAsECSFargateServiceWithALB(this IResourceBuilder<ProjectResource> builder, PublishECSFargateServiceWithALBConfig? config = null)
     {
         var annotation = new PublishECSFargateServiceWithALBAnnotation { Config = config ?? new PublishECSFargateServiceWithALBConfig() };
@@ -237,7 +240,7 @@ public static partial class AWSCDKEnvironmentExtensions
     /// <param name="builder">The resource builder for the resource to configure.</param>
     /// <param name="config">An optional configuration object for providing callbacks to customize the CDK props and construct.</param>
     /// <returns>The same resource builder instance for chaining additional configuration.</returns>
-    [Experimental(AWS.Constants.ASPIREAWSPUBLISHERS001)]
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
     public static IResourceBuilder<RedisResource> PublishAsElasticCacheNodeCluster(this IResourceBuilder<RedisResource> builder, PublishElastiCacheProvisionClusterConfig? config = null)
     {
         var annotation = new PublishElasticCacheProvisionClusterAnnotation { Config = config ?? new PublishElastiCacheProvisionClusterConfig() };
@@ -250,13 +253,13 @@ public static partial class AWSCDKEnvironmentExtensions
     /// Configures the <see cref="RedisResource"/> to be published as an Amazon ElastiCache serverless cluster during deployment.
     /// </summary>
     /// <remarks>
-    /// For optimal AWS support Valkey will be used by default as the cluster engine. To use Redis as the cluster engine set a callback on the config's <see cref="PublishElastiCacheServerlessClusterConfig.PropsCfnReplicationGroupCallback"/>
+    /// For optimal AWS support Valkey will be used by default as the cluster engine. To use Redis as the cluster engine set a callback on the config's <see cref="PublishElastiCacheServerlessClusterConfig.PropsCfnServerlessCacheCallback"/>
     /// property and modify the <see cref="Amazon.CDK.AWS.ElastiCache.CfnServerlessCacheProps.Engine"/> property.
     /// </remarks>
     /// <param name="builder">The resource builder for the resource to configure.</param>
     /// <param name="config">An optional configuration object for providing callbacks to customize the CDK props and construct.</param>
     /// <returns>The same resource builder instance for chaining additional configuration.</returns>
-    [Experimental(AWS.Constants.ASPIREAWSPUBLISHERS001)]
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
     public static IResourceBuilder<RedisResource> PublishAsElasticCacheServerlessCluster(this IResourceBuilder<RedisResource> builder, PublishElastiCacheServerlessClusterConfig? config = null)
     {
         var annotation = new PublishElasticCacheServerlessClusterAnnotation { Config = config ?? new PublishElastiCacheServerlessClusterConfig() };
@@ -271,7 +274,7 @@ public static partial class AWSCDKEnvironmentExtensions
     /// <param name="builder">The resource builder for the resource to configure.</param>
     /// <param name="config">An optional configuration object for providing callbacks to customize the CDK props and construct.</param>
     /// <returns>The same resource builder instance for chaining additional configuration.</returns>
-    [Experimental(AWS.Constants.ASPIREAWSPUBLISHERS001)]
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
     public static IResourceBuilder<ValkeyResource> PublishAsElasticCacheProvisionCluster(this IResourceBuilder<ValkeyResource> builder, PublishElastiCacheProvisionClusterConfig? config = null)
     {
         var annotation = new PublishElasticCacheProvisionClusterAnnotation { Config = config ?? new PublishElastiCacheProvisionClusterConfig() };
@@ -286,7 +289,7 @@ public static partial class AWSCDKEnvironmentExtensions
     /// <param name="builder">The resource builder for the resource to configure.</param>
     /// <param name="config">An optional configuration object for providing callbacks to customize the CDK props and construct.</param>
     /// <returns>The same resource builder instance for chaining additional configuration.</returns>
-    [Experimental(AWS.Constants.ASPIREAWSPUBLISHERS001)]
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
     public static IResourceBuilder<ValkeyResource> PublishAsElasticCacheServerlessCluster(this IResourceBuilder<ValkeyResource> builder, PublishElastiCacheServerlessClusterConfig? config = null)
     {
         var annotation = new PublishElasticCacheServerlessClusterAnnotation { Config = config ?? new PublishElastiCacheServerlessClusterConfig() };
@@ -304,13 +307,13 @@ public static partial class AWSCDKEnvironmentExtensions
     /// The following example shows how to add an SQS event source to the Lambda function:
     /// </remarks>
     /// <code>
-    /// builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
+    /// builder.AddAWSLambdaFunction&lt;Projects.SQSProcessorFunction&gt;("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
     ///     .WithDeploymentImageTag(context => deploymentTag)
     ///     .PublishAsLambdaFunction(new PublishLambdaFunctionConfig
     ///     {
     ///         ConstructFunctionCallback = (ctx, construct) =>
     ///         {
-    ///             construct.AddEventSource(new SqsEventSource(ctx.GetDeploymentStack<DeploymentStack>().LambdaQueue, new SqsEventSourceProps
+    ///             construct.AddEventSource(new SqsEventSource(ctx.GetDeploymentStack&lt;DeploymentStack&gt;().LambdaQueue, new SqsEventSourceProps
     ///             {
     ///                 BatchSize = 5,
     ///                 Enabled = true
@@ -321,7 +324,7 @@ public static partial class AWSCDKEnvironmentExtensions
     /// <param name="builder">The resource builder for the resource to configure.</param>
     /// <param name="config">Configuration for attaching callbacks to configure the CDK construct's props and associate the created CDK construct to other CDK constructs.</param>
     /// <returns>The same resource builder instance for chaining additional configuration.</returns>
-    [Experimental(AWS.Constants.ASPIREAWSPUBLISHERS001)]
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
     public static IResourceBuilder<LambdaProjectResource> PublishAsLambdaFunction(this IResourceBuilder<LambdaProjectResource> builder, PublishLambdaFunctionConfig? config = null)
     {
         var annotation = new PublishLambdaFunctionAnnotation { Config = config ?? new PublishLambdaFunctionConfig() };

@@ -89,7 +89,7 @@ internal class ECSFargateServiceWithALBPublishTarget(ITarballContainerImageBuild
 
         foreach (var listener in albFargateConstruct.LoadBalancer.Listeners)
         {
-            string protocol = listener.Port == 443 ? "https" : "http";
+            string protocol = (int)listener.Port == 443 ? "https" : "http";
 
             var key = $"services__{linkedAnnotation.Resource.Name}__{protocol}__0";
             var endpoint = $"{protocol}://{Token.AsString(albFargateConstruct.LoadBalancer.LoadBalancerDnsName)}:{Token.AsString(listener.Port)}/";

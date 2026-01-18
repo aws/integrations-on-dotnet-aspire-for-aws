@@ -19,7 +19,7 @@ internal class ECSFargateServicePublishTarget(ITarballContainerImageBuilder imag
 
     public override Type PublishTargetAnnotation => typeof(PublishECSFargateServiceAnnotation);
 
-    public override async Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, ApplicationModel.IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
+    public override async Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
     {
         var projectResource = resource as ProjectResource
                               ?? throw new InvalidOperationException($"Resource {resource.Name} is not a valid IProjectResource.");

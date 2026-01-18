@@ -3,7 +3,6 @@
 using Amazon.CDK.AWS.Lambda.EventSources;
 using Aspire.Hosting.AWS.Deployment;
 using Lambda.AppHost;
-using System.Diagnostics;
 
 // TODOs:
 // Support Publish methods from AddContainer
@@ -36,19 +35,19 @@ var cache = builder.AddValkey("cache");
 
 var frontend = builder.AddProject<Projects.Frontend>("Frontend")
         .WithExternalHttpEndpoints()
-        .WithDeploymentImageTag(context => deploymentTag)
+        .WithDeploymentImageTag(_ => deploymentTag)
         .WithReference(cache)
         .WaitFor(cache);
 
 
 builder.AddProject<Projects.Backend>("backend")
-        .WithDeploymentImageTag(context => deploymentTag)
+        .WithDeploymentImageTag(_ => deploymentTag)
         .WithReference(frontend)
         .WithReference(cache)
         .WaitFor(cache);
 
 builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
-        .WithDeploymentImageTag(context => deploymentTag)
+        .WithDeploymentImageTag(_ => deploymentTag)
         .PublishAsLambdaFunction(new PublishLambdaFunctionConfig
         {
             ConstructFunctionCallback = (ctx, construct) =>

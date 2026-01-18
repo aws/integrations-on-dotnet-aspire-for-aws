@@ -28,16 +28,16 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
         try
         {
             logger.LogDebug("Starting synthesis of CDK application for environment {EnvironmentName}", environment.Name);
-            logger.LogDebug("Capture of output from CDK context generation:\n{CDKContextLog}", environment.CDKContextGenerationLog);
-            InitializePublishTargetMapping(environment);
+            logger.LogDebug("Capture of output from CDK context generation:\n{CdkContextLog}", environment.CDKContextGenerationLog);
+            InitializePublishTargetMapping();
 
             var outputPath = environment.CDKApp.Outdir;
 
-            logger.LogInformation("Publishing to {output}", outputPath);
+            logger.LogInformation("Publishing to {Output}", outputPath);
             ClearOutputDirectory(outputPath);
 
             ApplyDefaultPublishTargetAnnotations(model, environment);
-            await ProcessResources(context, step, model, environment, cancellationToken);
+            await ProcessResources(context, model, environment, cancellationToken);
 
             environment.CDKApp.Synth();
 
@@ -54,18 +54,18 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
 
             if (environment.CDKContextGenerationLog == null)
             {
-                logger.LogDebug("No CDK context generation was run before synthesizing the application.");
+                logger.LogDebug("No CDK context generation was run before synthesizing the application");
             }
             else
             {
-                logger.LogDebug("Console out from generating the CDK context used to synthesize the application:\n{CDKContextLog}", environment.CDKContextGenerationLog);
+                logger.LogDebug("Console out from generating the CDK context used to synthesize the application:\n{CdkContextLog}", environment.CDKContextGenerationLog);
             }
 
             await step.FailAsync($"Failed to synthesize CDK application: {ex}", cancellationToken);
         }
     }
 
-    private void InitializePublishTargetMapping(AWSCDKEnvironmentResource environment)
+    private void InitializePublishTargetMapping()
     {
         _annotationsToPublishTargetsMapping.Clear();
 
@@ -93,7 +93,7 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
                         resource is not StackResource && 
                         resource is not ParameterResource)
                     {
-                        logger.LogInformation("Resource \"{ResourceName}\" of type \"{ResourceType}\" has no AWS publish target and will not be included in CDK stack.", resource.Name, resource.GetType().Namespace + "." + resource.GetType().Name);
+                        logger.LogInformation("Resource \"{ResourceName}\" of type \"{ResourceType}\" has no AWS publish target and will not be included in CDK stack", resource.Name, resource.GetType().Namespace + "." + resource.GetType().Name);
                     }
                     continue;
                 }
@@ -119,7 +119,7 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
         return bestMatch?.PublishTargetAnnotation;
     }
 
-    private async Task ProcessResources(PipelineStepContext context, IReportingTask step, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken)
+    private async Task ProcessResources(PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken)
     {
         // TODO: Make sure the order of processing resources responds to dependencies between resources
         foreach (var resource in model.Resources)
@@ -141,7 +141,7 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Failed to prepare {ProjectName} for {ResourceType}.", resource.Name, publishTarget.PublishTargetName);
+                logger.LogError(ex, "Failed to prepare {ProjectName} for {ResourceType}", resource.Name, publishTarget.PublishTargetName);
                 await activityTask.FailAsync($"Failed to prepare {resource.Name} for {publishTarget.PublishTargetName}: {ex}", cancellationToken);
                 throw;
             }
@@ -152,15 +152,15 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
     {
         if (Directory.Exists(outputPath))
         {
-            logger.LogTrace("Clearing output directory '{outputPath}'...", outputPath);
+            logger.LogTrace("Clearing output directory '{OutputPath}'...", outputPath);
             foreach (var file in Directory.EnumerateFiles(outputPath))
             {
-                logger.LogTrace("Deleting file '{file}'...", file);
+                logger.LogTrace("Deleting file '{File}'...", file);
                 File.Delete(file);
             }
             foreach (var directory in Directory.EnumerateDirectories(outputPath))
             {
-                logger.LogTrace("Deleting directory '{directory}'...", directory);
+                logger.LogTrace("Deleting directory '{Directory}'...", directory);
                 Directory.Delete(directory, recursive: true);
             }
         }
@@ -199,7 +199,7 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Error switching CDK assets file {file} to use PowerShell for restoring tarball", file);
+                logger.LogWarning(ex, "Error switching CDK assets file {File} to use PowerShell for restoring tarball", file);
             }
         }
     }

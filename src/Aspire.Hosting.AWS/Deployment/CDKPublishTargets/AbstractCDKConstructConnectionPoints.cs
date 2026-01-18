@@ -26,7 +26,7 @@ public class AbstractCDKConstructConnectionPoints
     /// Lambda function needs a security group that is added to the ElastiCache's
     /// default security group as an ingress rule.
     /// </summary>
-    public virtual ISecurityGroup? ReferenceSecurityGroup { get; }
+    public virtual ISecurityGroup? ReferenceSecurityGroup { get; } = null;
     
     /// <summary>
     /// Gets and sets the VPC for the construct. This is should be overriden when VPC configuration is optional

@@ -32,7 +32,7 @@ public partial class CDKDefaultsProvider
     /// <param name="props">>The <see cref="CfnServerlessCacheProps"/> object to which default values will be applied. Properties that are
     /// null will be set to their default values.</param>
     /// <param name="resource">The Aspire resource for which the name will be used for creating default values.</param>
-    protected internal virtual void ApplyCfnServerlessCachePropsDefaults(CfnServerlessCacheProps props, Aspire.Hosting.ApplicationModel.IResource resource)
+    protected internal virtual void ApplyCfnServerlessCachePropsDefaults(CfnServerlessCacheProps props, ApplicationModel.IResource resource)
     {
         if (props.ServerlessCacheName == null)
             props.ServerlessCacheName = $"{this.EnvironmentResource.CDKStack.StackName}-{resource.Name}";

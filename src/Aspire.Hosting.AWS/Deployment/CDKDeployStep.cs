@@ -2,9 +2,7 @@
 
 using Amazon.CloudFormation;
 using Amazon.CloudFormation.Model;
-using Amazon.Runtime.Credentials;
 using Aspire.Hosting.ApplicationModel;
-using Aspire.Hosting.AWS.Provisioning;
 using Aspire.Hosting.AWS.Utils.Internal;
 using Aspire.Hosting.Pipelines;
 using Microsoft.Extensions.Logging;
@@ -25,11 +23,11 @@ internal class CDKDeployStep(IProcessCommandService processCommandService, ILogg
     {
         using var cfClient = environment.GetCloudFormationClient();
 
-        await ExecuteCDKDeployCLIAsync(cfClient, context, model, environment, cancellationToken);
+        await ExecuteCDKDeployCLIAsync(cfClient, context, environment, cancellationToken);
         await LogOutputParametersAsync(cfClient, context, environment, cancellationToken);
     }
 
-    private async Task ExecuteCDKDeployCLIAsync(AmazonCloudFormationClient cfClient, PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken)
+    private async Task ExecuteCDKDeployCLIAsync(AmazonCloudFormationClient cfClient, PipelineStepContext context, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken)
     {
         var step = await context.ReportingStep.CreateTaskAsync($"Initiating CDK deploy", cancellationToken);
         try

@@ -70,7 +70,7 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
     /// </summary>
     /// <param name="resource"></param>
     /// <returns></returns>
-    protected IList<AWSLinkedObjectsAnnotation> GetAllReferencesLinks(IResource resource)
+    private IList<AWSLinkedObjectsAnnotation> GetAllReferencesLinks(IResource resource)
     {
         var links = new List<AWSLinkedObjectsAnnotation>();
         
@@ -111,8 +111,8 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
     /// <summary>
     /// Apply deployment tag to the CDK construct if the Aspire resource has a <see cref="DeploymentImageTagCallbackAnnotation"/>.
     /// </summary>
-    /// <param name="environmentResource">The owning environment</param>
-    /// <param name="resource">The Aspire resource being published</param>
+    /// <param name="environment">The owning environment</param>
+    /// <param name="aspireResource">The Aspire resource being published</param>
     /// <param name="construct">The CDK construct to create the CloudFormation tag with the Aspire deployment tag</param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
@@ -126,10 +126,7 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
                 CancellationToken = cancellationToken,
             };
             var tag = await deploymentTag.Callback(context).ConfigureAwait(false);
-            if (tag != null)
-            {
-                Tags.Of(construct).Add(environment.DefaultsProvider.DeploymentTagName, tag);
-            }
+            Tags.Of(construct).Add(environment.DefaultsProvider.DeploymentTagName, tag);
         }
     }
 
@@ -168,7 +165,7 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
         
         if (securityGroups == null)
         {
-            securityGroups = new ISecurityGroup[] { securityGroup };
+            securityGroups = new [] { securityGroup };
         }
         else
         {
@@ -185,7 +182,7 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
     /// </summary>
     /// <param name="referencePoints">The CDK connection points for the given Aspire resource to add connection info for resources referencing the Aspire resource.</param>
     /// <param name="resource">The Aspire resource that potentially had other resources add a reference to.</param>
-    protected virtual void ProcessRelationShips(AbstractCDKConstructConnectionPoints referencePoints, ApplicationModel.IResource resource)
+    protected virtual void ProcessRelationShips(AbstractCDKConstructConnectionPoints referencePoints, IResource resource)
     {
         var environmentVariables = referencePoints.EnvironmentVariables;
          

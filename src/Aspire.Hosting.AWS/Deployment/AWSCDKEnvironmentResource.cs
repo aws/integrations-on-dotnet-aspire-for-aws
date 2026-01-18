@@ -159,14 +159,12 @@ public abstract class AWSCDKEnvironmentResource : Resource
     {
         string? outputPath = null;
         var args = Environment.GetCommandLineArgs();
-        if (args != null)
+
+        for(var i = 0; i < args.Length - 1; i++)
         {
-            for(var i = 0; i < args.Length - 1; i++)
+            if (string.Equals(args[i], "--output-path", StringComparison.CurrentCultureIgnoreCase) || string.Equals(args[i], "-o", StringComparison.CurrentCultureIgnoreCase))
             {
-                if (string.Equals(args[i], "--output-path", StringComparison.CurrentCultureIgnoreCase) || string.Equals(args[i], "-o", StringComparison.CurrentCultureIgnoreCase))
-                {
-                    outputPath = args[i + 1];
-                }
+                outputPath = args[i + 1];
             }
         }
 
@@ -188,7 +186,7 @@ public abstract class AWSCDKEnvironmentResource : Resource
         return outputPath;
     }
 
-    protected Amazon.CDK.IEnvironment GetCDKEnvironment()
+    protected IEnvironment GetCDKEnvironment()
     {
         var environment = new Amazon.CDK.Environment();
 
@@ -202,7 +200,10 @@ public abstract class AWSCDKEnvironmentResource : Resource
             {
                 environment.Region = FallbackRegionFactory.GetRegionEndpoint()?.SystemName;
             }
-            catch { }
+            catch
+            {
+                // ignored
+            }
         }
 
         AWSCredentials? awsCredentials = null;
@@ -217,7 +218,10 @@ public abstract class AWSCDKEnvironmentResource : Resource
             {
                 awsCredentials = DefaultAWSCredentialsIdentityResolver.GetCredentials();
             }
-            catch { }
+            catch
+            {
+                // ignored
+            }
         }
 
         if (environment.Region != null && awsCredentials != null)
@@ -346,7 +350,7 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
 
                 var fullPath = Assembly.GetEntryAssembly()!.Location;
                 var appHostAssembly = Path.GetFileName(fullPath);
-                string? workingDirectory = Directory.GetParent(fullPath)!.FullName;
+                string workingDirectory = Directory.GetParent(fullPath)!.FullName;
                 var outputPath = Path.Combine(Path.GetTempPath(), Path.GetFileNameWithoutExtension(Path.GetRandomFileName()));
                 Directory.CreateDirectory(outputPath);
 
@@ -367,7 +371,7 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
                 {
                     // If the CDK CLI generated a CDK context it will put the value data in the CDK_CONTEXT_JSON_ENV_VARIABLE environment variable.
                     // Store the content in the location specified by the parent fork in the "if" block above.
-                    var cdkContextJsonContent = System.Environment.GetEnvironmentVariable(CDK_CONTEXT_JSON_ENV_VARIABLE);
+                    var cdkContextJsonContent = Environment.GetEnvironmentVariable(CDK_CONTEXT_JSON_ENV_VARIABLE);
                     if (!string.IsNullOrEmpty(cdkContextJsonContent))
                     {
                         var cdkContextJsonOutputPath = Environment.GetEnvironmentVariable(CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE);

@@ -1,7 +1,6 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Aspire.Hosting.ApplicationModel;
-using Constructs;
 using System.Diagnostics.CodeAnalysis;
 using Amazon.CDK.AWS.EC2;
 using Aspire.Hosting.AWS.Deployment.CDKDefaults;

@@ -40,7 +40,7 @@ public class CDKDefaultsProviderFactory(Func<AWSCDKEnvironmentResource, CDKDefau
     public static readonly CDKDefaultsProviderFactory Preview_V1 = new((environment) => new CDKDefaultsProviderPreviewV1(environment));
 
     /// <summary>
-    /// Construct the <see cref="CDKDefaultsProvider"> with the provided <see cref="AWSCDKEnvironmentResource"/>
+    /// Construct the <see cref="CDKDefaultsProvider"/> with the provided <see cref="AWSCDKEnvironmentResource"/>
     /// </summary>
     /// <param name="environment">The <see cref="AWSCDKEnvironmentResource"/> used as the parent for the <see cref="CDKDefaultsProvider"/></param>
     /// <returns>The <see cref="CDKDefaultsProvider"/> used from providing the default values and constructs used for publishing and deploying</returns>
