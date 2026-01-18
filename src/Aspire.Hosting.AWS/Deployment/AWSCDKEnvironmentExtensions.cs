@@ -40,7 +40,7 @@ public static partial class AWSCDKEnvironmentExtensions
     /// and deploy phases.
     /// <para>
     /// Node.js 22.x and AWS CDK must be installed on the machine running the deployment. For information installing AWS CDK after Node.js is installed <see href="https://docs.aws.amazon.com/cdk/v2/guide/getting-started.html"/>.
-    /// Once AWS CDK is installed ensure the CDK bootstrap has run on the target account and regrion. For bootstrapping instructions see <see href="https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html"/>.
+    /// Once AWS CDK is installed ensure the CDK bootstrap has run on the target account and region. For bootstrapping instructions see <see href="https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html"/>.
     /// </para>
     /// <para>
     /// The CDKDefaultsProviderFactory is used configure the factory to create the CDKDefaultsProvider. The default provider is used to provide 
@@ -49,7 +49,7 @@ public static partial class AWSCDKEnvironmentExtensions
     /// </para>
     /// <para>
     /// To define your own default constructs like a VPC use the AddAWSCDKEnvironment overload that takes a factory method to create a custom CDK Stack.
-    /// In the CDK stack class you can define your own default resources and apply the AWS Aspire default attribute on the resource to indentify the resource
+    /// In the CDK stack class you can define your own default resources and apply the AWS Aspire default attribute on the resource to identify the resource
     /// as the default. The following example shows how to define a stack that uses an account's default VPC.
     /// </para>
     /// <code>
@@ -66,7 +66,7 @@ public static partial class AWSCDKEnvironmentExtensions
     ///     [DefaultVpc]
     ///     public IVpc DefaultVpc { get; private set; }
     /// }
-    /// </code
+    /// </code>
     /// <para>
     /// The Aspire.Hosting.AWS.Deployment namespace attributes using the naming pattern "Default<resource>Attribute" to identify default resources in the CDK stack.
     /// For example <see cref="Aspire.Hosting.AWS.Deployment.DefaultVpcAttribute"/> is used to identify the default VPC resource in the CDK stack.
@@ -105,7 +105,7 @@ public static partial class AWSCDKEnvironmentExtensions
     /// and deploy phases.
     /// <para>
     /// Node.js 22.x and AWS CDK must be installed on the machine running the deployment. For information installing AWS CDK after Node.js is installed <see href="https://docs.aws.amazon.com/cdk/v2/guide/getting-started.html"/>.
-    /// Once AWS CDK is installed ensure the CDK bootstrap has run on the target account and regrion. For bootstrapping instructions see <see href="https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html"/>.
+    /// Once AWS CDK is installed ensure the CDK bootstrap has run on the target account and region. For bootstrapping instructions see <see href="https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html"/>.
     /// </para>
     /// <para>
     /// The CDKDefaultsProviderFactory is used configure the factory to create the CDKDefaultsProvider. The default provider is used to provide 
@@ -113,7 +113,7 @@ public static partial class AWSCDKEnvironmentExtensions
     /// It also provides default CDK constructs like VPCs, ECS Clusters, Security Groups, etc. that will be shared across multiple resources.
     /// </para>
     /// <para>
-    /// In the CDK stack class you can define your own default resources and apply the AWS Aspire default attribute on the resource to indentify the resource
+    /// In the CDK stack class you can define your own default resources and apply the AWS Aspire default attribute on the resource to identify the resource
     /// as the default. The following example shows how to define a stack that uses an account's default VPC.
     /// </para>
     /// <code>
@@ -130,7 +130,7 @@ public static partial class AWSCDKEnvironmentExtensions
     ///     [DefaultVpc]
     ///     public IVpc DefaultVpc { get; private set; }
     /// }
-    /// </code
+    /// </code>
     /// <para>
     /// The Aspire.Hosting.AWS.Deployment namespace attributes using the naming pattern "Default<resource>Attribute" to identify default resources in the CDK stack.
     /// For example <see cref="Aspire.Hosting.AWS.Deployment.DefaultVpcAttribute"/> is used to identify the default VPC resource in the CDK stack.
@@ -187,7 +187,7 @@ public static partial class AWSCDKEnvironmentExtensions
     }
 
     /// <summary>
-    /// Deploy to as a service to the AWS Elastic Container Service (ECS). An ECS service is a continuously running set of tasks running the console application as a container.
+    /// Deploy to AWS ECS Fargate Service. An ECS service is a continuously running set of tasks running the console application as a container.
     /// The CDK <see href="https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_ecs.FargateService.html">FargateService</see> construct is used to create the ECS service.
     /// </summary>
     /// <remarks>
@@ -228,7 +228,7 @@ public static partial class AWSCDKEnvironmentExtensions
     }
 
     /// <summary>
-    /// Configures the <see cref="RedisResource"> to be published as an Amazon ElastiCache provisioned node cluster during deployment.
+    /// Configures the <see cref="RedisResource"/> to be published as an Amazon ElastiCache provisioned node cluster during deployment.
     /// </summary>
     /// <remarks>
     /// For optimal AWS support Valkey will be used by default as the cluster engine. To use Redis as the cluster engine set a callback on the config's <see cref="PublishElastiCacheProvisionClusterConfig.PropsCfnReplicationGroupCallback"/>
@@ -247,7 +247,7 @@ public static partial class AWSCDKEnvironmentExtensions
     }
 
     /// <summary>
-    /// Configures the <see cref="RedisResource"> to be published as an Amazon ElastiCache serverless cluster during deployment.
+    /// Configures the <see cref="RedisResource"/> to be published as an Amazon ElastiCache serverless cluster during deployment.
     /// </summary>
     /// <remarks>
     /// For optimal AWS support Valkey will be used by default as the cluster engine. To use Redis as the cluster engine set a callback on the config's <see cref="PublishElastiCacheServerlessClusterConfig.PropsCfnReplicationGroupCallback"/>
@@ -266,7 +266,7 @@ public static partial class AWSCDKEnvironmentExtensions
     }
 
     /// <summary>
-    /// Configures the <see cref="ValkeyResource"> to be published as an Amazon ElastiCache provisioned node cluster during deployment.
+    /// Configures the <see cref="ValkeyResource"/> to be published as an Amazon ElastiCache provisioned node cluster during deployment.
     /// </summary>
     /// <param name="builder">The resource builder for the resource to configure.</param>
     /// <param name="config">An optional configuration object for providing callbacks to customize the CDK props and construct.</param>
@@ -281,7 +281,7 @@ public static partial class AWSCDKEnvironmentExtensions
     }
 
     /// <summary>
-    /// Configures the <see cref="ValkeyResource"> to be published as an Amazon ElastiCache serverless cluster during deployment.
+    /// Configures the <see cref="ValkeyResource"/> to be published as an Amazon ElastiCache serverless cluster during deployment.
     /// </summary>
     /// <param name="builder">The resource builder for the resource to configure.</param>
     /// <param name="config">An optional configuration object for providing callbacks to customize the CDK props and construct.</param>
@@ -300,7 +300,7 @@ public static partial class AWSCDKEnvironmentExtensions
     /// The CDK <see href="https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda.Function.html">Function</see> construct is used to create the Lambda function.
     /// </summary>
     /// <remarks>
-    /// To configure event sources use the <see cref="PublishLambdaFunctionConfig.ConstructFunctionCallback"/> property to access the CDK construct and add event sources."/>
+    /// To configure event sources use the <see cref="PublishLambdaFunctionConfig.ConstructFunctionCallback"/> property to access the CDK construct and add event sources.
     /// The following example shows how to add an SQS event source to the Lambda function:
     /// </remarks>
     /// <code>
