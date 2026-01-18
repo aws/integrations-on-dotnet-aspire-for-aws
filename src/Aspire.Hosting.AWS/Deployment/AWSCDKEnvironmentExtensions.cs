@@ -166,10 +166,10 @@ public static partial class AWSCDKEnvironmentExtensions
     }
 
     /// <summary>
-    /// Deploy to AWS Elastic Container Service using the <see href="https://docs.aws.amazon.com/AmazonECS/latest/developerguide/express-service-overview.html">Express Mode</a>.
+    /// Deploy to AWS Elastic Container Service using the <see href="https://docs.aws.amazon.com/AmazonECS/latest/developerguide/express-service-overview.html">Express Mode</see>.
     /// Express mode deploys as an ECS service and a shared Application Load Balancer (ALB) across your Express mode services to route traffic to the service. 
     /// An HTTPS endpoint will be provisioned by default and a TargetGroup rule added to the ALB for the provisioned host name.
-    /// The CDK <see href="https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_ecs.CfnExpressGatewayService.html">CfnExpressGatewayService</a> construct is used to create the ECS Express Gateway service.
+    /// The CDK <see href="https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_ecs.CfnExpressGatewayService.html">CfnExpressGatewayService</see> construct is used to create the ECS Express Gateway service.
     /// </summary>
     /// <remarks>
     /// Port 8080 is assumed to be the container port the web application listens on. This can be customized by adding a callback on the config's PropsCfnExpressGatewayServicePropsCallback property.
@@ -188,7 +188,7 @@ public static partial class AWSCDKEnvironmentExtensions
 
     /// <summary>
     /// Deploy to as a service to the AWS Elastic Container Service (ECS). An ECS service is a continuously running set of tasks running the console application as a container.
-    /// The CDK <see href="https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_ecs.FargateService.html">FargateService</a> construct is used to create the ECS service.
+    /// The CDK <see href="https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_ecs.FargateService.html">FargateService</see> construct is used to create the ECS service.
     /// </summary>
     /// <remarks>
     /// No HTTP(S) endpoint is provisioned for this publish target.
@@ -208,7 +208,7 @@ public static partial class AWSCDKEnvironmentExtensions
     /// <summary>
     /// Deploy to AWS ECS Fargate Service with Application Load Balancer. This uses the CDK 
     /// <see href="https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_ecs_patterns.ApplicationLoadBalancedFargateService.html">
-    /// ApplicationLoadBalancedFargateService</a> construct. This construct will create an ECS Fargate service fronted by an 
+    /// ApplicationLoadBalancedFargateService</see> construct. This construct will create an ECS Fargate service fronted by an 
     /// Application Load Balancer (ALB) to distribute incoming traffic across multiple instances of the web application.
     /// By default an HTTP endpoint will be provisioned.
     /// </summary>
@@ -297,7 +297,7 @@ public static partial class AWSCDKEnvironmentExtensions
 
     /// <summary>
     /// Deploy project to AWS Lambda as a function.
-    /// The CDK <see href="https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda.Function.html">Function</a> construct is used to create the Lambda function.
+    /// The CDK <see href="https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda.Function.html">Function</see> construct is used to create the Lambda function.
     /// </summary>
     /// <remarks>
     /// To configure event sources use the <see cref="PublishLambdaFunctionConfig.ConstructFunctionCallback"/> property to access the CDK construct and add event sources."/>
