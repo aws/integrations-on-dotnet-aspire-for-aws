@@ -17,6 +17,7 @@ using Xunit;
 
 namespace Aspire.Hosting.AWS.UnitTests.Deployment;
 
+[Collection("CDKDeploymentTests")]
 public class DefaultAttributeTests
 {
     [Fact]
