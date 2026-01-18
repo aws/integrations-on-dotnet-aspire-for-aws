@@ -221,7 +221,7 @@ public static partial class AWSCDKEnvironmentExtensions
     [Experimental(AWS.Constants.ASPIREAWSPUBLISHERS001)]
     public static IResourceBuilder<ProjectResource> PublishAsECSFargateServiceWithALB(this IResourceBuilder<ProjectResource> builder, PublishECSFargateServiceWithALBConfig? config = null)
     {
-        var annotation = new PublishCDKECSFargateServiceWithALBAnnotation { Config = config ?? new PublishECSFargateServiceWithALBConfig() };
+        var annotation = new PublishECSFargateServiceWithALBAnnotation { Config = config ?? new PublishECSFargateServiceWithALBConfig() };
         builder.Resource.Annotations.Add(annotation);
 
         return builder;

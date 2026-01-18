@@ -9,157 +9,135 @@ using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.ECS.Patterns;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Deployment.CDKDefaults;
-using Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
 using Aspire.Hosting.AWS.Deployment.Services;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
-namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
+namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
+
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+internal class ECSFargateServiceWithALBPublishTarget(ITarballContainerImageBuilder imageBuilder, ILogger<ECSFargateServiceWithALBPublishTarget> logger) : AbstractAWSPublishTarget(logger)
 {
-    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    internal class ECSFargateServiceWithALBPublishTarget(ITarballContainerImageBuilder imageBuilder, ILogger<ECSFargateServiceWithALBPublishTarget> logger) : AbstractAWSPublishTarget(logger)
+    public override string PublishTargetName => "ECS Fargate";
+
+    public override Type PublishTargetAnnotation => typeof(PublishECSFargateServiceWithALBAnnotation);
+
+    public override async Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
     {
-        public override string PublishTargetName => "ECS Fargate";
+        var projectResource = resource as ProjectResource
+                              ?? throw new InvalidOperationException($"Resource {resource.Name} is not a valid IProjectResource.");
 
-        public override Type PublishTargetAnnotation => typeof(PublishCDKECSFargateServiceWithALBAnnotation);
+        var publishAnnotation = annotation as PublishECSFargateServiceWithALBAnnotation
+                                ?? throw new InvalidOperationException($"Annotation for resource {resource.Name} is not a valid {nameof(PublishECSFargateServiceWithALBAnnotation)}.");
 
-        public override async Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
+        var imageTarballPath = await imageBuilder.CreateTarballImageAsync(projectResource, cancellationToken);
+
+        var taskImageOptions = new ApplicationLoadBalancedTaskImageOptions
         {
-            var projectResource = resource as ProjectResource
-                                  ?? throw new InvalidOperationException($"Resource {resource.Name} is not a valid IProjectResource.");
+            Image = ContainerImage.FromTarball(imageTarballPath),
+            Environment = new Dictionary<string, string>()
+        };
 
-            var publishAnnotation = annotation as PublishCDKECSFargateServiceWithALBAnnotation
-                                    ?? throw new InvalidOperationException($"Annotation for resource {resource.Name} is not a valid {nameof(PublishCDKECSFargateServiceWithALBAnnotation)}.");
+        publishAnnotation.Config.PropsApplicationLoadBalancedTaskImageOptionsCallback?.Invoke(CreatePublishTargetContext(environment), taskImageOptions);
+        environment.DefaultsProvider.ApplyECSFargateServiceWithALBDefaults(taskImageOptions);
 
-            var imageTarballPath = await imageBuilder.CreateTarballImageAsync(projectResource, cancellationToken);
-
-            var taskImageOptions = new ApplicationLoadBalancedTaskImageOptions
-            {
-                Image = ContainerImage.FromTarball(imageTarballPath),
-                Environment = new Dictionary<string, string>()
-            };
-
-            publishAnnotation.Config.PropsApplicationLoadBalancedTaskImageOptionsCallback?.Invoke(CreatePublishTargetContext(environment), taskImageOptions);
-            environment.DefaultsProvider.ApplyECSFargateServiceWithALBDefaults(taskImageOptions);
-
-            var fargateServiceProps = new ApplicationLoadBalancedFargateServiceProps
-            {
-                TaskImageOptions = taskImageOptions
-            };
-            publishAnnotation.Config.PropsApplicationLoadBalancedFargateServiceCallback?.Invoke(CreatePublishTargetContext(environment), fargateServiceProps);
-            environment.DefaultsProvider.ApplyECSFargateServiceWithALBDefaults(fargateServiceProps);
-
-            var referencePoints = new ApplicationLoadBalancedFargateServicePropsConnectionPoints(
-                fargateServiceProps,
-                    () => CreateEmptyReferenceSecurityGroup(environment, projectResource, fargateServiceProps, x => x.SecurityGroups, (x, v) => x.SecurityGroups = v));
-            ProcessRelationShips(referencePoints, projectResource);
-
-            var fargateService = new ApplicationLoadBalancedFargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
-            publishAnnotation.Config.ConstructApplicationLoadBalancedFargateServiceCallback?.Invoke(CreatePublishTargetContext(environment), fargateService);
-            ApplyAWSLinkedObjectsAnnotation(environment, projectResource, fargateService, this);
-
-            await ApplyDeploymentTagAsync(environment, projectResource, fargateService.Service, cancellationToken);
-        }
-
-        public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
+        var fargateServiceProps = new ApplicationLoadBalancedFargateServiceProps
         {
-            if (resource is ProjectResource projectResource &&
-                projectResource.GetEndpoints().Any() &&
-                cdkDefaultsProvider.DefaultWebProjectResourcePublishTarget == CDKDefaultsProvider.WebProjectResourcePublishTarget.ECSFargateServiceWithALB
-               )
-            {
-                return new IsDefaultPublishTargetMatchResult
-                {
-                    IsMatch = true,
-                    PublishTargetAnnotation = new PublishCDKECSFargateServiceWithALBAnnotation(),
-                    Rank = IsDefaultPublishTargetMatchResult.DEFAULT_MATCH_RANK + 100 // Override to raise rank over console application default
-                };
-            }
+            TaskImageOptions = taskImageOptions
+        };
+        publishAnnotation.Config.PropsApplicationLoadBalancedFargateServiceCallback?.Invoke(CreatePublishTargetContext(environment), fargateServiceProps);
+        environment.DefaultsProvider.ApplyECSFargateServiceWithALBDefaults(fargateServiceProps);
 
-            return IsDefaultPublishTargetMatchResult.NO_MATCH;
-        }
+        var referencePoints = new ApplicationLoadBalancedFargateServicePropsConnectionPoints(
+            fargateServiceProps,
+                () => CreateEmptyReferenceSecurityGroup(environment, projectResource, fargateServiceProps, x => x.SecurityGroups, (x, v) => x.SecurityGroups = v));
+        ProcessRelationShips(referencePoints, projectResource);
 
-        public override ReferenceConnectionInfo GetReferenceConnectionInfo(AWSLinkedObjectsAnnotation linkedAnnotation)
-        {
-            var result = new ReferenceConnectionInfo();
-            if (linkedAnnotation.Construct is not ApplicationLoadBalancedFargateService albFargateConstruct)
-                return result;
+        var fargateService = new ApplicationLoadBalancedFargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
+        publishAnnotation.Config.ConstructApplicationLoadBalancedFargateServiceCallback?.Invoke(CreatePublishTargetContext(environment), fargateService);
+        ApplyAWSLinkedObjectsAnnotation(environment, projectResource, fargateService, this);
 
-            result.EnvironmentVariables = new Dictionary<string, string>();
-
-            foreach (var listener in albFargateConstruct.LoadBalancer.Listeners)
-            {
-                string protocol = listener.Port == 443 ? "https" : "http";
-
-                var key = $"services__{linkedAnnotation.Resource.Name}__{protocol}__0";
-                var endpoint = $"{protocol}://{Token.AsString(albFargateConstruct.LoadBalancer.LoadBalancerDnsName)}:{Token.AsString(listener.Port)}/";
-                result.EnvironmentVariables[key] = endpoint;
-            }
-
-            return result;
-        }
+        await ApplyDeploymentTagAsync(environment, projectResource, fargateService.Service, cancellationToken);
     }
 
-    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    internal class ApplicationLoadBalancedFargateServicePropsConnectionPoints(ApplicationLoadBalancedFargateServiceProps props, Func<ISecurityGroup> securityGroupFactory) : AbstractCDKConstructConnectionPoints
+    public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
     {
-        ISecurityGroup? _referenceSecurityGroup;
-        public override IDictionary<string, string>? EnvironmentVariables
+        if (resource is ProjectResource projectResource &&
+            projectResource.GetEndpoints().Any() &&
+            cdkDefaultsProvider.DefaultWebProjectResourcePublishTarget == CDKDefaultsProvider.WebProjectResourcePublishTarget.ECSFargateServiceWithALB
+           )
         {
-            get
+            return new IsDefaultPublishTargetMatchResult
             {
-                if (props.TaskImageOptions?.Environment == null)
-                {
-                    throw new InvalidOperationException("TaskImageOptions.Environment must be set for the ApplicationLoadBalancedFargateServiceProps");
-                }
-
-                return props.TaskImageOptions.Environment;
-            }
-            set
-            {
-                if (props.TaskImageOptions?.Environment == null)
-                {
-                    throw new InvalidOperationException("TaskImageOptions.Environment must be set for the ApplicationLoadBalancedFargateServiceProps");
-                }
-
-                if (value != null)
-                {
-                    foreach (var kvp in value)
-                    {
-                        props.TaskImageOptions.Environment[kvp.Key] = kvp.Value;
-                    }
-                }
-            }
+                IsMatch = true,
+                PublishTargetAnnotation = new PublishECSFargateServiceWithALBAnnotation(),
+                Rank = IsDefaultPublishTargetMatchResult.DEFAULT_MATCH_RANK + 100 // Override to raise rank over console application default
+            };
         }
 
-        public override ISecurityGroup? ReferenceSecurityGroup
+        return IsDefaultPublishTargetMatchResult.NO_MATCH;
+    }
+
+    public override ReferenceConnectionInfo GetReferenceConnectionInfo(AWSLinkedObjectsAnnotation linkedAnnotation)
+    {
+        var result = new ReferenceConnectionInfo();
+        if (linkedAnnotation.Construct is not ApplicationLoadBalancedFargateService albFargateConstruct)
+            return result;
+
+        result.EnvironmentVariables = new Dictionary<string, string>();
+
+        foreach (var listener in albFargateConstruct.LoadBalancer.Listeners)
         {
-            get
-            {
-                _referenceSecurityGroup ??= securityGroupFactory();
-                return _referenceSecurityGroup;
-            }
+            string protocol = listener.Port == 443 ? "https" : "http";
+
+            var key = $"services__{linkedAnnotation.Resource.Name}__{protocol}__0";
+            var endpoint = $"{protocol}://{Token.AsString(albFargateConstruct.LoadBalancer.LoadBalancerDnsName)}:{Token.AsString(listener.Port)}/";
+            result.EnvironmentVariables[key] = endpoint;
         }
+
+        return result;
     }
 }
 
-namespace Aspire.Hosting.AWS.Deployment
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+internal class ApplicationLoadBalancedFargateServicePropsConnectionPoints(ApplicationLoadBalancedFargateServiceProps props, Func<ISecurityGroup> securityGroupFactory) : AbstractCDKConstructConnectionPoints
 {
-    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    public class PublishECSFargateServiceWithALBConfig
+    ISecurityGroup? _referenceSecurityGroup;
+    public override IDictionary<string, string>? EnvironmentVariables
     {
-        public PublishCallback<ApplicationLoadBalancedTaskImageOptions>? PropsApplicationLoadBalancedTaskImageOptionsCallback { get; set; }
+        get
+        {
+            if (props.TaskImageOptions?.Environment == null)
+            {
+                throw new InvalidOperationException("TaskImageOptions.Environment must be set for the ApplicationLoadBalancedFargateServiceProps");
+            }
 
-        public PublishCallback<ApplicationLoadBalancedFargateServiceProps>? PropsApplicationLoadBalancedFargateServiceCallback { get; set; }
+            return props.TaskImageOptions.Environment;
+        }
+        set
+        {
+            if (props.TaskImageOptions?.Environment == null)
+            {
+                throw new InvalidOperationException("TaskImageOptions.Environment must be set for the ApplicationLoadBalancedFargateServiceProps");
+            }
 
-        public PublishCallback<ApplicationLoadBalancedFargateService>? ConstructApplicationLoadBalancedFargateServiceCallback { get; set; }
-
+            if (value != null)
+            {
+                foreach (var kvp in value)
+                {
+                    props.TaskImageOptions.Environment[kvp.Key] = kvp.Value;
+                }
+            }
+        }
     }
 
-    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    internal class PublishCDKECSFargateServiceWithALBAnnotation : IAWSPublishTargetAnnotation
+    public override ISecurityGroup? ReferenceSecurityGroup
     {
-        public PublishECSFargateServiceWithALBConfig Config { get; set; } = new();
+        get
+        {
+            _referenceSecurityGroup ??= securityGroupFactory();
+            return _referenceSecurityGroup;
+        }
     }
 }

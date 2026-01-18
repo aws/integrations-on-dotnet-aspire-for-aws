@@ -8,132 +8,99 @@ using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.ElastiCache;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Deployment.CDKDefaults;
-using Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
-namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
+namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
+
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+internal class ElastiCacheProvisionClusterPublishTarget(ILogger<ElastiCacheProvisionClusterPublishTarget> logger) : AbstractAWSPublishTarget(logger)
 {
-    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    internal class ElastiCacheProvisionClusterPublishTarget(ILogger<ElastiCacheProvisionClusterPublishTarget> logger) : AbstractAWSPublishTarget(logger)
+    public override string PublishTargetName => "ElastiCache Provision Cluster";
+
+    public override Type PublishTargetAnnotation => typeof(PublishElasticCacheProvisionClusterAnnotation);
+
+    public override Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
     {
-        public override string PublishTargetName => "ElastiCache Provision Cluster";
+        var publishAnnotation = annotation as PublishElasticCacheProvisionClusterAnnotation
+                                ?? throw new InvalidOperationException($"Annotation for resource {resource.Name} is not a valid {nameof(PublishElasticCacheProvisionClusterAnnotation)}.");
 
-        public override Type PublishTargetAnnotation => typeof(PublishElasticCacheProvisionClusterAnnotation);
+        var clusterProps = new CfnReplicationGroupProps();
+        publishAnnotation.Config.PropsCfnReplicationGroupCallback?.Invoke(CreatePublishTargetContext(environment), clusterProps);
+        environment.DefaultsProvider.ApplyCfnReplicationGroupPropsDefaults(clusterProps);
 
-        public override Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
+        var cluster = new CfnReplicationGroup(environment.CDKStack, $"ElastiCache-{resource.Name}", clusterProps);
+        publishAnnotation.Config.ConstructCfnReplicationGroupCallback?.Invoke(CreatePublishTargetContext(environment), cluster);
+        ApplyAWSLinkedObjectsAnnotation(environment, resource, cluster, this);
+
+        return Task.CompletedTask;
+    }
+
+    public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
+    {
+        if ((resource is RedisResource || resource is ValkeyResource) &&
+            cdkDefaultsProvider.DefaultRedisResourcePublishTarget == CDKDefaultsProvider.RedisResourcePublishTarget.ElastiCacheProvisionCluster
+           )
         {
-            var publishAnnotation = annotation as PublishElasticCacheProvisionClusterAnnotation
-                                    ?? throw new InvalidOperationException($"Annotation for resource {resource.Name} is not a valid {nameof(PublishElasticCacheProvisionClusterAnnotation)}.");
-
-            var clusterProps = new CfnReplicationGroupProps();
-            publishAnnotation.Config.PropsCfnReplicationGroupCallback?.Invoke(CreatePublishTargetContext(environment), clusterProps);
-            environment.DefaultsProvider.ApplyCfnReplicationGroupPropsDefaults(clusterProps);
-
-            var cluster = new CfnReplicationGroup(environment.CDKStack, $"ElastiCache-{resource.Name}", clusterProps);
-            publishAnnotation.Config.ConstructCfnReplicationGroupCallback?.Invoke(CreatePublishTargetContext(environment), cluster);
-            ApplyAWSLinkedObjectsAnnotation(environment, resource, cluster, this);
-
-            return Task.CompletedTask;
+            return new IsDefaultPublishTargetMatchResult
+            {
+                IsMatch = true,
+                PublishTargetAnnotation = new PublishElasticCacheProvisionClusterAnnotation()
+            };
         }
 
-        public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
-        {
-            if ((resource is RedisResource || resource is ValkeyResource) &&
-                cdkDefaultsProvider.DefaultRedisResourcePublishTarget == CDKDefaultsProvider.RedisResourcePublishTarget.ElastiCacheProvisionCluster
-               )
-            {
-                return new IsDefaultPublishTargetMatchResult
-                {
-                    IsMatch = true,
-                    PublishTargetAnnotation = new PublishElasticCacheProvisionClusterAnnotation()
-                };
-            }
+        return IsDefaultPublishTargetMatchResult.NO_MATCH;
+    }
 
-            return IsDefaultPublishTargetMatchResult.NO_MATCH;
-        }
-
-        public override ReferenceConnectionInfo GetReferenceConnectionInfo(AWSLinkedObjectsAnnotation linkedAnnotation)
-        {
-            var result = new ReferenceConnectionInfo();
-            if (linkedAnnotation.Construct is not CfnReplicationGroup cacheConstruct)
-                return result;
-
-            if (!linkedAnnotation.Resource.TryGetLastAnnotation<PublishElasticCacheProvisionClusterAnnotation>(out var publishAnnotation))
-                throw new InvalidDataException($"Missing {nameof(PublishElasticCacheProvisionClusterAnnotation)} for resource {linkedAnnotation.Resource.Name}.");
-
-            result.EnvironmentVariables = new Dictionary<string, string>();
-
-            var key = $"ConnectionStrings__{linkedAnnotation.Resource.Name}";
-
-            string? endpoint;
-            if (publishAnnotation.Config.AssumeConnectionStringClusterMode == null || publishAnnotation.Config.AssumeConnectionStringClusterMode == true)
-            {
-                endpoint = $"{Token.AsString(cacheConstruct.AttrConfigurationEndPointAddress)}:{Token.AsString(cacheConstruct.AttrConfigurationEndPointPort)}";
-
-                // Log a message to the user since we are making an assumption that the user might need to change.
-                if (publishAnnotation.Config.AssumeConnectionStringClusterMode == null)
-                    logger.LogInformation("Generating connection string for resource {Resource} assuming cluster mode is enabled. If an error during deployment happens about attributes not found the {Property} property on {Config} might need to be set to false.", linkedAnnotation.Resource.Name, nameof(PublishElastiCacheProvisionClusterConfig.AssumeConnectionStringClusterMode), nameof(PublishElastiCacheProvisionClusterConfig));
-            }
-            else
-            {
-                endpoint = $"{Token.AsString(cacheConstruct.AttrPrimaryEndPointAddress)}:{Token.AsString(cacheConstruct.AttrPrimaryEndPointPort)}";
-            }
-
-            if (string.Equals(cacheConstruct.TransitEncryptionEnabled?.ToString(), "true", StringComparison.OrdinalIgnoreCase))
-                endpoint += ",ssl=True";
-
-            result.EnvironmentVariables[key] = endpoint;
-
+    public override ReferenceConnectionInfo GetReferenceConnectionInfo(AWSLinkedObjectsAnnotation linkedAnnotation)
+    {
+        var result = new ReferenceConnectionInfo();
+        if (linkedAnnotation.Construct is not CfnReplicationGroup cacheConstruct)
             return result;
-        }
 
-        public override bool ReferenceRequiresVPC()
+        if (!linkedAnnotation.Resource.TryGetLastAnnotation<PublishElasticCacheProvisionClusterAnnotation>(out var publishAnnotation))
+            throw new InvalidDataException($"Missing {nameof(PublishElasticCacheProvisionClusterAnnotation)} for resource {linkedAnnotation.Resource.Name}.");
+
+        result.EnvironmentVariables = new Dictionary<string, string>();
+
+        var key = $"ConnectionStrings__{linkedAnnotation.Resource.Name}";
+
+        string? endpoint;
+        if (publishAnnotation.Config.AssumeConnectionStringClusterMode == null || publishAnnotation.Config.AssumeConnectionStringClusterMode == true)
         {
-            return true;
-        }
+            endpoint = $"{Token.AsString(cacheConstruct.AttrConfigurationEndPointAddress)}:{Token.AsString(cacheConstruct.AttrConfigurationEndPointPort)}";
 
-        public override bool ReferenceRequiresSecurityGroup()
+            // Log a message to the user since we are making an assumption that the user might need to change.
+            if (publishAnnotation.Config.AssumeConnectionStringClusterMode == null)
+                logger.LogInformation("Generating connection string for resource {Resource} assuming cluster mode is enabled. If an error during deployment happens about attributes not found the {Property} property on {Config} might need to be set to false.", linkedAnnotation.Resource.Name, nameof(PublishElastiCacheProvisionClusterConfig.AssumeConnectionStringClusterMode), nameof(PublishElastiCacheProvisionClusterConfig));
+        }
+        else
         {
-            return true;
+            endpoint = $"{Token.AsString(cacheConstruct.AttrPrimaryEndPointAddress)}:{Token.AsString(cacheConstruct.AttrPrimaryEndPointPort)}";
         }
 
-        public override void ApplyReferenceSecurityGroup(AWSLinkedObjectsAnnotation linkedAnnotation, ISecurityGroup securityGroup)
-        {
-            var elastiCacheSecurityGroup = linkedAnnotation.EnvironmentResource.DefaultsProvider.GetDefaultElastiCacheProvisionClusterSecurityGroup();
-            elastiCacheSecurityGroup.AddIngressRule(peer: securityGroup, connection: Port.Tcp(6379));
-        }
-    }
-}
+        if (string.Equals(cacheConstruct.TransitEncryptionEnabled?.ToString(), "true", StringComparison.OrdinalIgnoreCase))
+            endpoint += ",ssl=True";
 
-namespace Aspire.Hosting.AWS.Deployment
-{
-    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    public class PublishElastiCacheProvisionClusterConfig
-    {
-        /// <summary>
-        /// When setting up connection strings for reference resources either the ConfigurationEndPoint
-        /// or PrimaryEndPoint
-        /// <see href="https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-elasticache-replicationgroup.html#aws-resource-elasticache-replicationgroup-return-values-fn--getatt">
-        /// CloudFormation return values</see> must be used depending on whether the
-        /// cluster is configured for cluster mode or not. It is not possible from the CDK construct 
-        /// to definitively determine whether cluster mode is enabled. When publishing to an ElastiCache
-        /// cluster mode is assumed. If cluster mode is not enabled then set this property to false.
-        /// </summary>
-        /// <remarks>
-        /// If property is null then cluster mode is assumed.
-        /// </remarks>
-        public bool? AssumeConnectionStringClusterMode { get; set; }
+        result.EnvironmentVariables[key] = endpoint;
 
-        public PublishCallback<CfnReplicationGroupProps>? PropsCfnReplicationGroupCallback { get; set; }
-
-        public PublishCallback<CfnReplicationGroup>? ConstructCfnReplicationGroupCallback { get; set; }
+        return result;
     }
 
-    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    internal class PublishElasticCacheProvisionClusterAnnotation : IAWSPublishTargetAnnotation
+    public override bool ReferenceRequiresVPC()
     {
-        public PublishElastiCacheProvisionClusterConfig Config { get; set; } = new();
+        return true;
+    }
+
+    public override bool ReferenceRequiresSecurityGroup()
+    {
+        return true;
+    }
+
+    public override void ApplyReferenceSecurityGroup(AWSLinkedObjectsAnnotation linkedAnnotation, ISecurityGroup securityGroup)
+    {
+        var elastiCacheSecurityGroup = linkedAnnotation.EnvironmentResource.DefaultsProvider.GetDefaultElastiCacheProvisionClusterSecurityGroup();
+        elastiCacheSecurityGroup.AddIngressRule(peer: securityGroup, connection: Port.Tcp(6379));
     }
 }

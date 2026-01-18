@@ -3,7 +3,7 @@
 using Aspire.Hosting.ApplicationModel;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
+namespace Aspire.Hosting.AWS.Deployment;
 
 /// <summary>
 /// The interface for identifying AWS publish target annotations.

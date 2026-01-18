@@ -7,119 +7,100 @@ using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.Lambda;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Deployment.CDKDefaults;
-using Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
 using Aspire.Hosting.AWS.Lambda;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets
+namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
+
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> logger) : AbstractAWSPublishTarget(logger)
 {
-    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> logger) : AbstractAWSPublishTarget(logger)
+    public override string PublishTargetName => "Lambda function";
+
+    public override Type PublishTargetAnnotation => typeof(PublishLambdaFunctionAnnotation);
+
+    public override async Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
     {
-        public override string PublishTargetName => "Lambda function";
+        var lambdaFunction = resource as LambdaProjectResource
+                             ?? throw new InvalidOperationException($"Resource {resource.Name} is not a valid LambdaProjectResource.");
 
-        public override Type PublishTargetAnnotation => typeof(PublishLambdaFunctionAnnotation);
+        var publishAnnotation = annotation as PublishLambdaFunctionAnnotation
+                                ?? throw new InvalidOperationException($"Annotation for resource {resource.Name} is not a valid {nameof(PublishLambdaFunctionAnnotation)}.");
 
-        public override async Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
+        if (!lambdaFunction.TryGetLastAnnotation<LambdaFunctionAnnotation>(out var lambdaFunctionAnnotation))
         {
-            var lambdaFunction = resource as LambdaProjectResource
-                                 ?? throw new InvalidOperationException($"Resource {resource.Name} is not a valid LambdaProjectResource.");
-
-            var publishAnnotation = annotation as PublishLambdaFunctionAnnotation
-                                    ?? throw new InvalidOperationException($"Annotation for resource {resource.Name} is not a valid {nameof(PublishLambdaFunctionAnnotation)}.");
-
-            if (!lambdaFunction.TryGetLastAnnotation<LambdaFunctionAnnotation>(out var lambdaFunctionAnnotation))
-            {
-                throw new InvalidOperationException($"Missing {nameof(LambdaFunctionAnnotation)} annotation");
-            }
-
-            var functionProps = new FunctionProps
-            {
-                Code = Code.FromAsset(lambdaFunctionAnnotation.DeploymentBundlePath!),
-                Handler = lambdaFunctionAnnotation.Handler
-            };
-
-            var referencePoints = new FunctionPropsConnectionPoints(
-                functionProps,
-                () => CreateEmptyReferenceSecurityGroup(environment, resource, functionProps, x => x.SecurityGroups,
-                    (x, v) => x.SecurityGroups = v));
-
-            ProcessRelationShips(referencePoints, lambdaFunction);
-
-            publishAnnotation.Config.PropsFunctionCallback?.Invoke(CreatePublishTargetContext(environment), functionProps);
-            environment.DefaultsProvider.ApplyLambdaFunctionDefaults(functionProps, lambdaFunction);
-
-            var function = new Function(environment.CDKStack, $"Function-{lambdaFunction.Name}", functionProps);
-            publishAnnotation.Config.ConstructFunctionCallback?.Invoke(CreatePublishTargetContext(environment), function);
-            ApplyAWSLinkedObjectsAnnotation(environment, lambdaFunction, function, this);
-
-            await ApplyDeploymentTagAsync(environment, lambdaFunction, function, cancellationToken);
+            throw new InvalidOperationException($"Missing {nameof(LambdaFunctionAnnotation)} annotation");
         }
 
-        public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
+        var functionProps = new FunctionProps
         {
-            if (resource is LambdaProjectResource &&
-                cdkDefaultsProvider.DefaultLambdaProjectResourcePublishTarget == CDKDefaultsProvider.LambdaProjectResourcePublishTarget.LambdaFunction
-               )
-            {
-                return new IsDefaultPublishTargetMatchResult
-                {
-                    IsMatch = true,
-                    PublishTargetAnnotation = new PublishLambdaFunctionAnnotation(),
-                    Rank = IsDefaultPublishTargetMatchResult.DEFAULT_MATCH_RANK + 200 // Override to raise rank over any "ProjectResource" defaults.
-                };
-            }
+            Code = Code.FromAsset(lambdaFunctionAnnotation.DeploymentBundlePath!),
+            Handler = lambdaFunctionAnnotation.Handler
+        };
 
-            return IsDefaultPublishTargetMatchResult.NO_MATCH;
-        }
+        var referencePoints = new FunctionPropsConnectionPoints(
+            functionProps,
+            () => CreateEmptyReferenceSecurityGroup(environment, resource, functionProps, x => x.SecurityGroups,
+                (x, v) => x.SecurityGroups = v));
 
-        public override ReferenceConnectionInfo GetReferenceConnectionInfo(AWSLinkedObjectsAnnotation linkedAnnotation)
-        {
-            return new ReferenceConnectionInfo();
-        }
+        ProcessRelationShips(referencePoints, lambdaFunction);
+
+        publishAnnotation.Config.PropsFunctionCallback?.Invoke(CreatePublishTargetContext(environment), functionProps);
+        environment.DefaultsProvider.ApplyLambdaFunctionDefaults(functionProps, lambdaFunction);
+
+        var function = new Function(environment.CDKStack, $"Function-{lambdaFunction.Name}", functionProps);
+        publishAnnotation.Config.ConstructFunctionCallback?.Invoke(CreatePublishTargetContext(environment), function);
+        ApplyAWSLinkedObjectsAnnotation(environment, lambdaFunction, function, this);
+
+        await ApplyDeploymentTagAsync(environment, lambdaFunction, function, cancellationToken);
     }
 
-    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    internal class FunctionPropsConnectionPoints(FunctionProps props, Func<ISecurityGroup> securityGroupFactory) : AbstractCDKConstructConnectionPoints
+    public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
     {
-        ISecurityGroup? _referenceSecurityGroup;
-        public override IDictionary<string, string>? EnvironmentVariables
+        if (resource is LambdaProjectResource &&
+            cdkDefaultsProvider.DefaultLambdaProjectResourcePublishTarget == CDKDefaultsProvider.LambdaProjectResourcePublishTarget.LambdaFunction
+           )
         {
-            get => props.Environment ?? new Dictionary<string, string>();
-            set => props.Environment = value ?? new Dictionary<string, string>();
-        }
-
-        public override ISecurityGroup? ReferenceSecurityGroup
-        {
-            get
+            return new IsDefaultPublishTargetMatchResult
             {
-                _referenceSecurityGroup ??= securityGroupFactory();
-                return _referenceSecurityGroup;
-            }
+                IsMatch = true,
+                PublishTargetAnnotation = new PublishLambdaFunctionAnnotation(),
+                Rank = IsDefaultPublishTargetMatchResult.DEFAULT_MATCH_RANK + 200 // Override to raise rank over any "ProjectResource" defaults.
+            };
         }
 
-        public override IVpc? Vpc
-        {
-            get => props.Vpc;
-            set => props.Vpc = value;
-        }
+        return IsDefaultPublishTargetMatchResult.NO_MATCH;
+    }
+
+    public override ReferenceConnectionInfo GetReferenceConnectionInfo(AWSLinkedObjectsAnnotation linkedAnnotation)
+    {
+        return new ReferenceConnectionInfo();
     }
 }
 
-namespace Aspire.Hosting.AWS.Deployment
+[Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+internal class FunctionPropsConnectionPoints(FunctionProps props, Func<ISecurityGroup> securityGroupFactory) : AbstractCDKConstructConnectionPoints
 {
-    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    public class PublishLambdaFunctionConfig
+    ISecurityGroup? _referenceSecurityGroup;
+    public override IDictionary<string, string>? EnvironmentVariables
     {
-        public PublishCallback<FunctionProps>? PropsFunctionCallback { get; set; }
-
-        public PublishCallback<Function>? ConstructFunctionCallback { get; set; }
+        get => props.Environment ?? new Dictionary<string, string>();
+        set => props.Environment = value ?? new Dictionary<string, string>();
     }
 
-    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    internal class PublishLambdaFunctionAnnotation : IAWSPublishTargetAnnotation
+    public override ISecurityGroup? ReferenceSecurityGroup
     {
-        public PublishLambdaFunctionConfig Config { get; set; } = new();
+        get
+        {
+            _referenceSecurityGroup ??= securityGroupFactory();
+            return _referenceSecurityGroup;
+        }
+    }
+
+    public override IVpc? Vpc
+    {
+        get => props.Vpc;
+        set => props.Vpc = value;
     }
 }
