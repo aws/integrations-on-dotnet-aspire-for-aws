@@ -17,10 +17,16 @@ namespace Aspire.Hosting.AWS.Deployment;
 #pragma warning disable ASPIREPUBLISHERS001
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-internal class CDKDeployStep(IProcessCommandService processCommandService, ILogger<CDKDeployStep> logger)
+internal class CDKDeployStep(IProcessCommandService processCommandService, ILogger<CDKDeployStep> logger, IAWSEnvironmentService environmentService)
 {
     public async Task ExecuteCDKDeployAsync(PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken = default)
     {
+        // This is not meant for end-user usage. It is used by the test suite that executes the AppHost
+        // without the Aspire CLI. In the test suite we often only want to run the publish step not the 
+        // deploy but running the AppHost directly always run the full pipeline unless we specify this custom flag.
+        if (environmentService.GetCommandLineArgs().Contains("--no-aws-deploy"))
+            return;
+
         using var cfClient = environment.GetCloudFormationClient();
 
         await ExecuteCDKDeployCLIAsync(cfClient, context, environment, cancellationToken);

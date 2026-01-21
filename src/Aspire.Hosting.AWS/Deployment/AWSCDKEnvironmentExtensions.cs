@@ -24,6 +24,7 @@ public static class AWSCDKEnvironmentExtensions
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
     private static void AddEnvironmentServices(this IDistributedApplicationBuilder builder)
     {
+        builder.Services.TryAddSingleton<IAWSEnvironmentService, DefaultAWSEnvironmentService>();
         builder.Services.TryAddSingleton<CDKPublishingStep, CDKPublishingStep>();
         builder.Services.TryAddSingleton<CDKDeployStep, CDKDeployStep>();
         builder.Services.TryAddSingleton<ITarballContainerImageBuilder, DefaultTarballContainerImageBuilder>();

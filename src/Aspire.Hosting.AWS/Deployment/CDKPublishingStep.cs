@@ -6,6 +6,7 @@
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.CDK;
 using Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
+using Aspire.Hosting.AWS.Utils.Internal;
 using Aspire.Hosting.Pipelines;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -18,7 +19,7 @@ using IResource = Aspire.Hosting.ApplicationModel.IResource;
 namespace Aspire.Hosting.AWS.Deployment;
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPublishingStep> logger)
+internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPublishingStep> logger, IAWSEnvironmentService environmentService)
 {
     IDictionary<Type, IAWSPublishTarget> _annotationsToPublishTargetsMapping = new Dictionary<Type, IAWSPublishTarget>(); 
 
@@ -29,6 +30,8 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
         {
             logger.LogDebug("Starting synthesis of CDK application for environment {EnvironmentName}", environment.Name);
             logger.LogDebug("Capture of output from CDK context generation:\n{CdkContextLog}", environment.CDKContextGenerationLog);
+
+            environment.InitializeCDKApp(DetermineOutputDirectory());
             InitializePublishTargetMapping();
 
             var outputPath = environment.CDKApp.Outdir;
@@ -63,6 +66,43 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
 
             await step.FailAsync($"Failed to synthesize CDK application: {ex}", cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// We have to do our own searching through the commandline arguments parameters to find the output path because
+    /// we need it for creating the CDK app which might happen before the Aspire publish pipeline is created. It is
+    /// a quirk of CDK that the output path has to be set on the app itself.
+    /// </summary>
+    /// <returns></returns>
+    private string DetermineOutputDirectory()
+    {
+        string? outputPath = null;
+        var args = environmentService.GetCommandLineArgs();
+
+        for (var i = 0; i < args.Length - 1; i++)
+        {
+            if (string.Equals(args[i], "--output-path", StringComparison.CurrentCultureIgnoreCase) || string.Equals(args[i], "-o", StringComparison.CurrentCultureIgnoreCase))
+            {
+                outputPath = args[i + 1];
+            }
+        }
+
+        if (outputPath == null)
+        {
+            outputPath = Environment.CurrentDirectory;
+        }
+
+        if (!string.Equals(new DirectoryInfo(outputPath).Name, "cdk.out"))
+        {
+            outputPath = Path.Combine(outputPath, "cdk.out");
+        }
+
+        if (!Directory.Exists(outputPath))
+        {
+            Directory.CreateDirectory(outputPath);
+        }
+
+        return outputPath;
     }
 
     private void InitializePublishTargetMapping()

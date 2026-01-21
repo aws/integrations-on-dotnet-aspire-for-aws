@@ -66,32 +66,28 @@ public abstract class AWSCDKEnvironmentResource : Resource
         {
             if (_cdkApp == null)
             {
-                var appProps = new AppProps();
-
-                if (IsPublishMode)
-                {
-                    // If CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE is set that means we are running in the forked mode to generate the CDK context.
-                    // In the fork mode we are creating the CDK is being synthed just to generate the context so we don't need to set the
-                    // output directory because it won't be the final output.
-                    //
-                    // See the override GetCDKContext method for more details about the fork mode and CDK context.
-                    if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE)))
-                    {
-                        appProps.Outdir = DetermineOutputDirectory();
-                    }
-
-                    var cdkContext = GetCDKContext();
-                    if (cdkContext != null)
-                    {
-                        appProps.Context = cdkContext;
-                    }
-                }
-
-                _cdkApp = new App(appProps);
+                throw new InvalidOperationException("CDK App has not been initialized. Ensure InitializeCDKApp has been called before accessing the CDKApp property.");
             }
 
             return _cdkApp;
         }
+    }
+
+    internal void InitializeCDKApp(string outputDir)
+    {
+        var appProps = new AppProps();
+        if (IsPublishMode)
+        {
+            appProps.Outdir = outputDir;
+
+            var cdkContext = GetCDKContext();
+            if (cdkContext != null)
+            {
+                appProps.Context = cdkContext;
+            }
+        }
+
+        _cdkApp = new App(appProps);
     }
 
     protected virtual IDictionary<string, object>? GetCDKContext() => null;
@@ -147,43 +143,6 @@ public abstract class AWSCDKEnvironmentResource : Resource
         deployStep.DependsOn(WellKnownPipelineSteps.Publish);
 
         return deployStep;
-    }
-
-    /// <summary>
-    /// We have to do our own searching through the commandline arguments parameters to find the output path because
-    /// we need it for creating the CDK app which might happen before the Aspire publish pipeline is created. It is
-    /// a quirk of CDK that the output path has to be set on the app itself.
-    /// </summary>
-    /// <returns></returns>
-    private string DetermineOutputDirectory()
-    {
-        string? outputPath = null;
-        var args = Environment.GetCommandLineArgs();
-
-        for(var i = 0; i < args.Length - 1; i++)
-        {
-            if (string.Equals(args[i], "--output-path", StringComparison.CurrentCultureIgnoreCase) || string.Equals(args[i], "-o", StringComparison.CurrentCultureIgnoreCase))
-            {
-                outputPath = args[i + 1];
-            }
-        }
-
-        if (outputPath == null)
-        {
-            outputPath = Environment.CurrentDirectory;
-        }
-
-        if (!string.Equals(new DirectoryInfo(outputPath).Name, "cdk.out"))
-        {
-            outputPath = Path.Combine(outputPath, "cdk.out");
-        }
-
-        if (!Directory.Exists(outputPath))
-        {
-            Directory.CreateDirectory(outputPath);
-        }
-
-        return outputPath;
     }
 
     protected IEnvironment GetCDKEnvironment()
@@ -289,6 +248,7 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
         // See the override GetCDKContext method for more details about the fork mode and CDK context.
         if (Environment.GetEnvironmentVariable(CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE) != null)
         {
+            InitializeCDKApp(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")));
             LoadEnvironmentStack();
         }
     }
@@ -362,7 +322,7 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
 
                 if (result.ExitCode != 0)
                 {
-                    throw new InvalidOperationException($"CDK context generation failed with exit code {result.ExitCode}");
+                    return null;
                 }
             }
             else
