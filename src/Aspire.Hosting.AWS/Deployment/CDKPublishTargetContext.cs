@@ -24,7 +24,7 @@ public class CDKPublishTargetContext
     }
 
     /// <summary>
-    /// The CDK Stack used as the parent for all of the constructs created during publishing.
+    /// The CDK Stack used as the parent for all the constructs created during publishing.
     /// </summary>
     /// <typeparam name="T">The type used when calling <see cref="AWSCDKEnvironmentExtensions.AddAWSCDKEnvironment"/> with a CDK stack type. If no type was specified then <see cref="Amazon.CDK.Stack"/> should be used.</typeparam>
     /// <returns>The deployment stack</returns>
