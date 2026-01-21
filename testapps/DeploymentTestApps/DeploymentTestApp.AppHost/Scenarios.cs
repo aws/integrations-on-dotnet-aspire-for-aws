@@ -18,6 +18,13 @@ namespace DeploymentTestApp.AppHost
             builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, stackName: nameof(PublishWebApp2ReferenceOnWebApp1));
 
             var webApp1 = builder.AddProject<Projects.DeploymentTestApps_WebApp1>("WebApp1")
+                .PublishAsECSFargateExpressService(new PublishECSFargateExpressServiceConfig
+                {
+                    PropsCfnExpressGatewayServicePropsCallback = (context, props) =>
+                    {
+                        props.Memory = "4096";
+                    }
+                })
                 .WithExternalHttpEndpoints();
 
             builder.AddProject<Projects.DeploymentTestApps_WebApp2>("WebApp2")
@@ -62,6 +69,22 @@ namespace DeploymentTestApp.AppHost
 
             builder.AddProject<Projects.DeploymentTestApp_Service1>("Service1")
                 .WithReference(webApp1);
+
+            await ExecuteApp(builder);
+        }
+
+        public static async Task PublishWebApp1UsingDefaultVpc()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new DefaultVpcStack(app, nameof(PublishWebApp1UsingDefaultVpc), props),
+                new AWSCDKEnvironmentResourceConfig
+                {
+                    OverrideAppHostAssemblyName = "DeploymentTestApp.AppHost.dll"
+                });
+
+            var webApp1 = builder.AddProject<Projects.DeploymentTestApps_WebApp1>("WebApp1")
+                .WithExternalHttpEndpoints();
 
             await ExecuteApp(builder);
         }

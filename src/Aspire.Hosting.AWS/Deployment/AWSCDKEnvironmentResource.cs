@@ -309,7 +309,7 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
                 environmentVariables[CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE] = cdkContextJsonTempPath;
 
                 var fullPath = Assembly.GetEntryAssembly()!.Location;
-                var appHostAssembly = Path.GetFileName(fullPath);
+                var appHostAssembly = Config.OverrideAppHostAssemblyName ?? Path.GetFileName(fullPath);
                 string workingDirectory = Directory.GetParent(fullPath)!.FullName;
                 var outputPath = Path.Combine(Path.GetTempPath(), Path.GetFileNameWithoutExtension(Path.GetRandomFileName()));
                 Directory.CreateDirectory(outputPath);

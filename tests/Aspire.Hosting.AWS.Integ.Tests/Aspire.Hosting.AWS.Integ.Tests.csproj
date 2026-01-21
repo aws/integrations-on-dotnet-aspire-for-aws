@@ -9,10 +9,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\DeploymentTestApp.AppHost\DeploymentTestApp.AppHost.csproj" />
 		<ProjectReference Include="..\..\playground\Lambda\Lambda.AppHost\Lambda.AppHost.csproj" />
 		<ProjectReference Include="..\..\playground\CloudFormationProvisioning\AWS.AppHost\AWS.AppHost.csproj" />
 		<ProjectReference Include="..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" />
+		<ProjectReference Include="..\..\testapps\DeploymentTestApps\DeploymentTestApp.AppHost\DeploymentTestApp.AppHost.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

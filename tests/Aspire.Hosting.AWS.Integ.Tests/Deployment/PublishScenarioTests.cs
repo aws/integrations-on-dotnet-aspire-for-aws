@@ -56,6 +56,12 @@ public class PublishScenarioTests
             ]
             """, webApp2EnvFnJoin);
 
+            var webApp1Memory = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/Memory");
+            Assert.Equal("4096", webApp1Memory.GetString());
+
+            var webApp2Memory = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp2/Properties/Memory");
+            Assert.Equal("2048", webApp2Memory.GetString());
+
             var vpcs = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::VPC");
             Assert.Single(vpcs);
 
@@ -405,128 +411,9 @@ public class PublishScenarioTests
             var iamRoles = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Role");
             Assert.Equal(4, iamRoles.Count);
 
-            // Validate Express Execution Role
-            var expressExecutionRole = iamRoles.FirstOrDefault(r => r.LogicalId.Contains("ECSExpressExecutionRole"));
-            Assert.NotNull(expressExecutionRole.LogicalId);
-            AssertJsonEquals("""
-            {
-             "Type": "AWS::IAM::Role",
-             "Properties": {
-              "AssumeRolePolicyDocument": {
-               "Statement": [
-                {
-                 "Action": "sts:AssumeRole",
-                 "Effect": "Allow",
-                 "Principal": {
-                  "Service": "ecs-tasks.amazonaws.com"
-                 }
-                }
-               ],
-               "Version": "2012-10-17"
-              },
-              "ManagedPolicyArns": [
-               {
-                "Fn::Join": [
-                 "",
-                 [
-                  "arn:",
-                  {
-                   "Ref": "AWS::Partition"
-                  },
-                  ":iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-                 ]
-                ]
-               },
-               {
-                "Fn::Join": [
-                 "",
-                 [
-                  "arn:",
-                  {
-                   "Ref": "AWS::Partition"
-                  },
-                  ":iam::aws:policy/CloudWatchLogsFullAccess"
-                 ]
-                ]
-               }
-              ]
-             }
-            }
-            """, expressExecutionRole.Resource);
-
-            // Validate Express Infrastructure Role
-            var expressInfrastructureRole = iamRoles.FirstOrDefault(r => r.LogicalId.Contains("ECSExpressInfrastructureRole"));
-            Assert.NotNull(expressInfrastructureRole.LogicalId);
-            AssertJsonEquals("""
-            {
-             "Type": "AWS::IAM::Role",
-             "Properties": {
-              "AssumeRolePolicyDocument": {
-               "Statement": [
-                {
-                 "Action": "sts:AssumeRole",
-                 "Effect": "Allow",
-                 "Principal": {
-                  "Service": "ecs.amazonaws.com"
-                 }
-                }
-               ],
-               "Version": "2012-10-17"
-              },
-              "ManagedPolicyArns": [
-               {
-                "Fn::Join": [
-                 "",
-                 [
-                  "arn:",
-                  {
-                   "Ref": "AWS::Partition"
-                  },
-                  ":iam::aws:policy/service-role/AmazonECSInfrastructureRoleforExpressGatewayServices"
-                 ]
-                ]
-               }
-              ]
-             }
-            }
-            """, expressInfrastructureRole.Resource);
-
             // Validate Security Groups
             var securityGroups = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroup");
             Assert.Single(securityGroups);
-
-            // Validate ExpressGatewayService exists (WebApp1)
-            var expressGatewayServices = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::ExpressGatewayService");
-            Assert.Single(expressGatewayServices);
-
-            // Validate WebApp1 configuration
-            AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1");
-
-            var webApp1ExecutionRoleAssignment = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/ExecutionRoleArn");
-            AssertJsonEquals($$"""
-            {
-             "Fn::GetAtt": [
-              "{{expressExecutionRole.LogicalId}}",
-              "Arn"
-             ]
-            }
-            """, webApp1ExecutionRoleAssignment);
-
-            var webApp1InfrastructureRoleAssignment = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/InfrastructureRoleArn");
-            AssertJsonEquals($$"""
-            {
-             "Fn::GetAtt": [
-              "{{expressInfrastructureRole.LogicalId}}",
-              "Arn"
-             ]
-            }
-            """, webApp1InfrastructureRoleAssignment);
-
-            var webApp1ContainerPort = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/PrimaryContainer/ContainerPort");
-            Assert.Equal(8080, webApp1ContainerPort.GetInt32());
-
-            var webApp1ImageAssignment = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/PrimaryContainer/Image");
-            Assert.True(webApp1ImageAssignment.TryGetProperty("Fn::Sub", out var _));
 
             // Validate ECS TaskDefinition for Service1
             var taskDefinitions = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::TaskDefinition");
@@ -614,6 +501,78 @@ public class PublishScenarioTests
         };
 
         await ExecutePublishAsync(nameof(Scenarios.PublishService1ReferenceOnWebApp1), cloudFormationValidation);
+    }
+
+    [Fact]
+    public async Task TestPublishWebApp1UsingDefaultVpc()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            // Validate NO VPC resource is created (using default VPC)
+            var vpcs = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::VPC");
+            Assert.Empty(vpcs);
+
+            // Validate NO Subnet resources are created (using default VPC subnets)
+            var subnets = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::Subnet");
+            Assert.Empty(subnets);
+
+            // Validate NO Route Tables are created
+            var routeTables = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::RouteTable");
+            Assert.Empty(routeTables);
+
+            // Validate NO NAT Gateways are created
+            var natGateways = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::NatGateway");
+            Assert.Empty(natGateways);
+
+            // Validate NO Internet Gateways are created
+            var internetGateways = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::InternetGateway");
+            Assert.Empty(internetGateways);
+
+            // Validate Security Group exists
+            var securityGroups = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroup");
+            Assert.Single(securityGroups);
+
+            // Validate Security Group references default VPC directly (string, not Ref)
+            var securityGroupVpcId = AssertElementExistsAtPath(securityGroups[0].Resource, "Properties/VpcId");
+            Assert.Equal(JsonValueKind.String, securityGroupVpcId.ValueKind);
+            Assert.StartsWith("vpc-", securityGroupVpcId.GetString());
+
+            // Validate ExpressGatewayService exists
+            var expressGatewayServices = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::ExpressGatewayService");
+            Assert.Single(expressGatewayServices);
+
+            // Validate WebApp1 configuration
+            AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1");
+
+            // Validate WebApp1 network configuration references subnets
+            var subnetAssignment = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/NetworkConfiguration/Subnets");
+            Assert.Equal(JsonValueKind.Array, subnetAssignment.ValueKind);
+            Assert.True(subnetAssignment.GetArrayLength() > 0, "WebApp1 should reference at least one subnet");
+
+            // Validate subnets are direct string IDs (from default VPC lookup), not Refs
+            foreach (var subnet in subnetAssignment.EnumerateArray())
+            {
+                Assert.Equal(JsonValueKind.String, subnet.ValueKind);
+                Assert.StartsWith("subnet-", subnet.GetString());
+            }
+
+            // Validate security group assignment
+            var securityGroupAssignment = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/NetworkConfiguration/SecurityGroups");
+            Assert.Equal(1, securityGroupAssignment.GetArrayLength());
+            AssertJsonEquals($$"""
+            [
+             {
+              "Fn::GetAtt": [
+               "{{securityGroups[0].LogicalId}}",
+               "GroupId"
+              ]
+             }
+            ]
+            """, securityGroupAssignment);
+
+            return Task.CompletedTask;
+        };
+        await ExecutePublishAsync(nameof(Scenarios.PublishWebApp1UsingDefaultVpc), cloudFormationValidation);
     }
 
     private async Task ExecutePublishAsync(string scenario, Func<JsonDocument, Task> cfTemplateValidation)

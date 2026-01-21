@@ -29,10 +29,10 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
         try
         {
             logger.LogDebug("Starting synthesis of CDK application for environment {EnvironmentName}", environment.Name);
-            logger.LogDebug("Capture of output from CDK context generation:\n{CdkContextLog}", environment.CDKContextGenerationLog);
 
             environment.InitializeCDKApp(DetermineOutputDirectory());
             InitializePublishTargetMapping();
+            logger.LogDebug("Capture of output from CDK context generation:\n{CdkContextLog}", environment.CDKContextGenerationLog);
 
             var outputPath = environment.CDKApp.Outdir;
 

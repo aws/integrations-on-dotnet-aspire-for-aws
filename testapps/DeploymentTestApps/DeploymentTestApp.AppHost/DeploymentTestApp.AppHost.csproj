@@ -17,10 +17,10 @@
 	</ItemGroup>
 	
 	<ItemGroup>
-	  <ProjectReference Include="..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" IsAspireProjectResource="false" />
-	  <ProjectReference Include="..\testapps\DeploymentTestApps\DeploymentTestApp.Service1\DeploymentTestApp.Service1.csproj" />
-	  <ProjectReference Include="..\testapps\DeploymentTestApps\DeploymentTestApps.WebApp1\DeploymentTestApps.WebApp1.csproj" />
-	  <ProjectReference Include="..\testapps\DeploymentTestApps\DeploymentTestApps.WebApp2\DeploymentTestApps.WebApp2.csproj" />
+	  <ProjectReference Include="..\..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" IsAspireProjectResource="false" />
+	  <ProjectReference Include="..\DeploymentTestApp.Service1\DeploymentTestApp.Service1.csproj" />
+	  <ProjectReference Include="..\DeploymentTestApps.WebApp1\DeploymentTestApps.WebApp1.csproj" />
+	  <ProjectReference Include="..\DeploymentTestApps.WebApp2\DeploymentTestApps.WebApp2.csproj" />
 	</ItemGroup>	
 
 </Project>

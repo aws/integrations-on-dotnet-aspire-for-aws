@@ -1,12 +1,22 @@
 using DeploymentTestApp.AppHost;
 using System.Reflection;
 
+const string envScenarioEnvironmentVariable = "AWS_ASPIRE_PUBLISH_SCENARIO";
+
 var scenario = GetScenarioFromArgs(args);
 
 if (string.IsNullOrWhiteSpace(scenario))
     throw new ArgumentException($"Missing required switch {DeploymentTestAppConstants.ScenarioSwitch}");
 
-await InvokeScenarioAsync(scenario);
+try
+{
+    await InvokeScenarioAsync(scenario);
+}
+finally
+{
+    // Clear the environment variable after the scenario has run
+    Environment.SetEnvironmentVariable(envScenarioEnvironmentVariable, null);
+}
 
 static async Task InvokeScenarioAsync(string scenario)
 {
@@ -40,19 +50,34 @@ static async Task InvokeScenarioAsync(string scenario)
 
 
 static string? GetScenarioFromArgs(string[] args)
-{
-    for (int i = 0; i < args.Length; i++)
+{ 
+
+    string? scenario = null;
+    if (Environment.GetEnvironmentVariable(envScenarioEnvironmentVariable) is string envVarValue && !string.IsNullOrWhiteSpace(envVarValue))
     {
-        if (args[i].Equals(DeploymentTestAppConstants.ScenarioSwitch, StringComparison.OrdinalIgnoreCase))
-        {
-            if (i + 1 < args.Length)
-            {
-                return args[i + 1];
-            }
-            return null;
-        }
+        scenario = envVarValue;
     }
-    return null;
+    else
+    {
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (args[i].Equals(DeploymentTestAppConstants.ScenarioSwitch, StringComparison.OrdinalIgnoreCase))
+            {
+                if (i + 1 < args.Length)
+                {
+                    scenario = args[i + 1];
+                }
+                break;
+            }
+        }
+
+        // Store the current scenario in an environment variable so if we need to get the
+        // CDK context using the internal fork mechanism that doesn't pass in the --scenario switch
+        // we can still retrieve the scenario.
+        Environment.SetEnvironmentVariable("AWS_ASPIRE_PUBLISH_SCENARIO", scenario);
+    }
+
+    return scenario;
 }
 
 await Scenarios.PublishWebApp2ReferenceOnWebApp1();
