@@ -575,6 +575,285 @@ public class PublishScenarioTests
         await ExecutePublishAsync(nameof(Scenarios.PublishWebApp1UsingDefaultVpc), cloudFormationValidation);
     }
 
+    [Fact]
+    public async Task TestPublishLambda()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            // Validate NO VPC resources are created
+            var vpcs = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::VPC");
+            Assert.Empty(vpcs);
+
+            // Validate NO Subnet resources are created
+            var subnets = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::Subnet");
+            Assert.Empty(subnets);
+
+            // Validate NO Security Groups are created
+            var securityGroups = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroup");
+            Assert.Empty(securityGroups);
+
+            // Validate NO ECS resources are created
+            var ecsClusters = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::Cluster");
+            Assert.Empty(ecsClusters);
+
+            // Validate NO Outputs (Lambda doesn't expose an endpoint by default)
+            var outputsElement = GetElementAtPath(cfTemplateDoc, "Outputs");
+            Assert.Null(outputsElement);
+
+            // Validate Lambda Function exists
+            var lambdaFunctions = GetResourcesOfType(cfTemplateDoc, "AWS::Lambda::Function");
+            Assert.Single(lambdaFunctions);
+            var lambdaFunction = lambdaFunctions[0];
+
+            // Validate Lambda has NO VpcConfig (not attached to VPC)
+            var vpcConfig = GetElementAtPath(lambdaFunction.Resource, "Properties/VpcConfig");
+            Assert.Null(vpcConfig);
+
+            // Validate Lambda runtime
+            var runtime = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Runtime");
+            Assert.Equal("dotnet8", runtime.GetString());
+
+            // Validate Lambda memory
+            var memorySize = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/MemorySize");
+            Assert.Equal(512, memorySize.GetInt32());
+
+            // Validate Lambda timeout
+            var timeout = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Timeout");
+            Assert.Equal(30, timeout.GetInt32());
+
+            // Validate Lambda handler
+            var handler = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Handler");
+            Assert.Contains("FunctionHandler", handler.GetString());
+
+            // Validate Lambda has deployment tag
+            var lambdaTags = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Tags");
+            var deploymentTag = lambdaTags.EnumerateArray()
+                .FirstOrDefault(t => t.GetProperty("Key").GetString() == "aspire:deployment-tag");
+            Assert.NotEqual(default, deploymentTag);
+
+            // Validate Lambda code is from S3
+            var codeS3Bucket = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Code/S3Bucket");
+            Assert.NotNull(codeS3Bucket.GetString());
+            var codeS3Key = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Code/S3Key");
+            Assert.EndsWith(".zip", codeS3Key.GetString());
+
+            // Validate Lambda role assignment
+            var roleAssignment = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Role");
+            Assert.True(roleAssignment.TryGetProperty("Fn::GetAtt", out var _));
+
+            // Validate IAM Role exists for Lambda
+            var iamRoles = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Role");
+            Assert.Single(iamRoles);
+            var lambdaRole = iamRoles[0];
+
+            // Validate IAM Role has Lambda service principal
+            var assumeRolePrincipal = AssertElementExistsAtPath(lambdaRole.Resource, "Properties/AssumeRolePolicyDocument/Statement/0/Principal/Service");
+            Assert.Equal("lambda.amazonaws.com", assumeRolePrincipal.GetString());
+
+            // Validate IAM Role has basic Lambda execution policy
+            var managedPolicyArns = AssertElementExistsAtPath(lambdaRole.Resource, "Properties/ManagedPolicyArns");
+            Assert.True(managedPolicyArns.GetArrayLength() >= 1);
+
+            // Validate managed policy contains AWSLambdaBasicExecutionRole
+            var firstPolicyFnJoin = AssertElementExistsAtPath(managedPolicyArns, "0/Fn::Join");
+            var policyParts = firstPolicyFnJoin.EnumerateArray().ToList();
+            Assert.True(policyParts.Count >= 2);
+            var policyPartsArray = policyParts[1].EnumerateArray().ToList();
+            var lastPart = policyPartsArray.Last();
+            Assert.Contains("AWSLambdaBasicExecutionRole", lastPart.GetString());
+
+            // Validate IAM Role has deployment tag
+            var roleTags = AssertElementExistsAtPath(lambdaRole.Resource, "Properties/Tags");
+            var roleDeploymentTag = roleTags.EnumerateArray()
+                .FirstOrDefault(t => t.GetProperty("Key").GetString() == "aspire:deployment-tag");
+            Assert.NotEqual(default, roleDeploymentTag);
+
+            // Validate Lambda depends on IAM Role
+            var lambdaDependsOn = AssertElementExistsAtPath(lambdaFunction.Resource, "DependsOn");
+            Assert.Equal(JsonValueKind.Array, lambdaDependsOn.ValueKind);
+            var dependsOnArray = lambdaDependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
+            Assert.Contains(lambdaRole.LogicalId, dependsOnArray);
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishLambda), cloudFormationValidation);
+    }
+
+    [Fact]
+    public async Task TestPublishLambdaWithCustomization()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            // Validate NO VPC resources are created
+            var vpcs = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::VPC");
+            Assert.Empty(vpcs);
+
+            var subnets = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::Subnet");
+            Assert.Empty(subnets);
+
+            var securityGroups = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroup");
+            Assert.Empty(securityGroups);
+
+            // Validate SQS Queue exists (created by custom stack)
+            var sqsQueues = GetResourcesOfType(cfTemplateDoc, "AWS::SQS::Queue");
+            Assert.Single(sqsQueues);
+            var sqsQueue = sqsQueues[0];
+
+            // Validate Lambda Function exists
+            var lambdaFunctions = GetResourcesOfType(cfTemplateDoc, "AWS::Lambda::Function");
+            Assert.Single(lambdaFunctions);
+            var lambdaFunction = lambdaFunctions[0];
+
+            // Validate Lambda has NO VpcConfig (not attached to VPC)
+            var vpcConfig = GetElementAtPath(lambdaFunction.Resource, "Properties/VpcConfig");
+            Assert.Null(vpcConfig);
+
+            // Validate Lambda runtime
+            var runtime = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Runtime");
+            Assert.Equal("dotnet8", runtime.GetString());
+
+            // Validate Lambda CUSTOMIZED memory (2048 instead of default 512)
+            var memorySize = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/MemorySize");
+            Assert.Equal(2048, memorySize.GetInt32());
+
+            // Validate Lambda CUSTOMIZED timeout (120 instead of default 30)
+            var timeout = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Timeout");
+            Assert.Equal(120, timeout.GetInt32());
+
+            // Validate Lambda handler
+            var handler = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Handler");
+            Assert.Contains("FunctionHandler", handler.GetString());
+
+            // Validate Lambda has deployment tag
+            var lambdaTags = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Tags");
+            var deploymentTag = lambdaTags.EnumerateArray()
+                .FirstOrDefault(t => t.GetProperty("Key").GetString() == "aspire:deployment-tag");
+            Assert.NotEqual(default, deploymentTag);
+
+            // Validate Event Source Mapping exists (Lambda -> SQS)
+            var eventSourceMappings = GetResourcesOfType(cfTemplateDoc, "AWS::Lambda::EventSourceMapping");
+            Assert.Single(eventSourceMappings);
+            var eventSourceMapping = eventSourceMappings[0];
+
+            // Validate Event Source Mapping BatchSize
+            var batchSize = AssertElementExistsAtPath(eventSourceMapping.Resource, "Properties/BatchSize");
+            Assert.Equal(5, batchSize.GetInt32());
+
+            // Validate Event Source Mapping is Enabled
+            var enabled = AssertElementExistsAtPath(eventSourceMapping.Resource, "Properties/Enabled");
+            Assert.True(enabled.GetBoolean());
+
+            // Validate Event Source Mapping references the SQS Queue
+            var eventSourceArn = AssertElementExistsAtPath(eventSourceMapping.Resource, "Properties/EventSourceArn/Fn::GetAtt");
+            var eventSourceArnArray = eventSourceArn.EnumerateArray().ToList();
+            Assert.Equal(2, eventSourceArnArray.Count);
+            Assert.Equal(sqsQueue.LogicalId, eventSourceArnArray[0].GetString());
+            Assert.Equal("Arn", eventSourceArnArray[1].GetString());
+
+            // Validate Event Source Mapping references the Lambda Function
+            var functionName = AssertElementExistsAtPath(eventSourceMapping.Resource, "Properties/FunctionName/Ref");
+            Assert.Equal(lambdaFunction.LogicalId, functionName.GetString());
+
+            // Validate Event Source Mapping has deployment tag
+            var eventSourceTags = AssertElementExistsAtPath(eventSourceMapping.Resource, "Properties/Tags");
+            var eventSourceDeploymentTag = eventSourceTags.EnumerateArray()
+                .FirstOrDefault(t => t.GetProperty("Key").GetString() == "aspire:deployment-tag");
+            Assert.NotEqual(default, eventSourceDeploymentTag);
+
+            // Validate IAM Role exists for Lambda
+            var iamRoles = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Role");
+            Assert.Single(iamRoles);
+            var lambdaRole = iamRoles[0];
+
+            // Validate IAM Role has Lambda service principal
+            var assumeRolePrincipal = AssertElementExistsAtPath(lambdaRole.Resource, "Properties/AssumeRolePolicyDocument/Statement/0/Principal/Service");
+            Assert.Equal("lambda.amazonaws.com", assumeRolePrincipal.GetString());
+
+            // Validate IAM Policy exists with SQS permissions
+            var iamPolicies = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Policy");
+            Assert.Single(iamPolicies);
+            var sqsPolicy = iamPolicies[0];
+
+            // Validate IAM Policy has SQS actions
+            var policyStatements = AssertElementExistsAtPath(sqsPolicy.Resource, "Properties/PolicyDocument/Statement");
+            Assert.True(policyStatements.GetArrayLength() >= 1);
+
+            var sqsStatement = policyStatements.EnumerateArray().First();
+            var actions = AssertElementExistsAtPath(sqsStatement, "Action");
+            var actionsList = actions.EnumerateArray().Select(a => a.GetString()).ToList();
+            Assert.Contains("sqs:ReceiveMessage", actionsList);
+            Assert.Contains("sqs:DeleteMessage", actionsList);
+            Assert.Contains("sqs:GetQueueAttributes", actionsList);
+
+            // Validate IAM Policy references SQS Queue ARN
+            var policyResource = AssertElementExistsAtPath(sqsStatement, "Resource/Fn::GetAtt");
+            var policyResourceArray = policyResource.EnumerateArray().ToList();
+            Assert.Equal(sqsQueue.LogicalId, policyResourceArray[0].GetString());
+            Assert.Equal("Arn", policyResourceArray[1].GetString());
+
+            // Validate Lambda depends on IAM Role and Policy
+            var lambdaDependsOn = AssertElementExistsAtPath(lambdaFunction.Resource, "DependsOn");
+            Assert.Equal(JsonValueKind.Array, lambdaDependsOn.ValueKind);
+            var dependsOnArray = lambdaDependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
+            Assert.Contains(lambdaRole.LogicalId, dependsOnArray);
+            Assert.Contains(sqsPolicy.LogicalId, dependsOnArray);
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishLambdaWithCustomization), cloudFormationValidation);
+    }
+
+    [Fact]
+    public async Task TestPublishLambdaWithReferences()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            // Validate Lambda Function exists
+            var lambdaFunctions = GetResourcesOfType(cfTemplateDoc, "AWS::Lambda::Function");
+            Assert.Single(lambdaFunctions);
+            var lambdaFunction = lambdaFunctions[0];
+
+            // Validate Lambda has NO VpcConfig (not attached to VPC)
+            var vpcConfig = GetElementAtPath(lambdaFunction.Resource, "Properties/VpcConfig");
+            Assert.Null(vpcConfig);
+
+            // Validate Lambda has Environment Variables with WebApp1 reference
+            var lambdaEnvVars = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Environment/Variables");
+            Assert.Equal(JsonValueKind.Object, lambdaEnvVars.ValueKind);
+
+            // Validate Lambda environment variable references WebApp1's endpoint
+            var webApp1EnvVarFnJoin = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Environment/Variables/services__WebApp1__https__0/Fn::Join");
+            AssertJsonEquals("""
+            [
+             "",
+             [
+              "https://",
+              {
+               "Fn::GetAtt": [
+                "ProjectWebApp1",
+                "Endpoint"
+               ]
+              },
+              "/"
+             ]
+            ]
+            """, webApp1EnvVarFnJoin);
+
+            // Validate Lambda depends on WebApp1
+            var lambdaDependsOn = AssertElementExistsAtPath(lambdaFunction.Resource, "DependsOn");
+            Assert.Equal(JsonValueKind.Array, lambdaDependsOn.ValueKind);
+            var dependsOnArray = lambdaDependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
+            Assert.Contains("ProjectWebApp1", dependsOnArray);
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishLambdaWithReferences), cloudFormationValidation);
+    }
+
+
     private async Task ExecutePublishAsync(string scenario, Func<JsonDocument, Task> cfTemplateValidation)
     {
         var outputPath = GetTempOutputPath();

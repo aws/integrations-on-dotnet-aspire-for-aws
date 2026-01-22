@@ -18,6 +18,7 @@
 	
 	<ItemGroup>
 	  <ProjectReference Include="..\..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" IsAspireProjectResource="false" />
+	  <ProjectReference Include="..\DeploymentTestApp.LambdaFunction1\DeploymentTestApp.LambdaFunction1.csproj" />
 	  <ProjectReference Include="..\DeploymentTestApp.Service1\DeploymentTestApp.Service1.csproj" />
 	  <ProjectReference Include="..\DeploymentTestApps.WebApp1\DeploymentTestApps.WebApp1.csproj" />
 	  <ProjectReference Include="..\DeploymentTestApps.WebApp2\DeploymentTestApps.WebApp2.csproj" />

@@ -27,6 +27,8 @@ public class AWSCDKEnvironmentResourceConfig
     public bool DisablePlatformCorrection { get; init; }
 
     /// <summary>
+    /// For testing only:
+    /// 
     /// When we need to fork the process to get CDK context information we determine the AppHost by assuming
     /// it is the entry assembly. This is how a customer would use our Aspire integration. However,
     /// in the integ tests that kicks off the publish the testhost.dll is the entry assembly.
