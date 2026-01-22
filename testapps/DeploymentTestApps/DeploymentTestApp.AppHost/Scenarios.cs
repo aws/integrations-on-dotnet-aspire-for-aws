@@ -153,6 +153,108 @@ namespace DeploymentTestApp.AppHost
             await ExecuteApp(builder);
         }
 
+        public static async Task PublishServerlessRedis()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new DefaultVpcStack(app, nameof(PublishServerlessRedis), props),
+                new AWSCDKEnvironmentResourceConfig
+                {
+                    OverrideAppHostAssemblyName = "DeploymentTestApp.AppHost.dll"
+                });
+
+            var cache = builder.AddRedis("Cache");
+
+            builder.AddProject<Projects.DeploymentTestApps_WebApp1>("WebApp1")
+                .WithReference(cache)
+                .WithExternalHttpEndpoints();
+
+            builder.AddProject<Projects.DeploymentTestApp_Service1>("Service1")
+                .WithReference(cache);
+
+            builder.AddAWSLambdaFunction<Projects.DeploymentTestApp_LambdaFunction1>("LambdaFunction1", "DeploymentTestApp.LambdaFunction1::DeploymentTestApp.LambdaFunction1.Function::FunctionHandler")
+                .WithReference(cache);
+
+            await ExecuteApp(builder);
+        }
+
+        public static async Task PublishProvisionedRedis()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new DefaultVpcStack(app, nameof(PublishProvisionedRedis), props),
+                new AWSCDKEnvironmentResourceConfig
+                {
+                    OverrideAppHostAssemblyName = "DeploymentTestApp.AppHost.dll"
+                });
+
+            var cache = builder.AddRedis("Cache")
+                               .PublishAsElasticCacheProvisionCluster();
+
+            builder.AddProject<Projects.DeploymentTestApps_WebApp1>("WebApp1")
+                .WithReference(cache)
+                .WithExternalHttpEndpoints();
+
+            builder.AddProject<Projects.DeploymentTestApp_Service1>("Service1")
+                .WithReference(cache);
+
+            builder.AddAWSLambdaFunction<Projects.DeploymentTestApp_LambdaFunction1>("LambdaFunction1", "DeploymentTestApp.LambdaFunction1::DeploymentTestApp.LambdaFunction1.Function::FunctionHandler")
+                .WithReference(cache);
+
+            await ExecuteApp(builder);
+        }
+
+        public static async Task PublishServerlessValkey()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new DefaultVpcStack(app, nameof(PublishServerlessValkey), props),
+                new AWSCDKEnvironmentResourceConfig
+                {
+                    OverrideAppHostAssemblyName = "DeploymentTestApp.AppHost.dll"
+                });
+
+            var cache = builder.AddValkey("Cache");
+
+            builder.AddProject<Projects.DeploymentTestApps_WebApp1>("WebApp1")
+                .WithReference(cache)
+                .WithExternalHttpEndpoints();
+
+            builder.AddProject<Projects.DeploymentTestApp_Service1>("Service1")
+                .WithReference(cache);
+
+            builder.AddAWSLambdaFunction<Projects.DeploymentTestApp_LambdaFunction1>("LambdaFunction1", "DeploymentTestApp.LambdaFunction1::DeploymentTestApp.LambdaFunction1.Function::FunctionHandler")
+                .WithReference(cache);
+
+            await ExecuteApp(builder);
+        }
+
+        public static async Task PublishProvisionedValkey()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new DefaultVpcStack(app, nameof(PublishProvisionedValkey), props),
+                new AWSCDKEnvironmentResourceConfig
+                {
+                    OverrideAppHostAssemblyName = "DeploymentTestApp.AppHost.dll"
+                });
+
+            var cache = builder.AddValkey("Cache")
+                               .PublishAsElasticCacheProvisionCluster();
+
+            builder.AddProject<Projects.DeploymentTestApps_WebApp1>("WebApp1")
+                .WithReference(cache)
+                .WithExternalHttpEndpoints();
+
+            builder.AddProject<Projects.DeploymentTestApp_Service1>("Service1")
+                .WithReference(cache);
+
+            builder.AddAWSLambdaFunction<Projects.DeploymentTestApp_LambdaFunction1>("LambdaFunction1", "DeploymentTestApp.LambdaFunction1::DeploymentTestApp.LambdaFunction1.Function::FunctionHandler")
+                .WithReference(cache);
+
+            await ExecuteApp(builder);
+        }
+
         /// <summary>
         /// When running the IDistributedApplication through tests for publishing there are exceptions thrown 
         /// when the IDistributedApplication is shutting down. This method catches and ignores those exceptions to allow for clean test runs.

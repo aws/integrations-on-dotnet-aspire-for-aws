@@ -242,7 +242,7 @@ public static class AWSCDKEnvironmentExtensions
     /// <param name="config">An optional configuration object for providing callbacks to customize the CDK props and construct.</param>
     /// <returns>The same resource builder instance for chaining additional configuration.</returns>
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-    public static IResourceBuilder<RedisResource> PublishAsElasticCacheNodeCluster(this IResourceBuilder<RedisResource> builder, PublishElastiCacheProvisionClusterConfig? config = null)
+    public static IResourceBuilder<RedisResource> PublishAsElasticCacheProvisionCluster(this IResourceBuilder<RedisResource> builder, PublishElastiCacheProvisionClusterConfig? config = null)
     {
         var annotation = new PublishElasticCacheProvisionClusterAnnotation { Config = config ?? new PublishElastiCacheProvisionClusterConfig() };
         builder.Resource.Annotations.Add(annotation);

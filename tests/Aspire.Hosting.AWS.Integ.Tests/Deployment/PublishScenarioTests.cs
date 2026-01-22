@@ -853,6 +853,742 @@ public class PublishScenarioTests
         await ExecutePublishAsync(nameof(Scenarios.PublishLambdaWithReferences), cloudFormationValidation);
     }
 
+    [Fact]
+    public async Task PublishServerlessRedis()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            // Validate ElastiCache ServerlessCache exists
+            var serverlessCaches = GetResourcesOfType(cfTemplateDoc, "AWS::ElastiCache::ServerlessCache");
+            Assert.Single(serverlessCaches);
+            var elastiCache = serverlessCaches[0];
+
+            // Validate ElastiCache engine is valkey
+            var engine = AssertElementExistsAtPath(elastiCache.Resource, "Properties/Engine");
+            Assert.Equal("valkey", engine.GetString());
+
+            // Validate ElastiCache major engine version
+            var majorEngineVersion = AssertElementExistsAtPath(elastiCache.Resource, "Properties/MajorEngineVersion");
+            Assert.Equal("8", majorEngineVersion.GetString());
+
+            // Validate ElastiCache has security group
+            var cacheSecurityGroups = AssertElementExistsAtPath(elastiCache.Resource, "Properties/SecurityGroupIds");
+            Assert.True(cacheSecurityGroups.GetArrayLength() >= 1);
+
+            // Validate ElastiCache has subnet IDs (direct strings from default VPC)
+            var cacheSubnetIds = AssertElementExistsAtPath(elastiCache.Resource, "Properties/SubnetIds");
+            Assert.True(cacheSubnetIds.GetArrayLength() >= 2);
+            foreach (var subnet in cacheSubnetIds.EnumerateArray())
+            {
+                Assert.Equal(JsonValueKind.String, subnet.ValueKind);
+                Assert.StartsWith("subnet-", subnet.GetString());
+            }
+
+            // Validate Security Groups exist (ElastiCache SG, ECS SG, Service1 Ref SG, Lambda Ref SG)
+            var securityGroups = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroup");
+            Assert.True(securityGroups.Count >= 4);
+
+            // Find ElastiCache security group
+            var elastiCacheSg = securityGroups.FirstOrDefault(sg => sg.LogicalId.Contains("ElastiCacheServerlessClusterSecurityGroup"));
+            Assert.NotNull(elastiCacheSg.LogicalId);
+
+            // Find ECS cluster security group
+            var ecsSg = securityGroups.FirstOrDefault(sg => sg.LogicalId.Contains("ECSClusterSecurityGroup"));
+            Assert.NotNull(ecsSg.LogicalId);
+
+            // Validate Security Group Ingress rules for ElastiCache access on port 6379
+            var securityGroupIngress = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroupIngress");
+            Assert.True(securityGroupIngress.Count >= 3, "Should have ingress rules for ECS, Service1, and Lambda");
+
+            // Validate all ingress rules target port 6379
+            foreach (var ingress in securityGroupIngress)
+            {
+                var fromPort = AssertElementExistsAtPath(ingress.Resource, "Properties/FromPort");
+                Assert.Equal(6379, fromPort.GetInt32());
+                var toPort = AssertElementExistsAtPath(ingress.Resource, "Properties/ToPort");
+                Assert.Equal(6379, toPort.GetInt32());
+                var protocol = AssertElementExistsAtPath(ingress.Resource, "Properties/IpProtocol");
+                Assert.Equal("tcp", protocol.GetString());
+            }
+
+            // Validate ExpressGatewayService exists for WebApp1
+            var expressGatewayServices = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::ExpressGatewayService");
+            Assert.Single(expressGatewayServices);
+
+            // Validate WebApp1 has ConnectionStrings__Cache environment variable
+            var webApp1EnvFnJoin = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/PrimaryContainer/Environment/{Name=ConnectionStrings__Cache}/Value/Fn::Join");
+            var webApp1EnvParts = webApp1EnvFnJoin.EnumerateArray().ToList();
+            Assert.Equal(2, webApp1EnvParts.Count);
+            Assert.Equal("", webApp1EnvParts[0].GetString());
+
+            // Validate the connection string references ElastiCache endpoint
+            var webApp1EnvPartsArray = webApp1EnvParts[1].EnumerateArray().ToList();
+            Assert.True(webApp1EnvPartsArray.Count >= 3);
+            // First part should be Fn::GetAtt for Endpoint.Address
+            var addressGetAtt = webApp1EnvPartsArray[0].GetProperty("Fn::GetAtt").EnumerateArray().ToList();
+            Assert.Equal(elastiCache.LogicalId, addressGetAtt[0].GetString());
+            Assert.Equal("Endpoint.Address", addressGetAtt[1].GetString());
+
+            // Validate WebApp1 depends on ElastiCache
+            var webApp1DependsOn = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/DependsOn");
+            Assert.Equal(JsonValueKind.Array, webApp1DependsOn.ValueKind);
+            var webApp1DependsOnArray = webApp1DependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
+            Assert.Contains(elastiCache.LogicalId, webApp1DependsOnArray);
+
+            // Validate ECS TaskDefinition for Service1
+            var taskDefinitions = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::TaskDefinition");
+            Assert.Single(taskDefinitions);
+            var service1TaskDef = taskDefinitions[0];
+
+            // Validate Service1 TaskDefinition has ConnectionStrings__Cache environment variable
+            var service1EnvFnJoin = AssertElementExistsAtPath(cfTemplateDoc, $"Resources/{service1TaskDef.LogicalId}/Properties/ContainerDefinitions/{{Name=Container-Service1}}/Environment/{{Name=ConnectionStrings__Cache}}/Value/Fn::Join");
+            var service1EnvParts = service1EnvFnJoin.EnumerateArray().ToList();
+            Assert.Equal(2, service1EnvParts.Count);
+
+            // Validate Service1 connection string references ElastiCache endpoint
+            var service1EnvPartsArray = service1EnvParts[1].EnumerateArray().ToList();
+            var service1AddressGetAtt = service1EnvPartsArray[0].GetProperty("Fn::GetAtt").EnumerateArray().ToList();
+            Assert.Equal(elastiCache.LogicalId, service1AddressGetAtt[0].GetString());
+            Assert.Equal("Endpoint.Address", service1AddressGetAtt[1].GetString());
+
+            // Validate ECS Service for Service1 depends on ElastiCache
+            var ecsServices = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::Service");
+            Assert.Single(ecsServices);
+            var service1 = ecsServices[0];
+
+            var service1DependsOn = AssertElementExistsAtPath(service1.Resource, "DependsOn");
+            var service1DependsOnArray = service1DependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
+            Assert.Contains(elastiCache.LogicalId, service1DependsOnArray);
+
+            // Validate Service1 has reference security group for ElastiCache access
+            var service1SecurityGroups = AssertElementExistsAtPath(service1.Resource, "Properties/NetworkConfiguration/AwsvpcConfiguration/SecurityGroups");
+            Assert.True(service1SecurityGroups.GetArrayLength() >= 2, "Service1 should have ECS SG and Ref SG");
+
+            // Validate Lambda Function exists
+            var lambdaFunctions = GetResourcesOfType(cfTemplateDoc, "AWS::Lambda::Function");
+            Assert.Single(lambdaFunctions);
+            var lambdaFunction = lambdaFunctions[0];
+
+            // Validate Lambda has ConnectionStrings__Cache environment variable
+            var lambdaEnvFnJoin = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Environment/Variables/ConnectionStrings__Cache/Fn::Join");
+            var lambdaEnvParts = lambdaEnvFnJoin.EnumerateArray().ToList();
+            Assert.Equal(2, lambdaEnvParts.Count);
+
+            // Validate Lambda connection string references ElastiCache endpoint
+            var lambdaEnvPartsArray = lambdaEnvParts[1].EnumerateArray().ToList();
+            var lambdaAddressGetAtt = lambdaEnvPartsArray[0].GetProperty("Fn::GetAtt").EnumerateArray().ToList();
+            Assert.Equal(elastiCache.LogicalId, lambdaAddressGetAtt[0].GetString());
+            Assert.Equal("Endpoint.Address", lambdaAddressGetAtt[1].GetString());
+
+            // Validate Lambda has VpcConfig (required to access ElastiCache)
+            var vpcConfig = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/VpcConfig");
+
+            // Validate Lambda VpcConfig has security group
+            var lambdaSecurityGroups = AssertElementExistsAtPath(vpcConfig, "SecurityGroupIds");
+            Assert.True(lambdaSecurityGroups.GetArrayLength() >= 1);
+
+            // Validate Lambda VpcConfig has subnet IDs
+            var lambdaSubnetIds = AssertElementExistsAtPath(vpcConfig, "SubnetIds");
+            Assert.True(lambdaSubnetIds.GetArrayLength() >= 2);
+
+            // Validate Lambda depends on ElastiCache
+            var lambdaDependsOn = AssertElementExistsAtPath(lambdaFunction.Resource, "DependsOn");
+            var lambdaDependsOnArray = lambdaDependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
+            Assert.Contains(elastiCache.LogicalId, lambdaDependsOnArray);
+
+            // Validate Lambda IAM Role has VPC access policy
+            var iamRoles = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Role");
+            var lambdaRole = iamRoles.FirstOrDefault(r => r.LogicalId.Contains("LambdaFunction") && r.LogicalId.Contains("ServiceRole"));
+            Assert.NotNull(lambdaRole.LogicalId);
+
+            var managedPolicyArns = AssertElementExistsAtPath(lambdaRole.Resource, "Properties/ManagedPolicyArns");
+            var policyArns = managedPolicyArns.EnumerateArray().ToList();
+            var hasVpcAccessPolicy = policyArns.Any(p =>
+            {
+                if (p.TryGetProperty("Fn::Join", out var fnJoin))
+                {
+                    var parts = fnJoin.EnumerateArray().ToList();
+                    if (parts.Count >= 2)
+                    {
+                        var lastPart = parts[1].EnumerateArray().Last();
+                        return lastPart.GetString()?.Contains("AWSLambdaVPCAccessExecutionRole") == true;
+                    }
+                }
+                return false;
+            });
+            Assert.True(hasVpcAccessPolicy, "Lambda role should have AWSLambdaVPCAccessExecutionRole policy");
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishServerlessRedis), cloudFormationValidation);
+    }
+
+    [Fact]
+    public async Task PublishProvisionedRedis()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            // Validate ElastiCache ReplicationGroup exists (provisioned, not serverless)
+            var replicationGroups = GetResourcesOfType(cfTemplateDoc, "AWS::ElastiCache::ReplicationGroup");
+            Assert.Single(replicationGroups);
+            var elastiCache = replicationGroups[0];
+
+            // Validate ElastiCache engine is valkey
+            var engine = AssertElementExistsAtPath(elastiCache.Resource, "Properties/Engine");
+            Assert.Equal("valkey", engine.GetString());
+
+            // Validate ElastiCache engine version
+            var engineVersion = AssertElementExistsAtPath(elastiCache.Resource, "Properties/EngineVersion");
+            Assert.Equal("8.2", engineVersion.GetString());
+
+            // Validate ElastiCache cache node type
+            var cacheNodeType = AssertElementExistsAtPath(elastiCache.Resource, "Properties/CacheNodeType");
+            Assert.Equal("cache.t3.micro", cacheNodeType.GetString());
+
+            // Validate ElastiCache num cache clusters
+            var numCacheClusters = AssertElementExistsAtPath(elastiCache.Resource, "Properties/NumCacheClusters");
+            Assert.Equal(2, numCacheClusters.GetInt32());
+
+            // Validate ElastiCache encryption settings
+            var atRestEncryption = AssertElementExistsAtPath(elastiCache.Resource, "Properties/AtRestEncryptionEnabled");
+            Assert.True(atRestEncryption.GetBoolean());
+            var transitEncryption = AssertElementExistsAtPath(elastiCache.Resource, "Properties/TransitEncryptionEnabled");
+            Assert.True(transitEncryption.GetBoolean());
+
+            // Validate ElastiCache automatic failover
+            var automaticFailover = AssertElementExistsAtPath(elastiCache.Resource, "Properties/AutomaticFailoverEnabled");
+            Assert.True(automaticFailover.GetBoolean());
+
+            // Validate ElastiCache port
+            var port = AssertElementExistsAtPath(elastiCache.Resource, "Properties/Port");
+            Assert.Equal(6379, port.GetInt32());
+
+            // Validate ElastiCache has security group
+            var cacheSecurityGroups = AssertElementExistsAtPath(elastiCache.Resource, "Properties/SecurityGroupIds");
+            Assert.True(cacheSecurityGroups.GetArrayLength() >= 1);
+
+            // Validate ElastiCache SubnetGroup exists
+            var subnetGroups = GetResourcesOfType(cfTemplateDoc, "AWS::ElastiCache::SubnetGroup");
+            Assert.Single(subnetGroups);
+            var subnetGroup = subnetGroups[0];
+
+            // Validate SubnetGroup has subnet IDs
+            var subnetGroupSubnetIds = AssertElementExistsAtPath(subnetGroup.Resource, "Properties/SubnetIds");
+            Assert.True(subnetGroupSubnetIds.GetArrayLength() >= 2);
+
+            // Validate ElastiCache references the SubnetGroup
+            var cacheSubnetGroupName = AssertElementExistsAtPath(elastiCache.Resource, "Properties/CacheSubnetGroupName/Ref");
+            Assert.Equal(subnetGroup.LogicalId, cacheSubnetGroupName.GetString());
+
+            // Validate Security Groups exist (ElastiCache SG, ECS SG, Service1 Ref SG, Lambda Ref SG)
+            var securityGroups = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroup");
+            Assert.True(securityGroups.Count >= 4);
+
+            // Find ElastiCache security group (provisioned uses different naming)
+            var elastiCacheSg = securityGroups.FirstOrDefault(sg => sg.LogicalId.Contains("ElastiCacheProvisionClusterSecurityGroup"));
+            Assert.NotNull(elastiCacheSg.LogicalId);
+
+            // Find ECS cluster security group
+            var ecsSg = securityGroups.FirstOrDefault(sg => sg.LogicalId.Contains("ECSClusterSecurityGroup"));
+            Assert.NotNull(ecsSg.LogicalId);
+
+            // Validate Security Group Ingress rules for ElastiCache access on port 6379
+            var securityGroupIngress = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroupIngress");
+            Assert.True(securityGroupIngress.Count >= 3, "Should have ingress rules for ECS, Service1, and Lambda");
+
+            // Validate all ingress rules target port 6379
+            foreach (var ingress in securityGroupIngress)
+            {
+                var fromPort = AssertElementExistsAtPath(ingress.Resource, "Properties/FromPort");
+                Assert.Equal(6379, fromPort.GetInt32());
+                var toPort = AssertElementExistsAtPath(ingress.Resource, "Properties/ToPort");
+                Assert.Equal(6379, toPort.GetInt32());
+                var protocol = AssertElementExistsAtPath(ingress.Resource, "Properties/IpProtocol");
+                Assert.Equal("tcp", protocol.GetString());
+            }
+
+            // Validate ExpressGatewayService exists for WebApp1
+            var expressGatewayServices = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::ExpressGatewayService");
+            Assert.Single(expressGatewayServices);
+
+            // Validate WebApp1 has ConnectionStrings__Cache environment variable
+            var webApp1EnvFnJoin = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/PrimaryContainer/Environment/{Name=ConnectionStrings__Cache}/Value/Fn::Join");
+            var webApp1EnvParts = webApp1EnvFnJoin.EnumerateArray().ToList();
+            Assert.Equal(2, webApp1EnvParts.Count);
+            Assert.Equal("", webApp1EnvParts[0].GetString());
+
+            // Validate the connection string references ElastiCache ConfigurationEndPoint (not Endpoint)
+            var webApp1EnvPartsArray = webApp1EnvParts[1].EnumerateArray().ToList();
+            Assert.True(webApp1EnvPartsArray.Count >= 3);
+            // First part should be Fn::GetAtt for ConfigurationEndPoint.Address
+            var addressGetAtt = webApp1EnvPartsArray[0].GetProperty("Fn::GetAtt").EnumerateArray().ToList();
+            Assert.Equal(elastiCache.LogicalId, addressGetAtt[0].GetString());
+            Assert.Equal("ConfigurationEndPoint.Address", addressGetAtt[1].GetString());
+
+            // Validate WebApp1 depends on ElastiCache
+            var webApp1DependsOn = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/DependsOn");
+            Assert.Equal(JsonValueKind.Array, webApp1DependsOn.ValueKind);
+            var webApp1DependsOnArray = webApp1DependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
+            Assert.Contains(elastiCache.LogicalId, webApp1DependsOnArray);
+
+            // Validate ECS TaskDefinition for Service1
+            var taskDefinitions = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::TaskDefinition");
+            Assert.Single(taskDefinitions);
+            var service1TaskDef = taskDefinitions[0];
+
+            // Validate Service1 TaskDefinition has ConnectionStrings__Cache environment variable
+            var service1EnvFnJoin = AssertElementExistsAtPath(cfTemplateDoc, $"Resources/{service1TaskDef.LogicalId}/Properties/ContainerDefinitions/{{Name=Container-Service1}}/Environment/{{Name=ConnectionStrings__Cache}}/Value/Fn::Join");
+            var service1EnvParts = service1EnvFnJoin.EnumerateArray().ToList();
+            Assert.Equal(2, service1EnvParts.Count);
+
+            // Validate Service1 connection string references ElastiCache ConfigurationEndPoint
+            var service1EnvPartsArray = service1EnvParts[1].EnumerateArray().ToList();
+            var service1AddressGetAtt = service1EnvPartsArray[0].GetProperty("Fn::GetAtt").EnumerateArray().ToList();
+            Assert.Equal(elastiCache.LogicalId, service1AddressGetAtt[0].GetString());
+            Assert.Equal("ConfigurationEndPoint.Address", service1AddressGetAtt[1].GetString());
+
+            // Validate ECS Service for Service1 depends on ElastiCache
+            var ecsServices = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::Service");
+            Assert.Single(ecsServices);
+            var service1 = ecsServices[0];
+
+            var service1DependsOn = AssertElementExistsAtPath(service1.Resource, "DependsOn");
+            var service1DependsOnArray = service1DependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
+            Assert.Contains(elastiCache.LogicalId, service1DependsOnArray);
+
+            // Validate Service1 has reference security group for ElastiCache access
+            var service1SecurityGroups = AssertElementExistsAtPath(service1.Resource, "Properties/NetworkConfiguration/AwsvpcConfiguration/SecurityGroups");
+            Assert.True(service1SecurityGroups.GetArrayLength() >= 2, "Service1 should have ECS SG and Ref SG");
+
+            // Validate Lambda Function exists
+            var lambdaFunctions = GetResourcesOfType(cfTemplateDoc, "AWS::Lambda::Function");
+            Assert.Single(lambdaFunctions);
+            var lambdaFunction = lambdaFunctions[0];
+
+            // Validate Lambda has ConnectionStrings__Cache environment variable
+            var lambdaEnvFnJoin = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Environment/Variables/ConnectionStrings__Cache/Fn::Join");
+            var lambdaEnvParts = lambdaEnvFnJoin.EnumerateArray().ToList();
+            Assert.Equal(2, lambdaEnvParts.Count);
+
+            // Validate Lambda connection string references ElastiCache ConfigurationEndPoint
+            var lambdaEnvPartsArray = lambdaEnvParts[1].EnumerateArray().ToList();
+            var lambdaAddressGetAtt = lambdaEnvPartsArray[0].GetProperty("Fn::GetAtt").EnumerateArray().ToList();
+            Assert.Equal(elastiCache.LogicalId, lambdaAddressGetAtt[0].GetString());
+            Assert.Equal("ConfigurationEndPoint.Address", lambdaAddressGetAtt[1].GetString());
+
+            // Validate Lambda has VpcConfig (required to access ElastiCache)
+            var vpcConfig = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/VpcConfig");
+
+            // Validate Lambda VpcConfig has security group
+            var lambdaSecurityGroups = AssertElementExistsAtPath(vpcConfig, "SecurityGroupIds");
+            Assert.True(lambdaSecurityGroups.GetArrayLength() >= 1);
+
+            // Validate Lambda VpcConfig has subnet IDs
+            var lambdaSubnetIds = AssertElementExistsAtPath(vpcConfig, "SubnetIds");
+            Assert.True(lambdaSubnetIds.GetArrayLength() >= 2);
+
+            // Validate Lambda depends on ElastiCache
+            var lambdaDependsOn = AssertElementExistsAtPath(lambdaFunction.Resource, "DependsOn");
+            var lambdaDependsOnArray = lambdaDependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
+            Assert.Contains(elastiCache.LogicalId, lambdaDependsOnArray);
+
+            // Validate Lambda IAM Role has VPC access policy
+            var iamRoles = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Role");
+            var lambdaRole = iamRoles.FirstOrDefault(r => r.LogicalId.Contains("LambdaFunction") && r.LogicalId.Contains("ServiceRole"));
+            Assert.NotNull(lambdaRole.LogicalId);
+
+            var managedPolicyArns = AssertElementExistsAtPath(lambdaRole.Resource, "Properties/ManagedPolicyArns");
+            var policyArns = managedPolicyArns.EnumerateArray().ToList();
+            var hasVpcAccessPolicy = policyArns.Any(p =>
+            {
+                if (p.TryGetProperty("Fn::Join", out var fnJoin))
+                {
+                    var parts = fnJoin.EnumerateArray().ToList();
+                    if (parts.Count >= 2)
+                    {
+                        var lastPart = parts[1].EnumerateArray().Last();
+                        return lastPart.GetString()?.Contains("AWSLambdaVPCAccessExecutionRole") == true;
+                    }
+                }
+                return false;
+            });
+            Assert.True(hasVpcAccessPolicy, "Lambda role should have AWSLambdaVPCAccessExecutionRole policy");
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishProvisionedRedis), cloudFormationValidation);
+    }
+
+    [Fact]
+    public async Task PublishServerlessValkey()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            // Validate ElastiCache ServerlessCache exists
+            var serverlessCaches = GetResourcesOfType(cfTemplateDoc, "AWS::ElastiCache::ServerlessCache");
+            Assert.Single(serverlessCaches);
+            var elastiCache = serverlessCaches[0];
+
+            // Validate ElastiCache engine is valkey
+            var engine = AssertElementExistsAtPath(elastiCache.Resource, "Properties/Engine");
+            Assert.Equal("valkey", engine.GetString());
+
+            // Validate ElastiCache major engine version
+            var majorEngineVersion = AssertElementExistsAtPath(elastiCache.Resource, "Properties/MajorEngineVersion");
+            Assert.Equal("8", majorEngineVersion.GetString());
+
+            // Validate ElastiCache has security group
+            var cacheSecurityGroups = AssertElementExistsAtPath(elastiCache.Resource, "Properties/SecurityGroupIds");
+            Assert.True(cacheSecurityGroups.GetArrayLength() >= 1);
+
+            // Validate ElastiCache has subnet IDs (direct strings from default VPC)
+            var cacheSubnetIds = AssertElementExistsAtPath(elastiCache.Resource, "Properties/SubnetIds");
+            Assert.True(cacheSubnetIds.GetArrayLength() >= 2);
+            foreach (var subnet in cacheSubnetIds.EnumerateArray())
+            {
+                Assert.Equal(JsonValueKind.String, subnet.ValueKind);
+                Assert.StartsWith("subnet-", subnet.GetString());
+            }
+
+            // Validate Security Groups exist (ElastiCache SG, ECS SG, Service1 Ref SG, Lambda Ref SG)
+            var securityGroups = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroup");
+            Assert.True(securityGroups.Count >= 4);
+
+            // Find ElastiCache security group
+            var elastiCacheSg = securityGroups.FirstOrDefault(sg => sg.LogicalId.Contains("ElastiCacheServerlessClusterSecurityGroup"));
+            Assert.NotNull(elastiCacheSg.LogicalId);
+
+            // Find ECS cluster security group
+            var ecsSg = securityGroups.FirstOrDefault(sg => sg.LogicalId.Contains("ECSClusterSecurityGroup"));
+            Assert.NotNull(ecsSg.LogicalId);
+
+            // Validate Security Group Ingress rules for ElastiCache access on port 6379
+            var securityGroupIngress = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroupIngress");
+            Assert.True(securityGroupIngress.Count >= 3, "Should have ingress rules for ECS, Service1, and Lambda");
+
+            // Validate all ingress rules target port 6379
+            foreach (var ingress in securityGroupIngress)
+            {
+                var fromPort = AssertElementExistsAtPath(ingress.Resource, "Properties/FromPort");
+                Assert.Equal(6379, fromPort.GetInt32());
+                var toPort = AssertElementExistsAtPath(ingress.Resource, "Properties/ToPort");
+                Assert.Equal(6379, toPort.GetInt32());
+                var protocol = AssertElementExistsAtPath(ingress.Resource, "Properties/IpProtocol");
+                Assert.Equal("tcp", protocol.GetString());
+            }
+
+            // Validate ExpressGatewayService exists for WebApp1
+            var expressGatewayServices = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::ExpressGatewayService");
+            Assert.Single(expressGatewayServices);
+
+            // Validate WebApp1 has ConnectionStrings__Cache environment variable
+            var webApp1EnvFnJoin = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/PrimaryContainer/Environment/{Name=ConnectionStrings__Cache}/Value/Fn::Join");
+            var webApp1EnvParts = webApp1EnvFnJoin.EnumerateArray().ToList();
+            Assert.Equal(2, webApp1EnvParts.Count);
+            Assert.Equal("", webApp1EnvParts[0].GetString());
+
+            // Validate the connection string references ElastiCache endpoint
+            var webApp1EnvPartsArray = webApp1EnvParts[1].EnumerateArray().ToList();
+            Assert.True(webApp1EnvPartsArray.Count >= 3);
+            // First part should be Fn::GetAtt for Endpoint.Address
+            var addressGetAtt = webApp1EnvPartsArray[0].GetProperty("Fn::GetAtt").EnumerateArray().ToList();
+            Assert.Equal(elastiCache.LogicalId, addressGetAtt[0].GetString());
+            Assert.Equal("Endpoint.Address", addressGetAtt[1].GetString());
+
+            // Validate WebApp1 depends on ElastiCache
+            var webApp1DependsOn = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/DependsOn");
+            Assert.Equal(JsonValueKind.Array, webApp1DependsOn.ValueKind);
+            var webApp1DependsOnArray = webApp1DependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
+            Assert.Contains(elastiCache.LogicalId, webApp1DependsOnArray);
+
+            // Validate ECS TaskDefinition for Service1
+            var taskDefinitions = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::TaskDefinition");
+            Assert.Single(taskDefinitions);
+            var service1TaskDef = taskDefinitions[0];
+
+            // Validate Service1 TaskDefinition has ConnectionStrings__Cache environment variable
+            var service1EnvFnJoin = AssertElementExistsAtPath(cfTemplateDoc, $"Resources/{service1TaskDef.LogicalId}/Properties/ContainerDefinitions/{{Name=Container-Service1}}/Environment/{{Name=ConnectionStrings__Cache}}/Value/Fn::Join");
+            var service1EnvParts = service1EnvFnJoin.EnumerateArray().ToList();
+            Assert.Equal(2, service1EnvParts.Count);
+
+            // Validate Service1 connection string references ElastiCache endpoint
+            var service1EnvPartsArray = service1EnvParts[1].EnumerateArray().ToList();
+            var service1AddressGetAtt = service1EnvPartsArray[0].GetProperty("Fn::GetAtt").EnumerateArray().ToList();
+            Assert.Equal(elastiCache.LogicalId, service1AddressGetAtt[0].GetString());
+            Assert.Equal("Endpoint.Address", service1AddressGetAtt[1].GetString());
+
+            // Validate ECS Service for Service1 depends on ElastiCache
+            var ecsServices = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::Service");
+            Assert.Single(ecsServices);
+            var service1 = ecsServices[0];
+
+            var service1DependsOn = AssertElementExistsAtPath(service1.Resource, "DependsOn");
+            var service1DependsOnArray = service1DependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
+            Assert.Contains(elastiCache.LogicalId, service1DependsOnArray);
+
+            // Validate Service1 has reference security group for ElastiCache access
+            var service1SecurityGroups = AssertElementExistsAtPath(service1.Resource, "Properties/NetworkConfiguration/AwsvpcConfiguration/SecurityGroups");
+            Assert.True(service1SecurityGroups.GetArrayLength() >= 2, "Service1 should have ECS SG and Ref SG");
+
+            // Validate Lambda Function exists
+            var lambdaFunctions = GetResourcesOfType(cfTemplateDoc, "AWS::Lambda::Function");
+            Assert.Single(lambdaFunctions);
+            var lambdaFunction = lambdaFunctions[0];
+
+            // Validate Lambda has ConnectionStrings__Cache environment variable
+            var lambdaEnvFnJoin = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Environment/Variables/ConnectionStrings__Cache/Fn::Join");
+            var lambdaEnvParts = lambdaEnvFnJoin.EnumerateArray().ToList();
+            Assert.Equal(2, lambdaEnvParts.Count);
+
+            // Validate Lambda connection string references ElastiCache endpoint
+            var lambdaEnvPartsArray = lambdaEnvParts[1].EnumerateArray().ToList();
+            var lambdaAddressGetAtt = lambdaEnvPartsArray[0].GetProperty("Fn::GetAtt").EnumerateArray().ToList();
+            Assert.Equal(elastiCache.LogicalId, lambdaAddressGetAtt[0].GetString());
+            Assert.Equal("Endpoint.Address", lambdaAddressGetAtt[1].GetString());
+
+            // Validate Lambda has VpcConfig (required to access ElastiCache)
+            var vpcConfig = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/VpcConfig");
+
+            // Validate Lambda VpcConfig has security group
+            var lambdaSecurityGroups = AssertElementExistsAtPath(vpcConfig, "SecurityGroupIds");
+            Assert.True(lambdaSecurityGroups.GetArrayLength() >= 1);
+
+            // Validate Lambda VpcConfig has subnet IDs
+            var lambdaSubnetIds = AssertElementExistsAtPath(vpcConfig, "SubnetIds");
+            Assert.True(lambdaSubnetIds.GetArrayLength() >= 2);
+
+            // Validate Lambda depends on ElastiCache
+            var lambdaDependsOn = AssertElementExistsAtPath(lambdaFunction.Resource, "DependsOn");
+            var lambdaDependsOnArray = lambdaDependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
+            Assert.Contains(elastiCache.LogicalId, lambdaDependsOnArray);
+
+            // Validate Lambda IAM Role has VPC access policy
+            var iamRoles = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Role");
+            var lambdaRole = iamRoles.FirstOrDefault(r => r.LogicalId.Contains("LambdaFunction") && r.LogicalId.Contains("ServiceRole"));
+            Assert.NotNull(lambdaRole.LogicalId);
+
+            var managedPolicyArns = AssertElementExistsAtPath(lambdaRole.Resource, "Properties/ManagedPolicyArns");
+            var policyArns = managedPolicyArns.EnumerateArray().ToList();
+            var hasVpcAccessPolicy = policyArns.Any(p =>
+            {
+                if (p.TryGetProperty("Fn::Join", out var fnJoin))
+                {
+                    var parts = fnJoin.EnumerateArray().ToList();
+                    if (parts.Count >= 2)
+                    {
+                        var lastPart = parts[1].EnumerateArray().Last();
+                        return lastPart.GetString()?.Contains("AWSLambdaVPCAccessExecutionRole") == true;
+                    }
+                }
+                return false;
+            });
+            Assert.True(hasVpcAccessPolicy, "Lambda role should have AWSLambdaVPCAccessExecutionRole policy");
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishServerlessValkey), cloudFormationValidation);
+    }
+
+    [Fact]
+    public async Task PublishProvisionedValkey()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            // Validate ElastiCache ReplicationGroup exists (provisioned, not serverless)
+            var replicationGroups = GetResourcesOfType(cfTemplateDoc, "AWS::ElastiCache::ReplicationGroup");
+            Assert.Single(replicationGroups);
+            var elastiCache = replicationGroups[0];
+
+            // Validate ElastiCache engine is valkey
+            var engine = AssertElementExistsAtPath(elastiCache.Resource, "Properties/Engine");
+            Assert.Equal("valkey", engine.GetString());
+
+            // Validate ElastiCache engine version
+            var engineVersion = AssertElementExistsAtPath(elastiCache.Resource, "Properties/EngineVersion");
+            Assert.Equal("8.2", engineVersion.GetString());
+
+            // Validate ElastiCache cache node type
+            var cacheNodeType = AssertElementExistsAtPath(elastiCache.Resource, "Properties/CacheNodeType");
+            Assert.Equal("cache.t3.micro", cacheNodeType.GetString());
+
+            // Validate ElastiCache num cache clusters
+            var numCacheClusters = AssertElementExistsAtPath(elastiCache.Resource, "Properties/NumCacheClusters");
+            Assert.Equal(2, numCacheClusters.GetInt32());
+
+            // Validate ElastiCache encryption settings
+            var atRestEncryption = AssertElementExistsAtPath(elastiCache.Resource, "Properties/AtRestEncryptionEnabled");
+            Assert.True(atRestEncryption.GetBoolean());
+            var transitEncryption = AssertElementExistsAtPath(elastiCache.Resource, "Properties/TransitEncryptionEnabled");
+            Assert.True(transitEncryption.GetBoolean());
+
+            // Validate ElastiCache automatic failover
+            var automaticFailover = AssertElementExistsAtPath(elastiCache.Resource, "Properties/AutomaticFailoverEnabled");
+            Assert.True(automaticFailover.GetBoolean());
+
+            // Validate ElastiCache port
+            var port = AssertElementExistsAtPath(elastiCache.Resource, "Properties/Port");
+            Assert.Equal(6379, port.GetInt32());
+
+            // Validate ElastiCache has security group
+            var cacheSecurityGroups = AssertElementExistsAtPath(elastiCache.Resource, "Properties/SecurityGroupIds");
+            Assert.True(cacheSecurityGroups.GetArrayLength() >= 1);
+
+            // Validate ElastiCache SubnetGroup exists
+            var subnetGroups = GetResourcesOfType(cfTemplateDoc, "AWS::ElastiCache::SubnetGroup");
+            Assert.Single(subnetGroups);
+            var subnetGroup = subnetGroups[0];
+
+            // Validate SubnetGroup has subnet IDs
+            var subnetGroupSubnetIds = AssertElementExistsAtPath(subnetGroup.Resource, "Properties/SubnetIds");
+            Assert.True(subnetGroupSubnetIds.GetArrayLength() >= 2);
+
+            // Validate ElastiCache references the SubnetGroup
+            var cacheSubnetGroupName = AssertElementExistsAtPath(elastiCache.Resource, "Properties/CacheSubnetGroupName/Ref");
+            Assert.Equal(subnetGroup.LogicalId, cacheSubnetGroupName.GetString());
+
+            // Validate Security Groups exist (ElastiCache SG, ECS SG, Service1 Ref SG, Lambda Ref SG)
+            var securityGroups = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroup");
+            Assert.True(securityGroups.Count >= 4);
+
+            // Find ElastiCache security group (provisioned uses different naming)
+            var elastiCacheSg = securityGroups.FirstOrDefault(sg => sg.LogicalId.Contains("ElastiCacheProvisionClusterSecurityGroup"));
+            Assert.NotNull(elastiCacheSg.LogicalId);
+
+            // Find ECS cluster security group
+            var ecsSg = securityGroups.FirstOrDefault(sg => sg.LogicalId.Contains("ECSClusterSecurityGroup"));
+            Assert.NotNull(ecsSg.LogicalId);
+
+            // Validate Security Group Ingress rules for ElastiCache access on port 6379
+            var securityGroupIngress = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroupIngress");
+            Assert.True(securityGroupIngress.Count >= 3, "Should have ingress rules for ECS, Service1, and Lambda");
+
+            // Validate all ingress rules target port 6379
+            foreach (var ingress in securityGroupIngress)
+            {
+                var fromPort = AssertElementExistsAtPath(ingress.Resource, "Properties/FromPort");
+                Assert.Equal(6379, fromPort.GetInt32());
+                var toPort = AssertElementExistsAtPath(ingress.Resource, "Properties/ToPort");
+                Assert.Equal(6379, toPort.GetInt32());
+                var protocol = AssertElementExistsAtPath(ingress.Resource, "Properties/IpProtocol");
+                Assert.Equal("tcp", protocol.GetString());
+            }
+
+            // Validate ExpressGatewayService exists for WebApp1
+            var expressGatewayServices = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::ExpressGatewayService");
+            Assert.Single(expressGatewayServices);
+
+            // Validate WebApp1 has ConnectionStrings__Cache environment variable
+            var webApp1EnvFnJoin = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/PrimaryContainer/Environment/{Name=ConnectionStrings__Cache}/Value/Fn::Join");
+            var webApp1EnvParts = webApp1EnvFnJoin.EnumerateArray().ToList();
+            Assert.Equal(2, webApp1EnvParts.Count);
+            Assert.Equal("", webApp1EnvParts[0].GetString());
+
+            // Validate the connection string references ElastiCache ConfigurationEndPoint (not Endpoint)
+            var webApp1EnvPartsArray = webApp1EnvParts[1].EnumerateArray().ToList();
+            Assert.True(webApp1EnvPartsArray.Count >= 3);
+            // First part should be Fn::GetAtt for ConfigurationEndPoint.Address
+            var addressGetAtt = webApp1EnvPartsArray[0].GetProperty("Fn::GetAtt").EnumerateArray().ToList();
+            Assert.Equal(elastiCache.LogicalId, addressGetAtt[0].GetString());
+            Assert.Equal("ConfigurationEndPoint.Address", addressGetAtt[1].GetString());
+
+            // Validate WebApp1 depends on ElastiCache
+            var webApp1DependsOn = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/DependsOn");
+            Assert.Equal(JsonValueKind.Array, webApp1DependsOn.ValueKind);
+            var webApp1DependsOnArray = webApp1DependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
+            Assert.Contains(elastiCache.LogicalId, webApp1DependsOnArray);
+
+            // Validate ECS TaskDefinition for Service1
+            var taskDefinitions = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::TaskDefinition");
+            Assert.Single(taskDefinitions);
+            var service1TaskDef = taskDefinitions[0];
+
+            // Validate Service1 TaskDefinition has ConnectionStrings__Cache environment variable
+            var service1EnvFnJoin = AssertElementExistsAtPath(cfTemplateDoc, $"Resources/{service1TaskDef.LogicalId}/Properties/ContainerDefinitions/{{Name=Container-Service1}}/Environment/{{Name=ConnectionStrings__Cache}}/Value/Fn::Join");
+            var service1EnvParts = service1EnvFnJoin.EnumerateArray().ToList();
+            Assert.Equal(2, service1EnvParts.Count);
+
+            // Validate Service1 connection string references ElastiCache ConfigurationEndPoint
+            var service1EnvPartsArray = service1EnvParts[1].EnumerateArray().ToList();
+            var service1AddressGetAtt = service1EnvPartsArray[0].GetProperty("Fn::GetAtt").EnumerateArray().ToList();
+            Assert.Equal(elastiCache.LogicalId, service1AddressGetAtt[0].GetString());
+            Assert.Equal("ConfigurationEndPoint.Address", service1AddressGetAtt[1].GetString());
+
+            // Validate ECS Service for Service1 depends on ElastiCache
+            var ecsServices = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::Service");
+            Assert.Single(ecsServices);
+            var service1 = ecsServices[0];
+
+            var service1DependsOn = AssertElementExistsAtPath(service1.Resource, "DependsOn");
+            var service1DependsOnArray = service1DependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
+            Assert.Contains(elastiCache.LogicalId, service1DependsOnArray);
+
+            // Validate Service1 has reference security group for ElastiCache access
+            var service1SecurityGroups = AssertElementExistsAtPath(service1.Resource, "Properties/NetworkConfiguration/AwsvpcConfiguration/SecurityGroups");
+            Assert.True(service1SecurityGroups.GetArrayLength() >= 2, "Service1 should have ECS SG and Ref SG");
+
+            // Validate Lambda Function exists
+            var lambdaFunctions = GetResourcesOfType(cfTemplateDoc, "AWS::Lambda::Function");
+            Assert.Single(lambdaFunctions);
+            var lambdaFunction = lambdaFunctions[0];
+
+            // Validate Lambda has ConnectionStrings__Cache environment variable
+            var lambdaEnvFnJoin = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Environment/Variables/ConnectionStrings__Cache/Fn::Join");
+            var lambdaEnvParts = lambdaEnvFnJoin.EnumerateArray().ToList();
+            Assert.Equal(2, lambdaEnvParts.Count);
+
+            // Validate Lambda connection string references ElastiCache ConfigurationEndPoint
+            var lambdaEnvPartsArray = lambdaEnvParts[1].EnumerateArray().ToList();
+            var lambdaAddressGetAtt = lambdaEnvPartsArray[0].GetProperty("Fn::GetAtt").EnumerateArray().ToList();
+            Assert.Equal(elastiCache.LogicalId, lambdaAddressGetAtt[0].GetString());
+            Assert.Equal("ConfigurationEndPoint.Address", lambdaAddressGetAtt[1].GetString());
+
+            // Validate Lambda has VpcConfig (required to access ElastiCache)
+            var vpcConfig = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/VpcConfig");
+
+            // Validate Lambda VpcConfig has security group
+            var lambdaSecurityGroups = AssertElementExistsAtPath(vpcConfig, "SecurityGroupIds");
+            Assert.True(lambdaSecurityGroups.GetArrayLength() >= 1);
+
+            // Validate Lambda VpcConfig has subnet IDs
+            var lambdaSubnetIds = AssertElementExistsAtPath(vpcConfig, "SubnetIds");
+            Assert.True(lambdaSubnetIds.GetArrayLength() >= 2);
+
+            // Validate Lambda depends on ElastiCache
+            var lambdaDependsOn = AssertElementExistsAtPath(lambdaFunction.Resource, "DependsOn");
+            var lambdaDependsOnArray = lambdaDependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
+            Assert.Contains(elastiCache.LogicalId, lambdaDependsOnArray);
+
+            // Validate Lambda IAM Role has VPC access policy
+            var iamRoles = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Role");
+            var lambdaRole = iamRoles.FirstOrDefault(r => r.LogicalId.Contains("LambdaFunction") && r.LogicalId.Contains("ServiceRole"));
+            Assert.NotNull(lambdaRole.LogicalId);
+
+            var managedPolicyArns = AssertElementExistsAtPath(lambdaRole.Resource, "Properties/ManagedPolicyArns");
+            var policyArns = managedPolicyArns.EnumerateArray().ToList();
+            var hasVpcAccessPolicy = policyArns.Any(p =>
+            {
+                if (p.TryGetProperty("Fn::Join", out var fnJoin))
+                {
+                    var parts = fnJoin.EnumerateArray().ToList();
+                    if (parts.Count >= 2)
+                    {
+                        var lastPart = parts[1].EnumerateArray().Last();
+                        return lastPart.GetString()?.Contains("AWSLambdaVPCAccessExecutionRole") == true;
+                    }
+                }
+                return false;
+            });
+            Assert.True(hasVpcAccessPolicy, "Lambda role should have AWSLambdaVPCAccessExecutionRole policy");
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishProvisionedValkey), cloudFormationValidation);
+    }
+
 
     private async Task ExecutePublishAsync(string scenario, Func<JsonDocument, Task> cfTemplateValidation)
     {
