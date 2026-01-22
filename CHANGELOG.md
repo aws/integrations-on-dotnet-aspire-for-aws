@@ -1,3 +1,8 @@
+## Release 2026-01-22
+
+### Aspire.Hosting.AWS (9.3.1)
+* Update AWSSDK.Core to 4.0.3.3
+
 ## Release 2025-10-24
 
 ### Aspire.Hosting.AWS (9.3.0)
