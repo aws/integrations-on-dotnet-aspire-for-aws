@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Update AWSSDK.Core to 4.0.3.3"
+      ]
+    }
+  ]
+}
