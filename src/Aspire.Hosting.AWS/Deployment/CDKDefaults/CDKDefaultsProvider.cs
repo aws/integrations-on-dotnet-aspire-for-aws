@@ -30,10 +30,5 @@ public abstract partial class CDKDefaultsProvider
     {
         EnvironmentResource = environmentResource;
     }
-
-    /// <summary>
-    /// Gets the name of the AWS tag name used for setting the Aspire deployment tag.
-    /// </summary>
-    public virtual string DeploymentTagName => "aspire:deployment-tag";
 }
 

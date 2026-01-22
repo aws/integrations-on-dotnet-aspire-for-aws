@@ -52,8 +52,6 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
         var function = new Function(environment.CDKStack, $"Function-{lambdaFunction.Name}", functionProps);
         publishAnnotation.Config.ConstructFunctionCallback?.Invoke(CreatePublishTargetContext(environment), function);
         ApplyAWSLinkedObjectsAnnotation(environment, lambdaFunction, function, this);
-
-        await ApplyDeploymentTagAsync(environment, lambdaFunction, function, cancellationToken);
     }
 
     public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)

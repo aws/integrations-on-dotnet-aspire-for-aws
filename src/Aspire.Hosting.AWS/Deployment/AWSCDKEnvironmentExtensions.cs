@@ -309,7 +309,6 @@ public static class AWSCDKEnvironmentExtensions
     /// </remarks>
     /// <code>
     /// builder.AddAWSLambdaFunction&lt;Projects.SQSProcessorFunction&gt;("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
-    ///     .WithDeploymentImageTag(context => deploymentTag)
     ///     .PublishAsLambdaFunction(new PublishLambdaFunctionConfig
     ///     {
     ///         ConstructFunctionCallback = (ctx, construct) =>

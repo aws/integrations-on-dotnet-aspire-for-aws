@@ -23,10 +23,8 @@ var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.US
 
 builder.AddAWSCDKEnvironment("aws", 
                                     CDKDefaultsProviderFactory.Preview_V1, 
-                                    (app, props) => new DeploymentStack(app, "DeploymentInfrastructure19", props), 
+                                    (app, props) => new DeploymentStack(app, "DeploymentInfrastructure20", props), 
                                     new AWSCDKEnvironmentResourceConfig { AWSSDKConfig = awsSdkConfig });
-
-var deploymentTag = "v" + DateTime.UtcNow.ToString("yyyyMMddHHmmss");
 
 var cdkStackResource = builder.AddAWSCDKStack("AWSLambdaPlaygroundResources");
 var localDevQueue = cdkStackResource.AddSQSQueue("LocalDevQueue");
@@ -35,19 +33,16 @@ var cache = builder.AddValkey("cache");
 
 var frontend = builder.AddProject<Projects.Frontend>("Frontend")
         .WithExternalHttpEndpoints()
-        .WithDeploymentImageTag(_ => deploymentTag)
         .WithReference(cache)
         .WaitFor(cache);
 
 
 builder.AddProject<Projects.Backend>("backend")
-        .WithDeploymentImageTag(_ => deploymentTag)
         .WithReference(frontend)
         .WithReference(cache)
         .WaitFor(cache);
 
 builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
-        .WithDeploymentImageTag(_ => deploymentTag)
         .PublishAsLambdaFunction(new PublishLambdaFunctionConfig
         {
             ConstructFunctionCallback = (ctx, construct) =>

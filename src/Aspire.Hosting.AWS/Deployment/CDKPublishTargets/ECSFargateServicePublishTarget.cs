@@ -65,8 +65,6 @@ internal class ECSFargateServicePublishTarget(ITarballContainerImageBuilder imag
         var fargateService = new FargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
         publishAnnotation.Config.ConstructFargateServiceCallback?.Invoke(CreatePublishTargetContext(environment), fargateService);
         ApplyAWSLinkedObjectsAnnotation(environment, projectResource, fargateService, this);
-
-        await ApplyDeploymentTagAsync(environment, projectResource, fargateService, cancellationToken);
     }
 
     public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)

@@ -109,28 +109,6 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
     }
 
     /// <summary>
-    /// Apply deployment tag to the CDK construct if the Aspire resource has a <see cref="DeploymentImageTagCallbackAnnotation"/>.
-    /// </summary>
-    /// <param name="environment">The owning environment</param>
-    /// <param name="aspireResource">The Aspire resource being published</param>
-    /// <param name="construct">The CDK construct to create the CloudFormation tag with the Aspire deployment tag</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    protected async Task ApplyDeploymentTagAsync(AWSCDKEnvironmentResource environment, IResource aspireResource, IConstruct construct, CancellationToken cancellationToken)
-    {
-        if (aspireResource.TryGetLastAnnotation<DeploymentImageTagCallbackAnnotation>(out var deploymentTag))
-        {
-            var context = new DeploymentImageTagCallbackAnnotationContext
-            {
-                Resource = aspireResource,
-                CancellationToken = cancellationToken,
-            };
-            var tag = await deploymentTag.Callback(context).ConfigureAwait(false);
-            Tags.Of(construct).Add(environment.DefaultsProvider.DeploymentTagName, tag);
-        }
-    }
-
-    /// <summary>
     /// Creates a <see cref="Amazon.CDK.AWS.EC2.ISecurityGroup"/> with no ingress rules and added it to the given construct.
     /// This is used to create security group to security group ingress rules.
     /// </summary>
