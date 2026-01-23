@@ -1,5 +1,6 @@
 ﻿@page "/"
 @inject IConnectionMultiplexer redis
+@inject ILogger<Home> logger
 @using StackExchange.Redis
 
 <PageTitle>Home</PageTitle>

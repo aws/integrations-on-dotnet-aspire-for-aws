@@ -12,8 +12,9 @@ namespace Frontend.Components.Pages
                 var db = redis.GetDatabase();
                 await db.StringSetAsync(new RedisKey("cacheString"), new RedisValue("Hello World"));
                 CacheString = await db.StringGetAsync(new RedisKey("cacheString"));
+                logger.LogInformation("Set and Get value from Redis: {0}", CacheString);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 CacheString = "Failed to cache: " + ex.Message;
             }

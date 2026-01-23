@@ -89,5 +89,6 @@ internal class ElastiCacheServerlessClusterPublishTarget(ILogger<ElastiCacheServ
     {
         var elastiCacheSecurityGroup = linkedAnnotation.EnvironmentResource.DefaultsProvider.GetDefaultElastiCacheServerlessClusterSecurityGroup();
         elastiCacheSecurityGroup.AddIngressRule(peer: securityGroup, connection: Port.Tcp(6379));
+        elastiCacheSecurityGroup.AddIngressRule(peer: securityGroup, connection: Port.Tcp(6380));
     }
 }

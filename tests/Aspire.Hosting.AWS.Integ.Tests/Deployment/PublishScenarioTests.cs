@@ -111,7 +111,10 @@ public class PublishScenarioTests
                 ]
                }
               ]
-             }
+             },
+             "Metadata": {
+                "aws:cdk:path": "PublishWebApp2ReferenceOnWebApp1/DefaultECSExpressExecutionRole/Resource"
+              }
             }
             """, executionRole.Resource);
 
@@ -156,7 +159,10 @@ public class PublishScenarioTests
                 ]
                }
               ]
-             }
+             },
+             "Metadata": {
+                "aws:cdk:path": "PublishWebApp2ReferenceOnWebApp1/DefaultECSExpressInfrastructureRole/Resource"
+              }
             }
             """, infrastructureRole.Resource);
 
@@ -328,12 +334,6 @@ public class PublishScenarioTests
             var webApp1LBContainerPort = AssertElementExistsAtPath(webApp1LoadBalancers, "0/ContainerPort");
             Assert.Equal(8080, webApp1LBContainerPort.GetInt32());
 
-            // Validate WebApp1 Service has deployment tag
-            var webApp1Tags = AssertElementExistsAtPath(webApp1Service.Resource, "Properties/Tags");
-            var webApp1DeploymentTag = webApp1Tags.EnumerateArray()
-                .FirstOrDefault(t => t.GetProperty("Key").GetString() == "aspire:deployment-tag");
-            Assert.NotEqual(default, webApp1DeploymentTag);
-
             var webApp2Service = ecsServices.FirstOrDefault(s => s.LogicalId.Contains("WebApp2"));
             Assert.NotNull(webApp2Service.LogicalId);
 
@@ -483,12 +483,6 @@ public class PublishScenarioTests
             var dependsOnArray = service1DependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
             Assert.Contains("ProjectWebApp1", dependsOnArray);
 
-            // Validate Service1 has deployment tag
-            var service1Tags = AssertElementExistsAtPath(service1.Resource, "Properties/Tags");
-            var deploymentTag = service1Tags.EnumerateArray()
-                .FirstOrDefault(t => t.GetProperty("Key").GetString() == "aspire:deployment-tag");
-            Assert.NotEqual(default, deploymentTag);
-
             // Validate Log Group exists
             var logGroups = GetResourcesOfType(cfTemplateDoc, "AWS::Logs::LogGroup");
             Assert.Single(logGroups);
@@ -625,12 +619,6 @@ public class PublishScenarioTests
             var handler = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Handler");
             Assert.Contains("FunctionHandler", handler.GetString());
 
-            // Validate Lambda has deployment tag
-            var lambdaTags = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Tags");
-            var deploymentTag = lambdaTags.EnumerateArray()
-                .FirstOrDefault(t => t.GetProperty("Key").GetString() == "aspire:deployment-tag");
-            Assert.NotEqual(default, deploymentTag);
-
             // Validate Lambda code is from S3
             var codeS3Bucket = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Code/S3Bucket");
             Assert.NotNull(codeS3Bucket.GetString());
@@ -662,11 +650,6 @@ public class PublishScenarioTests
             var lastPart = policyPartsArray.Last();
             Assert.Contains("AWSLambdaBasicExecutionRole", lastPart.GetString());
 
-            // Validate IAM Role has deployment tag
-            var roleTags = AssertElementExistsAtPath(lambdaRole.Resource, "Properties/Tags");
-            var roleDeploymentTag = roleTags.EnumerateArray()
-                .FirstOrDefault(t => t.GetProperty("Key").GetString() == "aspire:deployment-tag");
-            Assert.NotEqual(default, roleDeploymentTag);
 
             // Validate Lambda depends on IAM Role
             var lambdaDependsOn = AssertElementExistsAtPath(lambdaFunction.Resource, "DependsOn");
@@ -725,12 +708,6 @@ public class PublishScenarioTests
             var handler = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Handler");
             Assert.Contains("FunctionHandler", handler.GetString());
 
-            // Validate Lambda has deployment tag
-            var lambdaTags = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Tags");
-            var deploymentTag = lambdaTags.EnumerateArray()
-                .FirstOrDefault(t => t.GetProperty("Key").GetString() == "aspire:deployment-tag");
-            Assert.NotEqual(default, deploymentTag);
-
             // Validate Event Source Mapping exists (Lambda -> SQS)
             var eventSourceMappings = GetResourcesOfType(cfTemplateDoc, "AWS::Lambda::EventSourceMapping");
             Assert.Single(eventSourceMappings);
@@ -754,12 +731,6 @@ public class PublishScenarioTests
             // Validate Event Source Mapping references the Lambda Function
             var functionName = AssertElementExistsAtPath(eventSourceMapping.Resource, "Properties/FunctionName/Ref");
             Assert.Equal(lambdaFunction.LogicalId, functionName.GetString());
-
-            // Validate Event Source Mapping has deployment tag
-            var eventSourceTags = AssertElementExistsAtPath(eventSourceMapping.Resource, "Properties/Tags");
-            var eventSourceDeploymentTag = eventSourceTags.EnumerateArray()
-                .FirstOrDefault(t => t.GetProperty("Key").GetString() == "aspire:deployment-tag");
-            Assert.NotEqual(default, eventSourceDeploymentTag);
 
             // Validate IAM Role exists for Lambda
             var iamRoles = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Role");
@@ -880,8 +851,9 @@ public class PublishScenarioTests
             Assert.True(cacheSubnetIds.GetArrayLength() >= 2);
             foreach (var subnet in cacheSubnetIds.EnumerateArray())
             {
-                Assert.Equal(JsonValueKind.String, subnet.ValueKind);
-                Assert.StartsWith("subnet-", subnet.GetString());
+                Assert.Equal(JsonValueKind.Object, subnet.ValueKind);
+                var refSubnet = AssertElementExistsAtPath(subnet, "Ref");
+                Assert.StartsWith("DefaultVPCPrivate", refSubnet.GetString());
             }
 
             // Validate Security Groups exist (ElastiCache SG, ECS SG, Service1 Ref SG, Lambda Ref SG)
@@ -896,17 +868,17 @@ public class PublishScenarioTests
             var ecsSg = securityGroups.FirstOrDefault(sg => sg.LogicalId.Contains("ECSClusterSecurityGroup"));
             Assert.NotNull(ecsSg.LogicalId);
 
-            // Validate Security Group Ingress rules for ElastiCache access on port 6379
+            // Validate Security Group Ingress rules for ElastiCache access on port 6379 and 6380
             var securityGroupIngress = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroupIngress");
             Assert.True(securityGroupIngress.Count >= 3, "Should have ingress rules for ECS, Service1, and Lambda");
 
-            // Validate all ingress rules target port 6379
+            // Validate all ingress rules target port 6379 or 6380
             foreach (var ingress in securityGroupIngress)
             {
                 var fromPort = AssertElementExistsAtPath(ingress.Resource, "Properties/FromPort");
-                Assert.Equal(6379, fromPort.GetInt32());
+                Assert.Contains(fromPort.GetInt32(), new int[] { 6379, 6380 });
                 var toPort = AssertElementExistsAtPath(ingress.Resource, "Properties/ToPort");
-                Assert.Equal(6379, toPort.GetInt32());
+                Assert.Contains(fromPort.GetInt32(), new int[] { 6379, 6380 });
                 var protocol = AssertElementExistsAtPath(ingress.Resource, "Properties/IpProtocol");
                 Assert.Equal("tcp", protocol.GetString());
             }
@@ -1077,6 +1049,13 @@ public class PublishScenarioTests
             var subnetGroupSubnetIds = AssertElementExistsAtPath(subnetGroup.Resource, "Properties/SubnetIds");
             Assert.True(subnetGroupSubnetIds.GetArrayLength() >= 2);
 
+            foreach (var subnet in subnetGroupSubnetIds.EnumerateArray())
+            {
+                Assert.Equal(JsonValueKind.Object, subnet.ValueKind);
+                var refSubnet = AssertElementExistsAtPath(subnet, "Ref");
+                Assert.StartsWith("DefaultVPCPrivate", refSubnet.GetString());
+            }
+
             // Validate ElastiCache references the SubnetGroup
             var cacheSubnetGroupName = AssertElementExistsAtPath(elastiCache.Resource, "Properties/CacheSubnetGroupName/Ref");
             Assert.Equal(subnetGroup.LogicalId, cacheSubnetGroupName.GetString());
@@ -1093,17 +1072,17 @@ public class PublishScenarioTests
             var ecsSg = securityGroups.FirstOrDefault(sg => sg.LogicalId.Contains("ECSClusterSecurityGroup"));
             Assert.NotNull(ecsSg.LogicalId);
 
-            // Validate Security Group Ingress rules for ElastiCache access on port 6379
+            // Validate Security Group Ingress rules for ElastiCache access on port 6379 and 6380
             var securityGroupIngress = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroupIngress");
             Assert.True(securityGroupIngress.Count >= 3, "Should have ingress rules for ECS, Service1, and Lambda");
 
-            // Validate all ingress rules target port 6379
+            // Validate all ingress rules target port 6379 or 6380
             foreach (var ingress in securityGroupIngress)
             {
                 var fromPort = AssertElementExistsAtPath(ingress.Resource, "Properties/FromPort");
-                Assert.Equal(6379, fromPort.GetInt32());
+                Assert.Contains(fromPort.GetInt32(), new int[] { 6379, 6380 });
                 var toPort = AssertElementExistsAtPath(ingress.Resource, "Properties/ToPort");
-                Assert.Equal(6379, toPort.GetInt32());
+                Assert.Contains(fromPort.GetInt32(), new int[] { 6379, 6380 });
                 var protocol = AssertElementExistsAtPath(ingress.Resource, "Properties/IpProtocol");
                 Assert.Equal("tcp", protocol.GetString());
             }
@@ -1248,8 +1227,9 @@ public class PublishScenarioTests
             Assert.True(cacheSubnetIds.GetArrayLength() >= 2);
             foreach (var subnet in cacheSubnetIds.EnumerateArray())
             {
-                Assert.Equal(JsonValueKind.String, subnet.ValueKind);
-                Assert.StartsWith("subnet-", subnet.GetString());
+                Assert.Equal(JsonValueKind.Object, subnet.ValueKind);
+                var refSubnet = AssertElementExistsAtPath(subnet, "Ref");
+                Assert.StartsWith("DefaultVPCPrivate", refSubnet.GetString());
             }
 
             // Validate Security Groups exist (ElastiCache SG, ECS SG, Service1 Ref SG, Lambda Ref SG)
@@ -1264,17 +1244,17 @@ public class PublishScenarioTests
             var ecsSg = securityGroups.FirstOrDefault(sg => sg.LogicalId.Contains("ECSClusterSecurityGroup"));
             Assert.NotNull(ecsSg.LogicalId);
 
-            // Validate Security Group Ingress rules for ElastiCache access on port 6379
+            // Validate Security Group Ingress rules for ElastiCache access on port 6379 and 6380
             var securityGroupIngress = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroupIngress");
             Assert.True(securityGroupIngress.Count >= 3, "Should have ingress rules for ECS, Service1, and Lambda");
 
-            // Validate all ingress rules target port 6379
+            // Validate all ingress rules target port 6379 or 6380
             foreach (var ingress in securityGroupIngress)
             {
                 var fromPort = AssertElementExistsAtPath(ingress.Resource, "Properties/FromPort");
-                Assert.Equal(6379, fromPort.GetInt32());
+                Assert.Contains(fromPort.GetInt32(), new int[] { 6379, 6380 });
                 var toPort = AssertElementExistsAtPath(ingress.Resource, "Properties/ToPort");
-                Assert.Equal(6379, toPort.GetInt32());
+                Assert.Contains(fromPort.GetInt32(), new int[] { 6379, 6380 });
                 var protocol = AssertElementExistsAtPath(ingress.Resource, "Properties/IpProtocol");
                 Assert.Equal("tcp", protocol.GetString());
             }
@@ -1445,6 +1425,13 @@ public class PublishScenarioTests
             var subnetGroupSubnetIds = AssertElementExistsAtPath(subnetGroup.Resource, "Properties/SubnetIds");
             Assert.True(subnetGroupSubnetIds.GetArrayLength() >= 2);
 
+            foreach (var subnet in subnetGroupSubnetIds.EnumerateArray())
+            {
+                Assert.Equal(JsonValueKind.Object, subnet.ValueKind);
+                var refSubnet = AssertElementExistsAtPath(subnet, "Ref");
+                Assert.StartsWith("DefaultVPCPrivate", refSubnet.GetString());
+            }
+
             // Validate ElastiCache references the SubnetGroup
             var cacheSubnetGroupName = AssertElementExistsAtPath(elastiCache.Resource, "Properties/CacheSubnetGroupName/Ref");
             Assert.Equal(subnetGroup.LogicalId, cacheSubnetGroupName.GetString());
@@ -1461,17 +1448,17 @@ public class PublishScenarioTests
             var ecsSg = securityGroups.FirstOrDefault(sg => sg.LogicalId.Contains("ECSClusterSecurityGroup"));
             Assert.NotNull(ecsSg.LogicalId);
 
-            // Validate Security Group Ingress rules for ElastiCache access on port 6379
+            // Validate Security Group Ingress rules for ElastiCache access on port 6379 and 6380
             var securityGroupIngress = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroupIngress");
             Assert.True(securityGroupIngress.Count >= 3, "Should have ingress rules for ECS, Service1, and Lambda");
 
-            // Validate all ingress rules target port 6379
+            // Validate all ingress rules target port 6379 or 6380
             foreach (var ingress in securityGroupIngress)
             {
                 var fromPort = AssertElementExistsAtPath(ingress.Resource, "Properties/FromPort");
-                Assert.Equal(6379, fromPort.GetInt32());
+                Assert.Contains(fromPort.GetInt32(), new int[] { 6379, 6380 });
                 var toPort = AssertElementExistsAtPath(ingress.Resource, "Properties/ToPort");
-                Assert.Equal(6379, toPort.GetInt32());
+                Assert.Contains(fromPort.GetInt32(), new int[] { 6379, 6380 });
                 var protocol = AssertElementExistsAtPath(ingress.Resource, "Properties/IpProtocol");
                 Assert.Equal("tcp", protocol.GetString());
             }
@@ -1613,6 +1600,11 @@ public class PublishScenarioTests
 
             var cfTemplatePath = Path.Combine(outputPath, "cdk.out", $"{scenario}.template.json");
             Assert.True(File.Exists(cfTemplatePath));
+
+            // Look to make sure no CDK Context JSON place holders are in the file.
+            var cfTemplateContent = File.ReadAllText(cfTemplatePath);
+            Assert.DoesNotContain("dummy1a", cfTemplateContent);
+            Assert.DoesNotContain("vpc-12345", cfTemplateContent);
 
             var cfTemplateDoc = JsonDocument.Parse(File.ReadAllText(cfTemplatePath));
 

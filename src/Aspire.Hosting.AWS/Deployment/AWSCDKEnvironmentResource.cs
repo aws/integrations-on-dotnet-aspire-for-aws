@@ -20,6 +20,7 @@ using AppProps = Amazon.CDK.AppProps;
 using Environment = System.Environment;
 using Resource = Aspire.Hosting.ApplicationModel.Resource;
 using Stack = Amazon.CDK.Stack;
+using Amazon.CDK.AWS.EC2;
 
 namespace Aspire.Hosting.AWS.Deployment;
 
@@ -304,6 +305,8 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
             var cdkContextJsonTempPath = Path.GetTempFileName();
             if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE)))
             {
+                const string cdkContextFileName = "cdk.context.json";
+
                 using var cfClient = GetCloudFormationClient();
                 var environmentVariables = SdkUtilities.CreateDictionaryOfAWSCredentialsAndRegion(cfClient);
                 environmentVariables[CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE] = cdkContextJsonTempPath;
@@ -313,6 +316,12 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
                 string workingDirectory = Directory.GetParent(fullPath)!.FullName;
                 var outputPath = Path.Combine(Path.GetTempPath(), Path.GetFileNameWithoutExtension(Path.GetRandomFileName()));
                 Directory.CreateDirectory(outputPath);
+
+                // Clean up any existing cdk.context.json file in the working directory to avoid reusing stale context.
+                if (File.Exists(Path.Combine(workingDirectory, cdkContextFileName)))
+                {
+                    File.Delete(Path.Combine(workingDirectory, cdkContextFileName));
+                }
 
                 // Essentially fork the Aspire process running from the CDK cli which will handle generating the CDK context. In the fork the code will go into the following "else" block.
                 // The fork else block will write the CDK context to location specified by cdkContextJsonTempPath.
@@ -349,7 +358,17 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
                     {
                         Env = cdkEnvironment
                     };
-                    _stackFactory(app, props);
+                    var stack = _stackFactory(app, props);
+
+                    // Add a stub VPC to the stack for generating the context to ensure the availability zones are captured in the context.
+                    // Of the constructs that the Aspire integration uses that require context generation, VPC is the only one that needs it.
+                    // Any other constructs that require CDK context should be defined by the user in the stack created by stack factory passed in to
+                    // the environment resource by the user.
+                    new Vpc(stack, "__PlaceHolderVpc__", new VpcProps
+                    {
+                        MaxAzs = 2
+                    });
+
                     app.Synth();
 
                     // Exit successfully to inform the parent fork that the context generation succeeded.

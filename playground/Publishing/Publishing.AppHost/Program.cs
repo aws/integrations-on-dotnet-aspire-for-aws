@@ -23,7 +23,7 @@ var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.US
 
 builder.AddAWSCDKEnvironment("aws", 
                                     CDKDefaultsProviderFactory.Preview_V1, 
-                                    (app, props) => new DeploymentStack(app, "DeploymentInfrastructure20", props), 
+                                    (app, props) => new DeploymentStack(app, "AspirePlay1", props), 
                                     new AWSCDKEnvironmentResourceConfig { AWSSDKConfig = awsSdkConfig });
 
 var cdkStackResource = builder.AddAWSCDKStack("AWSLambdaPlaygroundResources");
@@ -54,7 +54,6 @@ builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunctio
                 }));
             }
         })
-        .WithReference(cache)
         .WithReference(awsSdkConfig)
         .WithSQSEventSource(localDevQueue);
 

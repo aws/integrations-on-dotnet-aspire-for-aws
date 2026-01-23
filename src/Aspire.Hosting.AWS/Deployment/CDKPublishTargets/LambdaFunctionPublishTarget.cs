@@ -42,7 +42,7 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
         var referencePoints = new FunctionPropsConnectionPoints(
             functionProps,
             () => CreateEmptyReferenceSecurityGroup(environment, resource, functionProps, x => x.SecurityGroups,
-                (x, v) => x.SecurityGroups = v));
+                (x, v) => x.SecurityGroups = v), resource.Name);
 
         ProcessRelationShips(referencePoints, lambdaFunction);
 
@@ -78,7 +78,7 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
 }
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-internal class FunctionPropsConnectionPoints(FunctionProps props, Func<ISecurityGroup> securityGroupFactory) : AbstractCDKConstructConnectionPoints
+internal class FunctionPropsConnectionPoints(FunctionProps props, Func<ISecurityGroup> securityGroupFactory, string resourceName) : AbstractCDKConstructConnectionPoints
 {
     ISecurityGroup? _referenceSecurityGroup;
     public override IDictionary<string, string>? EnvironmentVariables
@@ -99,6 +99,24 @@ internal class FunctionPropsConnectionPoints(FunctionProps props, Func<ISecurity
     public override IVpc? Vpc
     {
         get => props.Vpc;
-        set => props.Vpc = value;
+        set
+        {
+            if (!value?.PrivateSubnets?.Any() ?? false && props.AllowPublicSubnet.GetValueOrDefault() == false)
+            {
+                // CDK will throw an error later, but we want to provide a more helpful message.
+                var errorMessage = $"""
+Lambda function {resourceName} references a resource that requires the function to be attached to a VPC. The configured 
+VPC contains only public subnets and no private subnets. Lambda functions placed in public subnets are not assigned 
+public IP addresses and therefore cannot directly access the internet.
+
+To allow internet and AWS API access through a NAT Gateway, Lambda functions must be attached to private subnets. 
+If the Lambda function only accesses resources within the VPC, this error can be overridden by setting the 
+AllowPublicSubnet property on FunctionProps to true.
+""";
+                throw new InvalidOperationException(errorMessage);
+            }
+
+            props.Vpc = value;
+        }
     }
 }

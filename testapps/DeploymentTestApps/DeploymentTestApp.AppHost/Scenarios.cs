@@ -13,12 +13,16 @@ namespace DeploymentTestApp.AppHost
 {
     public static class Scenarios
     {
+        static readonly AWSCDKEnvironmentResourceConfig _defaultEnvironentResourceConfig = new AWSCDKEnvironmentResourceConfig
+        {
+            OverrideAppHostAssemblyName = "DeploymentTestApp.AppHost.dll"
+        };
 
         public static async Task PublishWebApp2ReferenceOnWebApp1()
         {
             var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
 
-            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, stackName: nameof(PublishWebApp2ReferenceOnWebApp1));
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishWebApp2ReferenceOnWebApp1));
 
             var webApp1 = builder.AddProject<Projects.DeploymentTestApps_WebApp1>("WebApp1")
                 .PublishAsECSFargateExpressService(new PublishECSFargateExpressServiceConfig
@@ -41,7 +45,7 @@ namespace DeploymentTestApp.AppHost
         {
             var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
 
-            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, stackName: nameof(PublishWebApp2ReferenceOnWebApp1WithAlb));
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishWebApp2ReferenceOnWebApp1WithAlb));
 
             var webApp1 = builder.AddProject<Projects.DeploymentTestApps_WebApp1>("WebApp1")
                 .PublishAsECSFargateServiceWithALB(new PublishECSFargateServiceWithALBConfig
@@ -65,7 +69,7 @@ namespace DeploymentTestApp.AppHost
         {
             var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
 
-            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, stackName: nameof(PublishService1ReferenceOnWebApp1));
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishService1ReferenceOnWebApp1));
 
             var webApp1 = builder.AddProject<Projects.DeploymentTestApps_WebApp1>("WebApp1")
                 .WithExternalHttpEndpoints();
@@ -80,11 +84,7 @@ namespace DeploymentTestApp.AppHost
         {
             var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
 
-            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new DefaultVpcStack(app, nameof(PublishWebApp1UsingDefaultVpc), props),
-                new AWSCDKEnvironmentResourceConfig
-                {
-                    OverrideAppHostAssemblyName = "DeploymentTestApp.AppHost.dll"
-                });
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new DefaultVpcStack(app, nameof(PublishWebApp1UsingDefaultVpc), props), _defaultEnvironentResourceConfig);
 
             builder.AddProject<Projects.DeploymentTestApps_WebApp1>("WebApp1")
                 .WithExternalHttpEndpoints();
@@ -96,7 +96,7 @@ namespace DeploymentTestApp.AppHost
         {
             var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
 
-            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, stackName: nameof(PublishLambda));
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishLambda));
 
             builder.AddAWSLambdaFunction<Projects.DeploymentTestApp_LambdaFunction1>("LambdaFunction1", "DeploymentTestApp.LambdaFunction1::DeploymentTestApp.LambdaFunction1.Function::FunctionHandler");
 
@@ -107,11 +107,7 @@ namespace DeploymentTestApp.AppHost
         {
             var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
 
-            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new PublishLambdaWithCustomization(app, nameof(PublishLambdaWithCustomization), props),
-                new AWSCDKEnvironmentResourceConfig
-                {
-                    OverrideAppHostAssemblyName = "DeploymentTestApp.AppHost.dll"
-                });
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new PublishLambdaWithCustomization(app, nameof(PublishLambdaWithCustomization), props), _defaultEnvironentResourceConfig);
 
             builder.AddAWSLambdaFunction<Projects.DeploymentTestApp_LambdaFunction1>("LambdaFunction1", "DeploymentTestApp.LambdaFunction1::DeploymentTestApp.LambdaFunction1.Function::FunctionHandler")
                     .PublishAsLambdaFunction(new PublishLambdaFunctionConfig
@@ -138,11 +134,7 @@ namespace DeploymentTestApp.AppHost
         {
             var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
 
-            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new DefaultVpcStack(app, nameof(PublishLambdaWithReferences), props),
-                new AWSCDKEnvironmentResourceConfig
-                {
-                    OverrideAppHostAssemblyName = "DeploymentTestApp.AppHost.dll"
-                });
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new DefaultVpcStack(app, nameof(PublishLambdaWithReferences), props), _defaultEnvironentResourceConfig);
 
             var webApp1 = builder.AddProject<Projects.DeploymentTestApps_WebApp1>("WebApp1")
                 .WithExternalHttpEndpoints();
@@ -157,11 +149,7 @@ namespace DeploymentTestApp.AppHost
         {
             var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
 
-            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new DefaultVpcStack(app, nameof(PublishServerlessRedis), props),
-                new AWSCDKEnvironmentResourceConfig
-                {
-                    OverrideAppHostAssemblyName = "DeploymentTestApp.AppHost.dll"
-                });
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishServerlessRedis));
 
             var cache = builder.AddRedis("Cache");
 
@@ -182,11 +170,7 @@ namespace DeploymentTestApp.AppHost
         {
             var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
 
-            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new DefaultVpcStack(app, nameof(PublishProvisionedRedis), props),
-                new AWSCDKEnvironmentResourceConfig
-                {
-                    OverrideAppHostAssemblyName = "DeploymentTestApp.AppHost.dll"
-                });
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishProvisionedRedis));
 
             var cache = builder.AddRedis("Cache")
                                .PublishAsElasticCacheProvisionCluster();
@@ -208,11 +192,7 @@ namespace DeploymentTestApp.AppHost
         {
             var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
 
-            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new DefaultVpcStack(app, nameof(PublishServerlessValkey), props),
-                new AWSCDKEnvironmentResourceConfig
-                {
-                    OverrideAppHostAssemblyName = "DeploymentTestApp.AppHost.dll"
-                });
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishServerlessValkey));
 
             var cache = builder.AddValkey("Cache");
 
@@ -233,11 +213,7 @@ namespace DeploymentTestApp.AppHost
         {
             var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
 
-            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new DefaultVpcStack(app, nameof(PublishProvisionedValkey), props),
-                new AWSCDKEnvironmentResourceConfig
-                {
-                    OverrideAppHostAssemblyName = "DeploymentTestApp.AppHost.dll"
-                });
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishProvisionedValkey));
 
             var cache = builder.AddValkey("Cache")
                                .PublishAsElasticCacheProvisionCluster();
