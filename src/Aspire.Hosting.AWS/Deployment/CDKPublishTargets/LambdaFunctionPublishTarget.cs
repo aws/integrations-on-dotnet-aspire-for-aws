@@ -20,7 +20,7 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
 
     public override Type PublishTargetAnnotation => typeof(PublishLambdaFunctionAnnotation);
 
-    public override async Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
+    public override Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
     {
         var lambdaFunction = resource as LambdaProjectResource
                              ?? throw new InvalidOperationException($"Resource {resource.Name} is not a valid LambdaProjectResource.");
@@ -52,6 +52,8 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
         var function = new Function(environment.CDKStack, $"Function-{lambdaFunction.Name}", functionProps);
         publishAnnotation.Config.ConstructFunctionCallback?.Invoke(CreatePublishTargetContext(environment), function);
         ApplyAWSLinkedObjectsAnnotation(environment, lambdaFunction, function, this);
+
+        return Task.CompletedTask;
     }
 
     public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
