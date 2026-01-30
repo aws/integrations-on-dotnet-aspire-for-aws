@@ -1,6 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 using Amazon.Lambda;
-using Aspire.Hosting;
 using Aspire.Hosting.AWS.Lambda;
 
 #pragma warning disable CA2252 // This API requires opting into preview features
@@ -15,7 +14,9 @@ cdkStackResource.WithTag("aws-repo", "integrations-on-dotnet-aspire-for-aws");
 var sqsDemoQueue1 = cdkStackResource.AddSQSQueue("DemoQueue1");
 var sqsDemoQueue2 = cdkStackResource.AddSQSQueue("DemoQueue2");
 
-builder.AddAWSLambdaFunction<Projects.ToUpperLambdaFunctionExecutable>("ToUpperFunction", lambdaHandler: "ToUpperLambdaFunctionExecutable", new LambdaFunctionOptions { ApplicationLogLevel = ApplicationLogLevel.DEBUG, LogFormat = LogFormat.JSON});
+
+
+builder.AddAWSLambdaFunction<Projects.ToUpperLambdaFunctionExecutable>("ToUpperFunction", lambdaHandler: "ToUpperLambdaFunctionExecutable", new LambdaFunctionOptions { ApplicationLogLevel = ApplicationLogLevel.DEBUG, LogFormat = LogFormat.JSON });
 
 var defaultRouteLambda = builder.AddAWSLambdaFunction<Projects.WebDefaultLambdaFunction>("LambdaDefaultRoute", lambdaHandler: "WebDefaultLambdaFunction");
 var listAwsResourcesRouteLambda = builder.AddAWSLambdaFunction<Projects.WebAWSCallsLambdaFunction>("ListAwsResourcesRoute", lambdaHandler: "WebAWSCallsLambdaFunction");
@@ -27,7 +28,7 @@ var divideFunction = builder.AddAWSLambdaFunction<Projects.WebCalculatorFunction
 
 builder.AddAWSAPIGatewayEmulator("APIGatewayEmulator", Aspire.Hosting.AWS.Lambda.APIGatewayType.HttpV2)
         .WithReference(defaultRouteLambda, Method.Get, "/")
-        // Add route demonstrating making AWS servic calls
+        // Add route demonstrating making AWS service calls
         .WithReference(listAwsResourcesRouteLambda, Method.Get, "/aws/{service}")
         // Add the Web API calculator routes
         .WithReference(addFunction, Method.Get, "/add/{x}/{y}")

@@ -9,8 +9,10 @@
 *.user
 *.userosscache
 *.sln.docstates
+*.DS_Store
 
 playground/**/launchSettings.json
+**/.aspire/**
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

@@ -1,6 +1,19 @@
 {
   "$schema": "https://json.schemastore.org/launchsettings.json",
   "profiles": {
+    "publish": {
+      "commandName": "Project",
+      "commandLineArgs": "--publisher default --output-path c:/temp/publish-out",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "applicationUrl": "https://localhost:17296;http://localhost:15137",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "DOTNET_ENVIRONMENT": "Development",
+        "DOTNET_DASHBOARD_OTLP_ENDPOINT_URL": "https://localhost:21296",
+        "DOTNET_RESOURCE_SERVICE_ENDPOINT_URL": "https://localhost:22291"
+      }
+    },
     "https": {
       "commandName": "Project",
       "dotnetRunMessages": true,
