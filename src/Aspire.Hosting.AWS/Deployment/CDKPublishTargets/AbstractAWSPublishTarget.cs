@@ -12,7 +12,7 @@ using IResource = Aspire.Hosting.ApplicationModel.IResource;
 namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
 
 /// <summary>
-/// THe base class of pubish targets used to transform an Aspire resource into AWS CDK constructs.
+/// THe base class of publish targets used to transform an Aspire resource into AWS CDK constructs.
 /// </summary>
 /// <param name="logger"></param>
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
@@ -93,7 +93,7 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
     /// <param name="environmentResource">The owning environment</param>
     /// <param name="resource">The Aspire resource being published</param>
     /// <param name="sourceConstruct">The CDK construct created for the Aspire resource</param>
-    /// <param name="publishTarget">The <see cref="IAWSPublishTarget"/> used to create the CDK constuct for the Aspire resource</param>
+    /// <param name="publishTarget">The <see cref="IAWSPublishTarget"/> used to create the CDK construct for the Aspire resource</param>
     protected void ApplyAWSLinkedObjectsAnnotation(AWSCDKEnvironmentResource environmentResource, IResource resource, Construct sourceConstruct, IAWSPublishTarget publishTarget)
     {
         resource.Annotations.Add(new AWSLinkedObjectsAnnotation { EnvironmentResource = environmentResource, Resource = resource, Construct = sourceConstruct, PublishTarget = publishTarget });

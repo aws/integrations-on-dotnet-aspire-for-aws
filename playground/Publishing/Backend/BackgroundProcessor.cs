@@ -5,7 +5,7 @@ namespace Backend
 {
     internal class BackgroundProcessor : BackgroundService
     {
-        IDatabase _db;
+        readonly IDatabase _db;
         
         public BackgroundProcessor(IConnectionMultiplexer mp /*FrontendApiClient frontendApiClient*/)
         {
@@ -25,7 +25,7 @@ namespace Backend
                 Console.WriteLine($"Print line: {printLine}");
                 
                 var processedMessages = await _db.StringIncrementAsync("printlines", printLine);
-                Console.WriteLine($"Lines printed: {printLine}");                
+                Console.WriteLine($"Lines printed: {processedMessages}");                
 
                 //var data = await frontendApiClient.GetFrontendDataAsync(cancellationToken: stoppingToken);
                 //Console.WriteLine($"Data from frontend: {data}");

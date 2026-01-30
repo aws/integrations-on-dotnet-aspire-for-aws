@@ -6,8 +6,8 @@ namespace DeploymentTestApp.Service1;
 
 internal class BackgroundProcessor : BackgroundService
 {
-    IDatabase _db;
-    WebApp1Client _webApp1Client;
+    readonly IDatabase _db;
+    readonly WebApp1Client _webApp1Client;
 
 
     public BackgroundProcessor(IConnectionMultiplexer mp, WebApp1Client webApp1Client)

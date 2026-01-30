@@ -219,7 +219,7 @@ await runtimeSupportInitializer.RunLambdaBootstrap();
             arguments.Add(msBuildParameters);
         }
 
-        var process = new Process
+        using var process = new Process
         {
             StartInfo = new ProcessStartInfo
             {
@@ -234,7 +234,6 @@ await runtimeSupportInitializer.RunLambdaBootstrap();
 
         process.Start();
         string output = process.StandardOutput.ReadToEnd().Trim();
-        string error = process.StandardError.ReadToEnd();
         process.WaitForExit(5000);
 
         if (process.ExitCode == 0)

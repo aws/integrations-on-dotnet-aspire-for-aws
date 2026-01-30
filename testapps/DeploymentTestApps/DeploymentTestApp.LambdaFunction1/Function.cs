@@ -12,9 +12,9 @@ namespace DeploymentTestApp.LambdaFunction1;
 
 public class Function
 {
-    IHost _host;
-    TracerProvider _traceProvider;
-    IDatabase _db;
+    readonly IHost _host;
+    readonly TracerProvider _traceProvider;
+    readonly IDatabase _db;
 
     public Function()
     {

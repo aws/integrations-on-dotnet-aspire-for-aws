@@ -10,6 +10,7 @@ using Aspire.Hosting.AWS.Utils.Internal;
 using Aspire.Hosting.Pipelines;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -21,7 +22,7 @@ namespace Aspire.Hosting.AWS.Deployment;
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
 internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPublishingStep> logger, IAWSEnvironmentService environmentService)
 {
-    IDictionary<Type, IAWSPublishTarget> _annotationsToPublishTargetsMapping = new Dictionary<Type, IAWSPublishTarget>(); 
+    readonly IDictionary<Type, IAWSPublishTarget> _annotationsToPublishTargetsMapping = new Dictionary<Type, IAWSPublishTarget>(); 
 
     public async Task GenerateCDKOutputAsync(PipelineStepContext context, DistributedApplicationModel model, AWSCDKEnvironmentResource environment, CancellationToken cancellationToken = default)
     {

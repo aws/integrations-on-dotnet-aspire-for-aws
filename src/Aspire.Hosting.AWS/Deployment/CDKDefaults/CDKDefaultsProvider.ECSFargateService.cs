@@ -25,9 +25,9 @@ public partial class CDKDefaultsProvider
     /// <summary>
     /// Gets the desired number of ECS Fargate service tasks to run.
     /// </summary>
-    /// <rmarks>
+    /// <remarks>
     /// Default is 1.
-    /// </rmarks>
+    /// </remarks>
     public virtual double? ECSFargateServiceDesiredCount => 1;
 
     /// <summary>

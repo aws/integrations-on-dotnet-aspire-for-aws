@@ -878,7 +878,7 @@ public class PublishScenarioTests
                 var fromPort = AssertElementExistsAtPath(ingress.Resource, "Properties/FromPort");
                 Assert.Contains(fromPort.GetInt32(), new int[] { 6379, 6380 });
                 var toPort = AssertElementExistsAtPath(ingress.Resource, "Properties/ToPort");
-                Assert.Contains(fromPort.GetInt32(), new int[] { 6379, 6380 });
+                Assert.Contains(toPort.GetInt32(), new int[] { 6379, 6380 });
                 var protocol = AssertElementExistsAtPath(ingress.Resource, "Properties/IpProtocol");
                 Assert.Equal("tcp", protocol.GetString());
             }
@@ -1082,7 +1082,7 @@ public class PublishScenarioTests
                 var fromPort = AssertElementExistsAtPath(ingress.Resource, "Properties/FromPort");
                 Assert.Contains(fromPort.GetInt32(), new int[] { 6379, 6380 });
                 var toPort = AssertElementExistsAtPath(ingress.Resource, "Properties/ToPort");
-                Assert.Contains(fromPort.GetInt32(), new int[] { 6379, 6380 });
+                Assert.Contains(toPort.GetInt32(), new int[] { 6379, 6380 });
                 var protocol = AssertElementExistsAtPath(ingress.Resource, "Properties/IpProtocol");
                 Assert.Equal("tcp", protocol.GetString());
             }
@@ -1254,7 +1254,7 @@ public class PublishScenarioTests
                 var fromPort = AssertElementExistsAtPath(ingress.Resource, "Properties/FromPort");
                 Assert.Contains(fromPort.GetInt32(), new int[] { 6379, 6380 });
                 var toPort = AssertElementExistsAtPath(ingress.Resource, "Properties/ToPort");
-                Assert.Contains(fromPort.GetInt32(), new int[] { 6379, 6380 });
+                Assert.Contains(toPort.GetInt32(), new int[] { 6379, 6380 });
                 var protocol = AssertElementExistsAtPath(ingress.Resource, "Properties/IpProtocol");
                 Assert.Equal("tcp", protocol.GetString());
             }
@@ -1584,7 +1584,7 @@ public class PublishScenarioTests
         {
             var args = GetPublishArguments(outputPath, scenario);
             var mockAwsEnvironmentService = new MockAWSEnvironmentService(args);
-            CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
 
             var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.DeploymentTestApp_AppHost>(GetPublishArguments(outputPath, scenario));
             appHost.Services.AddSingleton<IAWSEnvironmentService>(mockAwsEnvironmentService);
@@ -1639,7 +1639,7 @@ public class PublishScenarioTests
         public Task<string> CreateTarballImageAsync(ProjectResource resource, CancellationToken cancellationToken = default)
         {
             // Return a dummy tarball path
-            var filePath = Path.Combine(Path.GetTempPath(), $"{resource}_image.tar");
+            var filePath = Path.Combine(Path.GetTempPath(), $"{resource.Name}_image.tar");
             File.WriteAllText(filePath, "dummy content");
             return Task.FromResult(filePath);
         }

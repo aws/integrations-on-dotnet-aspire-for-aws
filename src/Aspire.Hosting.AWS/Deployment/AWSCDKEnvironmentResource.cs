@@ -192,7 +192,7 @@ public abstract class AWSCDKEnvironmentResource : Resource, IComputeEnvironmentR
                 RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(environment.Region),
                 DefaultAWSCredentials = awsCredentials
             };
-            var stsClient = new AmazonSecurityTokenServiceClient(stsConfig);
+            using var stsClient = new AmazonSecurityTokenServiceClient(stsConfig);
 
             var callerIdentityResponse = stsClient.GetCallerIdentityAsync(new Amazon.SecurityToken.Model.GetCallerIdentityRequest()).GetAwaiter().GetResult();
             environment.Account = callerIdentityResponse.Account;
@@ -237,7 +237,7 @@ public abstract class AWSCDKEnvironmentResource : Resource, IComputeEnvironmentR
 public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
     where T : Stack 
 {
-    Func<App, IStackProps, T> _stackFactory;
+    readonly Func<App, IStackProps, T> _stackFactory;
 
     internal AWSCDKEnvironmentResource(string name, bool isPublishMode, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, Func<App, IStackProps, T> stackFactory, AWSCDKEnvironmentResourceConfig? environmentResourceConfig)
         : base(name, isPublishMode, cdkDefaultsProviderFactory, environmentResourceConfig)

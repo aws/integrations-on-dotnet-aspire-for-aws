@@ -101,7 +101,7 @@ internal class FunctionPropsConnectionPoints(FunctionProps props, Func<ISecurity
         get => props.Vpc;
         set
         {
-            if (!value?.PrivateSubnets?.Any() ?? false && props.AllowPublicSubnet.GetValueOrDefault() == false)
+            if ((value?.PrivateSubnets?.Any() ?? false) == false && props.AllowPublicSubnet.GetValueOrDefault() == false)
             {
                 // CDK will throw an error later, but we want to provide a more helpful message.
                 var errorMessage = $"""
