@@ -3,6 +3,8 @@
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Aspire.Hosting.AWS.Utils.Internal;
@@ -25,9 +27,10 @@ public interface IProcessCommandService
     /// <param name="logger"></param>
     /// <param name="path"></param>
     /// <param name="arguments"></param>
+    /// <param name="workingDirectory"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    Task<RunProcessAndCaptureStdOutResult> RunProcessAndCaptureOuputAsync(ILogger logger, string path, string arguments, CancellationToken cancellationToken);
+    Task<RunProcessAndCaptureStdOutResult> RunProcessAndCaptureOutputAsync(ILogger logger, string path, string arguments, string? workingDirectory, CancellationToken cancellationToken);
 
 
     /// <summary>
@@ -38,7 +41,9 @@ public interface IProcessCommandService
     /// <param name="arguments"></param>
     /// <param name="workingDirectory"></param>
     /// <returns>Exit code</returns>
-    int RunProcess(ILogger logger, string path, string arguments, string workingDirectory);
+    int RunProcess(ILogger logger, string path, string arguments, string workingDirectory, bool streamOutputToLogger, IDictionary<string, string>? environmentVariables = null);
+
+    IProcessCommandService.RunProcessAndCaptureStdOutResult RunCDKProcess(ILogger logger, LogLevel logLevel, string arguments, string workingDirectory, IDictionary<string, string>? environmentVariables = null);
 }
 
 internal class ProcessCommandService : IProcessCommandService
@@ -50,15 +55,16 @@ internal class ProcessCommandService : IProcessCommandService
     /// <param name="logger"></param>
     /// <param name="path"></param>
     /// <param name="arguments"></param>
+    /// <param name="workingDirectory"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task<IProcessCommandService.RunProcessAndCaptureStdOutResult> RunProcessAndCaptureOuputAsync(ILogger logger, string path, string arguments, CancellationToken cancellationToken)
+    public async Task<IProcessCommandService.RunProcessAndCaptureStdOutResult> RunProcessAndCaptureOutputAsync(ILogger logger, string path, string arguments, string? workingDirectory, CancellationToken cancellationToken)
     {
         using var process = new Process
         {
             StartInfo = new ProcessStartInfo
             {
-                WorkingDirectory = Directory.GetCurrentDirectory(),
+                WorkingDirectory = workingDirectory == null ? Directory.GetCurrentDirectory() : workingDirectory,
                 FileName = path,
                 Arguments = arguments,
                 RedirectStandardOutput = true,
@@ -129,7 +135,7 @@ internal class ProcessCommandService : IProcessCommandService
     /// <param name="arguments"></param>
     /// <param name="workingDirectory"></param>
     /// <returns></returns>
-    public int RunProcess(ILogger logger, string path, string arguments, string workingDirectory)
+    public int RunProcess(ILogger logger, string path, string arguments, string workingDirectory, bool streamOutputToLogger, IDictionary<string, string>? environmentVariables)
     {
         using var process = new Process
         {
@@ -145,12 +151,22 @@ internal class ProcessCommandService : IProcessCommandService
             }
         };
 
+        if (environmentVariables != null)
+        {
+            foreach (var kvp in environmentVariables)
+            {
+                process.StartInfo.EnvironmentVariables[kvp.Key] = kvp.Value;
+            }
+        }
+
         var output = new StringBuilder();
 
         process.OutputDataReceived += (sender, e) =>
         {
             if (e.Data != null)
             {
+                if (streamOutputToLogger)
+                    logger.LogInformation(e.Data);
                 output.Append(e.Data);
             }
         };
@@ -159,6 +175,8 @@ internal class ProcessCommandService : IProcessCommandService
         {
             if (e.Data != null)
             {
+                if (streamOutputToLogger)
+                    logger.LogInformation(e.Data);
                 output.Append(e.Data);
             }
         };
@@ -177,5 +195,74 @@ internal class ProcessCommandService : IProcessCommandService
         }
         
         return process.ExitCode;
+    }
+
+    public IProcessCommandService.RunProcessAndCaptureStdOutResult RunCDKProcess(ILogger? logger, LogLevel logLevel, string arguments, string workingDirectory, IDictionary<string, string>? environmentVariables = null)
+    {
+        string shellCommand;
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            shellCommand = "powershell";
+            arguments = $"-NoProfile -Command \"cdk \"{arguments}\"";
+        }
+        else
+        {
+            shellCommand = "sh";
+            arguments = $"-c \"cdk {arguments}\"";
+        }
+
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                WorkingDirectory = workingDirectory,
+                FileName = shellCommand,
+                Arguments = arguments,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                WindowStyle = ProcessWindowStyle.Hidden
+            }
+        };
+
+        if (environmentVariables != null)
+        {
+            foreach (var kvp in environmentVariables)
+            {
+                process.StartInfo.EnvironmentVariables[kvp.Key] = kvp.Value;
+            }
+        }
+
+        var output = new StringBuilder();
+        process.OutputDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+            {
+                logger?.Log(logLevel, e.Data);
+                output.AppendLine(e.Data);
+            }
+        };
+
+        process.ErrorDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+            {
+                logger?.Log(logLevel, e.Data);
+                output.AppendLine(e.Data);
+            }
+        };
+
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+
+        process.WaitForExit(int.MaxValue);
+
+        if (process.ExitCode != 0)
+        {
+            logger?.LogDebug("Process exited with code {exitCode}.", process.ExitCode);
+        }
+
+        return new IProcessCommandService.RunProcessAndCaptureStdOutResult(process.ExitCode, output.ToString());
     }
 }

@@ -1,7 +1,8 @@
+using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Microsoft.Extensions.Logging;
 
 namespace Aspire.Hosting.AWS.Utils;
 
@@ -181,5 +182,87 @@ await runtimeSupportInitializer.RunLambdaBootstrap();
         File.WriteAllText(programPath, programContent);
 
         return projectPath;
+    }
+
+    internal static string? LookupTargetFrameworkFromProjectFile(string projectFile, string msBuildParameters = "")
+    {
+        var properties = LookupProjectProperties(projectFile, msBuildParameters, "TargetFramework", "TargetFrameworks");
+        if (properties.TryGetValue("TargetFramework", out var targetFramework) && !string.IsNullOrEmpty(targetFramework))
+        {
+            return targetFramework;
+        }
+        if (properties.TryGetValue("TargetFrameworks", out var targetFrameworks) && !string.IsNullOrEmpty(targetFrameworks))
+        {
+            var frameworks = targetFrameworks.Split(';');
+            if (frameworks.Length > 1)
+            {
+                return null;
+            }
+            return frameworks[0];
+        }
+        return null;
+    }
+
+    internal static Dictionary<string, string> LookupProjectProperties(string projectFile, string msBuildParameters, params string[] propertyNames)
+    {
+        var properties = new Dictionary<string, string>();
+        var arguments = new List<string>
+            {
+                "msbuild",
+                projectFile,
+                "-nologo",
+                $"--getProperty:{string.Join(",", propertyNames)}"
+            };
+
+        if (!string.IsNullOrEmpty(msBuildParameters))
+        {
+            arguments.Add(msBuildParameters);
+        }
+
+        var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                Arguments = string.Join(" ", arguments),
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            }
+        };
+
+        process.Start();
+        string output = process.StandardOutput.ReadToEnd().Trim();
+        string error = process.StandardError.ReadToEnd();
+        process.WaitForExit(5000);
+
+        if (process.ExitCode == 0)
+        {
+            if (propertyNames.Length == 1)
+            {
+                // If only one property was requested, the output is the direct value
+                properties[propertyNames[0]] = output;
+            }
+            else
+            {
+                // Multiple properties were requested, so we expect JSON output
+                using (JsonDocument doc = JsonDocument.Parse(output))
+                {
+                    JsonElement root = doc.RootElement;
+                    JsonElement propertiesElement = root.GetProperty("Properties");
+
+                    foreach (var property in propertyNames)
+                    {
+                        if (propertiesElement.TryGetProperty(property, out JsonElement propertyValue))
+                        {
+                            properties[property] = propertyValue.GetString()!;
+                        }
+                    }
+                }
+            }
+        }
+
+        return properties;
     }
 }

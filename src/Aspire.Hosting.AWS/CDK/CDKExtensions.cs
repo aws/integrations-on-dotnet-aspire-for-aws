@@ -5,6 +5,7 @@ using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS;
 using Aspire.Hosting.AWS.CDK;
 using Aspire.Hosting.AWS.CloudFormation;
+using Aspire.Hosting.AWS.Deployment;
 using Constructs;
 using Environment = System.Environment;
 
@@ -230,6 +231,14 @@ public static class CDKExtensions
     /// <param name="builder"></param>
     private static App ResolveCDKApp(IDistributedApplicationBuilder builder)
     {
+#pragma warning disable ASPIREAWSPUBLISHERS001
+        //var cdkEnvironment = builder.Resources.OfType<AWSCDKEnvironmentResource>().FirstOrDefault();
+        //if (cdkEnvironment != null)
+        //{
+        //    return cdkEnvironment.CDKApp;
+        //}
+#pragma warning restore ASPIREAWSPUBLISHERS001
+
         var stackResource = builder.Resources.OfType<IStackResource>().FirstOrDefault();
         if (stackResource != null)
         {

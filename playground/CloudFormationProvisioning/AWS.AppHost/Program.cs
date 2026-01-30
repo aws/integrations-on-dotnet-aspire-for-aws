@@ -17,7 +17,8 @@ var awsResources = builder.AddAWSCloudFormationTemplate("AspireSampleDevResource
 awsResources.WithTag("aws-repo", "integrations-on-dotnet-aspire-for-aws");
 
 // Add a DynamoDB Local instance
-var localDynamoDB = builder.AddAWSDynamoDBLocal("DynamoDBLocal");
+var localDynamoDB = builder.AddAWSDynamoDBLocal("DynamoDBLocal")
+    .WithLifetime(ContainerLifetime.Persistent);
 
 // To add outputs of a CloudFormation stack that was created outside of AppHost use the AddAWSCloudFormationStack method.
 // then attach the CloudFormation resource to a project using the WithReference method.
