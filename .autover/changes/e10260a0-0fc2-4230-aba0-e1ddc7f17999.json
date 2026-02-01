@@ -6,7 +6,7 @@
       "ChangelogMessages": [
         "Update to version 0.12.0 of Lambda Test Tool",
 		"Update to version 1.14.2 of Amazon.Lambda.RuntimeSupport",
-		"Update code setting up launch profile for Lambda functions to handle Lambda Test Tool's version of Amazon.Lambda.RuntimeSupport be renamed to Amazon.Lambda.RuntimeSupport.TestTool"
+		"Update code setting up launch profile for Lambda functions to handle Lambda Test Tool's version of Amazon.Lambda.RuntimeSupport being renamed to Amazon.Lambda.RuntimeSupport.TestTool"
       ]
     }
   ]
