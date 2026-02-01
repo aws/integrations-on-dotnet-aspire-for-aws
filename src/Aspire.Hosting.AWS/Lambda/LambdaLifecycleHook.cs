@@ -84,9 +84,9 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
                         targetFramework, "Amazon.Lambda.RuntimeSupport.TestTool.dll");
                     if (!File.Exists(runtimeSupportAssemblyPath))
                     {
-                        // The test tool renames Amazon.Lambda.RuntimeSupport.dll to Amazon.Lambda.RuntimeSupport.TestTool.dll to avoid issues of the version
-                        // of Amazon.Lambda.RuntimeSupport.dll be used in from the Lambda project if pulled in via NuGet. Older versions of the test tool
-                        // do not do the rename so this check is to see if we can find the non-renamed version of we didn't find the renamed version.
+                        // The test tool renames Amazon.Lambda.RuntimeSupport.dll to Amazon.Lambda.RuntimeSupport.TestTool.dll to avoid the version of
+                        // Amazon.Lambda.RuntimeSupport.dll from the Lambda project (if referenced via NuGet) being used instead. Older versions of the test tool
+                        // do not perform this rename, so this check is to see if we can find the non-renamed version if we didn't find the renamed version.
                         runtimeSupportAssemblyPath = runtimeSupportAssemblyPath.Replace("Amazon.Lambda.RuntimeSupport.TestTool.dll", "Amazon.Lambda.RuntimeSupport.dll");
                         if (!File.Exists(runtimeSupportAssemblyPath))
                         {
