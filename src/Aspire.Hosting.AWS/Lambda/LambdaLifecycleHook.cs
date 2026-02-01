@@ -81,11 +81,18 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
                         continue;
                     }
                     var runtimeSupportAssemblyPath = Path.Combine(contentFolder, "content", "Amazon.Lambda.RuntimeSupport",
-                        targetFramework, "Amazon.Lambda.RuntimeSupport.dll");
+                        targetFramework, "Amazon.Lambda.RuntimeSupport.TestTool.dll");
                     if (!File.Exists(runtimeSupportAssemblyPath))
                     {
-                        logger.LogError("Cannot find a version of Amazon.Lambda.RuntimeSupport that supports your project's target framework '{Framework}'. The following directory does not exist '{RuntimeSupportPath}'.", targetFramework, runtimeSupportAssemblyPath);
-                        continue;
+                        // The test tool renames Amazon.Lambda.RuntimeSupport.dll to Amazon.Lambda.RuntimeSupport.TestTool.dll to avoid issues of the version
+                        // of Amazon.Lambda.RuntimeSupport.dll be used in from the Lambda project if pulled in via NuGet. Older versions of the test tool
+                        // do not do the rename so this check is to see if we can find the non-renamed version of we didn't find the renamed version.
+                        runtimeSupportAssemblyPath = runtimeSupportAssemblyPath.Replace("Amazon.Lambda.RuntimeSupport.TestTool.dll", "Amazon.Lambda.RuntimeSupport.dll");
+                        if (!File.Exists(runtimeSupportAssemblyPath))
+                        {
+                            logger.LogError("Cannot find a version of Amazon.Lambda.RuntimeSupport that supports your project's target framework '{Framework}'. The following file does not exist '{RuntimeSupportPath}'.", targetFramework, runtimeSupportAssemblyPath);
+                            continue;
+                        }
                     }
                     ProjectUtilities.UpdateLaunchSettingsWithLambdaTester(
                         resourceName: projectResource.Name,
