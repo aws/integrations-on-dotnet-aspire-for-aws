@@ -77,6 +77,8 @@ public abstract class AWSCDKEnvironmentResource : Resource, IComputeEnvironmentR
 
     internal void InitializeCDKApp(string outputDir)
     {
+        SystemCapabilityEvaluator.CheckNodeInstallationAsync().GetAwaiter().GetResult();
+
         var appProps = new AppProps();
         if (IsPublishMode)
         {

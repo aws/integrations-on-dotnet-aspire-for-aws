@@ -186,7 +186,7 @@ public class InstallLambdaTestToolTests
             }
         }
 
-        public IProcessCommandService.RunProcessAndCaptureStdOutResult RunCDKProcess(ILogger logger, LogLevel logLevel, string arguments, string workingDirectory, IDictionary<string, string>? environmentVariables = null)
+        public IProcessCommandService.RunProcessAndCaptureStdOutResult RunCDKProcess(ILogger? logger, LogLevel logLevel, string arguments, string workingDirectory, IDictionary<string, string>? environmentVariables = null)
         {
             throw new NotImplementedException();
         }

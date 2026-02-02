@@ -43,7 +43,7 @@ public interface IProcessCommandService
     /// <returns>Exit code</returns>
     int RunProcess(ILogger logger, string path, string arguments, string workingDirectory, bool streamOutputToLogger, IDictionary<string, string>? environmentVariables = null);
 
-    IProcessCommandService.RunProcessAndCaptureStdOutResult RunCDKProcess(ILogger logger, LogLevel logLevel, string arguments, string workingDirectory, IDictionary<string, string>? environmentVariables = null);
+    IProcessCommandService.RunProcessAndCaptureStdOutResult RunCDKProcess(ILogger? logger, LogLevel logLevel, string arguments, string workingDirectory, IDictionary<string, string>? environmentVariables = null);
 }
 
 internal class ProcessCommandService : IProcessCommandService
@@ -58,7 +58,7 @@ internal class ProcessCommandService : IProcessCommandService
     /// <param name="workingDirectory"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task<IProcessCommandService.RunProcessAndCaptureStdOutResult> RunProcessAndCaptureOutputAsync(ILogger logger, string path, string arguments, string? workingDirectory, CancellationToken cancellationToken)
+    public async Task<IProcessCommandService.RunProcessAndCaptureStdOutResult> RunProcessAndCaptureOutputAsync(ILogger? logger, string path, string arguments, string? workingDirectory, CancellationToken cancellationToken)
     {
         using var process = new Process
         {
@@ -101,7 +101,7 @@ internal class ProcessCommandService : IProcessCommandService
         catch (Exception ex)
         {
             // If this fails then it most likely means the executable being invoked does not exist.
-            logger.LogDebug(ex, "Failed to start process {process}.", path);
+            logger?.LogDebug(ex, "Failed to start process {process}.", path);
             return new IProcessCommandService.RunProcessAndCaptureStdOutResult(-404, string.Empty);
         }
 
@@ -119,7 +119,7 @@ internal class ProcessCommandService : IProcessCommandService
 
         if (process.ExitCode != 0)
         {
-            logger.LogDebug("Process {process} exited with code {exitCode}.", path, process.ExitCode);
+            logger?.LogDebug("Process {process} exited with code {exitCode}.", path, process.ExitCode);
             return new IProcessCommandService.RunProcessAndCaptureStdOutResult(process.ExitCode, output.ToString());
         }
 
