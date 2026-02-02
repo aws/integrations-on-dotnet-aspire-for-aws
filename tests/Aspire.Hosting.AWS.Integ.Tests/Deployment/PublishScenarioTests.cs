@@ -3,8 +3,9 @@ using Aspire.Hosting.AWS.Lambda;
 using Aspire.Hosting.AWS.Utils.Internal;
 using Aspire.Hosting.Publishing;
 using DeploymentTestApp.AppHost;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
-
+using Xunit.Abstractions;
 using static Aspire.Hosting.AWS.Integ.Tests.Deployment.CloudFormationJsonUtilities;
 
 namespace Aspire.Hosting.AWS.Integ.Tests.Deployment;
@@ -12,7 +13,7 @@ namespace Aspire.Hosting.AWS.Integ.Tests.Deployment;
 #pragma warning disable ASPIREPIPELINES003
 
 [Collection("CDKDeploymentTests")]
-public class PublishScenarioTests
+public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
 {
     [Fact]
     public async Task TestPublishWebApp2ReferenceOnWebApp1()
@@ -1594,6 +1595,13 @@ public class PublishScenarioTests
             appHost.Services.AddSingleton<ITarballContainerImageBuilder, MockTarballContainerImageBuilder>();
             appHost.Services.AddSingleton<IResourceContainerImageBuilder, MockResourceContainerImageManager>();
             appHost.Services.AddSingleton<ILambdaDeploymentPackager, MockLambdaDeploymentPackager>();
+
+            appHost.Services.AddLogging(configure =>
+            {
+                configure.ClearProviders();
+                configure.SetMinimumLevel(LogLevel.Debug);
+                configure.AddProvider(new TestOutputLoggerProvider(testOutputHelper, LogLevel.Debug));
+            });
 
             await using var app = await appHost.BuildAsync();
             await app.RunAsync(cts.Token);
