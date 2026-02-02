@@ -3,6 +3,7 @@ version: 0.2
 phases:
   install:
     runtime-versions:
+      nodejs: 22
       dotnet: 8.x
   build:
     commands:
