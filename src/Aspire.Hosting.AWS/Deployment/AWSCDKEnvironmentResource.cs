@@ -75,7 +75,7 @@ public abstract class AWSCDKEnvironmentResource : Resource, IComputeEnvironmentR
         }
     }
 
-    internal void InitializeCDKApp(string outputDir)
+    internal void InitializeCDKApp(ILogger? logger, string outputDir)
     {
         SystemCapabilityEvaluator.CheckNodeInstallationAsync().GetAwaiter().GetResult();
 
@@ -84,7 +84,7 @@ public abstract class AWSCDKEnvironmentResource : Resource, IComputeEnvironmentR
         {
             appProps.Outdir = outputDir;
 
-            var cdkContext = GetCDKContext();
+            var cdkContext = GetCDKContext(logger);
             if (cdkContext != null)
             {
                 appProps.Context = cdkContext;
@@ -94,7 +94,7 @@ public abstract class AWSCDKEnvironmentResource : Resource, IComputeEnvironmentR
         _cdkApp = new App(appProps);
     }
 
-    protected virtual IDictionary<string, object>? GetCDKContext() => null;
+    protected virtual IDictionary<string, object>? GetCDKContext(ILogger? logger) => null;
 
     /// <summary>
     /// The CDK context comes from the CDK CLI and is what is used to resolve lookups like Vpc.FromLookup, etc.
@@ -252,7 +252,7 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
         // See the override GetCDKContext method for more details about the fork mode and CDK context.
         if (Environment.GetEnvironmentVariable(CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE) != null)
         {
-            InitializeCDKApp(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")));
+            InitializeCDKApp(null, Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")));
             LoadEnvironmentStack();
         }
     }
@@ -292,10 +292,17 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
         }
     }
 
-    protected override IDictionary<string, object>? GetCDKContext()
+    protected override IDictionary<string, object>? GetCDKContext(ILogger? logger)
     {
         try
         {
+            if (!SystemCapabilityEvaluator.IsCDKInstalled())
+            {
+                logger?.LogWarning("AWS CDK CLI is not installed. The CDK CLI is recommended for publish step and required for deployment step. " + 
+                    "Skipping CDK context generation. If the CDK stack references any existing resources like the default VPC, CDK will generate the CloudFormation template with incorrect placeholder values.");
+                return null;
+            }
+
             // If there is no SDK config applied to the environment then we can't 
             // configure the CDK environment and thus can't generate the context.
             // It is okay to not have a context but if the user uses any lookup constructs

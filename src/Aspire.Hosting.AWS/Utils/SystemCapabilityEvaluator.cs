@@ -64,6 +64,23 @@ internal class SystemCapabilityEvaluator
             throw new InvalidOperationException($"Installed Node.js version {info.NodeJsVersion} doesn't meet the requirement for AWS CDK which requires a minimum version {MinimumNodeJSVersion}.");
     }
 
+    public static bool IsCDKInstalled()
+    {
+        try
+        {
+            // run node --version to get the version
+            var commandService = new ProcessCommandService();
+            var result = commandService.RunCDKProcess(null, Microsoft.Extensions.Logging.LogLevel.Information, "--help", Environment.CurrentDirectory);
+
+            return result.ExitCode == 0;
+
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
     internal class NodeInfo
     {
         /// <summary>
