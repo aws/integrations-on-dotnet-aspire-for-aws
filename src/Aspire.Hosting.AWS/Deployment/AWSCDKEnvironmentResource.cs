@@ -346,6 +346,7 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
             }
             else
             {
+                Console.WriteLine("Executing CDK context fork");
                 try
                 {
                     // If the CDK CLI generated a CDK context it will put the value data in the CDK_CONTEXT_JSON_ENV_VARIABLE environment variable.
@@ -369,6 +370,7 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
                         Env = cdkEnvironment
                     };
                     var stack = _stackFactory(app, props);
+                    Console.WriteLine("CDK stack created");
 
                     // Add a stub VPC to the stack for generating the context to ensure the availability zones are captured in the context.
                     // Of the constructs that the Aspire integration uses that require context generation, VPC is the only one that needs it.
@@ -378,14 +380,15 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
                     {
                         MaxAzs = 2
                     });
-
+                    
                     app.Synth();
 
                     // Exit successfully to inform the parent fork that the context generation succeeded.
                     Environment.Exit(0);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Console.WriteLine("CDK Synth failed in fork to get context: " + ex);
                     Environment.Exit(-1);
                 }
             }
