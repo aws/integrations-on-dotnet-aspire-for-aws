@@ -336,7 +336,7 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
                 // Essentially fork the Aspire process running from the CDK cli which will handle generating the CDK context. In the fork the code will go into the following "else" block.
                 // The fork else block will write the CDK context to location specified by cdkContextJsonTempPath.
                 var processCommandService = new ProcessCommandService();
-                var result = processCommandService.RunCDKProcess(null, LogLevel.Warning, $"--app \'dotnet exec {appHostAssembly} --operation publish --step publish\' synth --output \'{outputPath}\'", workingDirectory, environmentVariables);
+                var result = processCommandService.RunCDKProcess(null, LogLevel.Warning, $"--app \'dotnet exec {appHostAssembly} --operation publish --step publish\' synth --verbose --output \'{outputPath}\'", workingDirectory, environmentVariables);
                 CDKContextGenerationLog = result.Output;
 
                 if (result.ExitCode != 0)
