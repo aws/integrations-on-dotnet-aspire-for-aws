@@ -53,7 +53,17 @@ public abstract class AWSCDKEnvironmentResource : Resource, IComputeEnvironmentR
     protected AWSCDKEnvironmentResource(string name, bool isPublishMode, CDKDefaultsProviderFactory cdkDefaultsProviderFactory, AWSCDKEnvironmentResourceConfig? environmentResourceConfig)
     : base(name)
     {
-        IsPublishMode = isPublishMode;
+        // If CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE is set that means we are in the fork mode
+        // generating the CDK context. In that case we are always in publish mode.
+        if (Environment.GetEnvironmentVariable(CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE) != null)
+        {
+            IsPublishMode = true;
+        }
+        else
+        {
+            IsPublishMode = isPublishMode;
+        }
+        
         DefaultsProvider = cdkDefaultsProviderFactory.Create(this);
         Config = environmentResourceConfig ?? new AWSCDKEnvironmentResourceConfig();
 
