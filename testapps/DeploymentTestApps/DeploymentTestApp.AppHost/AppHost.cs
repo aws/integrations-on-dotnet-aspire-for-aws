@@ -3,6 +3,8 @@ using System.Reflection;
 
 const string envScenarioEnvironmentVariable = "AWS_ASPIRE_PUBLISH_SCENARIO";
 
+Console.WriteLine("Starting DeploymentTestApp AppHost with arguments: " + string.Join(',', Environment.GetCommandLineArgs()));
+
 var scenario = GetScenarioFromArgs(args);
 
 if (string.IsNullOrWhiteSpace(scenario))
