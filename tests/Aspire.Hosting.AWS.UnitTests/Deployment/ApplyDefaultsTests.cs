@@ -537,7 +537,7 @@ public class ApplyDefaultsTests
             (a, props) => stack,
             null);
 
-        environment.InitializeCDKApp(Path.GetTempPath());
+        environment.InitializeCDKApp(null, Path.GetTempPath());
         return environment;
     }
 

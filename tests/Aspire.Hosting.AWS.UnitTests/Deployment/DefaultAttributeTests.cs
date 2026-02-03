@@ -300,7 +300,7 @@ public class DefaultAttributeTests
             (a, props) => stack,
             null);
 
-        environmentResource.InitializeCDKApp(Path.GetTempPath());
+        environmentResource.InitializeCDKApp(null, Path.GetTempPath());
         var provider = new CDKDefaultsProviderPreviewV1(environmentResource);
         
         return (provider, stack);

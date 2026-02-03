@@ -33,7 +33,7 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
 
             environment.InitializeCDKApp(logger, DetermineOutputDirectory());
             InitializePublishTargetMapping();
-            logger.LogInformation("Capture of output from CDK context generation:\n{CdkContextLog}", environment.CDKContextGenerationLog);
+            logger.LogDebug("Capture of output from CDK context generation:\n{CdkContextLog}", environment.CDKContextGenerationLog);
 
             var outputPath = environment.CDKApp.Outdir;
 
