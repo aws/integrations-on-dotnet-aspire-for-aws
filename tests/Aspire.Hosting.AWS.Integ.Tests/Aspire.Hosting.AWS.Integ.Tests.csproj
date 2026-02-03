@@ -4,7 +4,8 @@
 		<TargetFramework>$(DefaultTargetFramework)</TargetFramework>
 		<IsTestProject>true</IsTestProject>
 		<NoWarn>$(NoWarn);CS8002</NoWarn>
-		<OutputType>Exe</OutputType>		
+		<OutputType>Exe</OutputType>
+		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 		<!-- AWS CDK packages are not signed -->
 	</PropertyGroup>
 
