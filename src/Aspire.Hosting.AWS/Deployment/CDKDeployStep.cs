@@ -3,6 +3,7 @@
 using Amazon.CloudFormation;
 using Amazon.CloudFormation.Model;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.AWS.Utils;
 using Aspire.Hosting.AWS.Utils.Internal;
 using Aspire.Hosting.Pipelines;
 using Microsoft.Extensions.Logging;
@@ -38,6 +39,11 @@ internal class CDKDeployStep(IProcessCommandService processCommandService, ILogg
         var step = await context.ReportingStep.CreateTaskAsync($"Initiating CDK deploy", cancellationToken);
         try
         {
+            if (!SystemCapabilityEvaluator.IsCDKInstalled())
+            {
+                throw new InvalidOperationException("AWS CDK CLI is not installed. Please install the AWS CDK CLI to proceed. Visit https://docs.aws.amazon.com/cdk/v2/guide/getting-started.html for installation instructions.");
+            }    
+
             var cdkDeployCommand = "cdk deploy --no-notices --require-approval never --app .";
             string shellCommand;
             string arguments;
