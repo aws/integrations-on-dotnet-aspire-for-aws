@@ -77,11 +77,13 @@ public abstract class AWSCDKEnvironmentResource : Resource, IComputeEnvironmentR
 
     internal void InitializeCDKApp(ILogger? logger, string outputDir)
     {
+        Console.WriteLine("Starting InitializeCDKApp");
         SystemCapabilityEvaluator.CheckNodeInstallationAsync().GetAwaiter().GetResult();
 
         var appProps = new AppProps();
         if (IsPublishMode)
         {
+            Console.WriteLine("Setting CDK App output directory to: " + outputDir);
             appProps.Outdir = outputDir;
 
             var cdkContext = GetCDKContext(logger);
@@ -245,6 +247,8 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
         : base(name, isPublishMode, cdkDefaultsProviderFactory, environmentResourceConfig)
     {
         _stackFactory = stackFactory;
+        
+        Console.WriteLine("Value of CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE: " + Environment.GetEnvironmentVariable(CDK_CONTEXT_JSON_OUTPUT_ENV_VARIABLE));
 
         // Running in the fork mode so we need to force load the stack during the constructor
         // so the CDK cli can validate it has all of the required information for the CDK context.

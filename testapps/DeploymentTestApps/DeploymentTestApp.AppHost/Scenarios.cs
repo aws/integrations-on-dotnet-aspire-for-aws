@@ -22,6 +22,7 @@ namespace DeploymentTestApp.AppHost
         {
             var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
 
+            Console.WriteLine("Running in publish mode: " + builder.ExecutionContext.IsPublishMode);
             builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishWebApp2ReferenceOnWebApp1));
 
             var webApp1 = builder.AddProject<Projects.DeploymentTestApps_WebApp1>("WebApp1")

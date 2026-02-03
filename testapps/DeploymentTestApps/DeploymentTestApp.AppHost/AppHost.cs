@@ -7,6 +7,8 @@ Console.WriteLine("Starting DeploymentTestApp AppHost with arguments: " + string
 
 var scenario = GetScenarioFromArgs(args);
 
+Console.WriteLine("Executing scenario: " + scenario);
+
 if (string.IsNullOrWhiteSpace(scenario))
     throw new ArgumentException($"Missing required switch {DeploymentTestAppConstants.ScenarioSwitch}");
 
