@@ -2,17 +2,17 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <AspireSdkVersion>13.0.0</AspireSdkVersion>
+    <AspireSdkVersion>13.1.0</AspireSdkVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Aspire.Hosting" Version="13.0.0" />
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.0.0" />
-    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.0.0" />
-    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.0.0" />
-    <PackageVersion Include="Aspire.Hosting.Valkey" Version="13.0.0" />
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.0.0" />
-    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.0.0" />
-    <PackageVersion Include="Aspire.StackExchange.Redis.OutputCaching" Version="13.0.0" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.1.0" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.1.0" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.1.0" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.1.0" />
+    <PackageVersion Include="Aspire.Hosting.Valkey" Version="13.1.0" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.1.0" />
+    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.1.0" />
+    <PackageVersion Include="Aspire.StackExchange.Redis.OutputCaching" Version="13.1.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery.Dns" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.0" />	  

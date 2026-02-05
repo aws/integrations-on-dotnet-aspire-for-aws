@@ -1593,7 +1593,7 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             // To speed up tests we don't actually need to build the projects since we are only validating the generated CF template.
             // This stubs out the service interfaces that are used for building projects.
             appHost.Services.AddSingleton<ITarballContainerImageBuilder, MockTarballContainerImageBuilder>();
-            appHost.Services.AddSingleton<IResourceContainerImageBuilder, MockResourceContainerImageManager>();
+            appHost.Services.AddSingleton<IResourceContainerImageManager, MockResourceContainerImageManager>();
             appHost.Services.AddSingleton<ILambdaDeploymentPackager, MockLambdaDeploymentPackager>();
 
             appHost.Services.AddLogging(configure =>
@@ -1633,7 +1633,7 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
     }
 
 
-    private static string[] GetPublishArguments(string outputPath, string scenario) => new string[] { "--publisher", "default", "--output-path", outputPath, DeploymentTestAppConstants.ScenarioSwitch, scenario, "--no-aws-deploy" };
+    private static string[] GetPublishArguments(string outputPath, string scenario) => new string[] { "--operation", "publish", "--step", "publish", "--output-path", outputPath, DeploymentTestAppConstants.ScenarioSwitch, scenario, "--no-aws-deploy" };
 
     string GetTempOutputPath() => Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
 
@@ -1653,24 +1653,19 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
         }
     }
 
-    internal class MockResourceContainerImageManager : IResourceContainerImageBuilder
+    internal class MockResourceContainerImageManager : IResourceContainerImageManager
     {
-        public Task BuildImageAsync(IResource resource, ContainerBuildOptions? options = null, CancellationToken cancellationToken = default)
+        public Task BuildImageAsync(IResource resource, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }
 
-        public Task BuildImagesAsync(IEnumerable<IResource> resources, ContainerBuildOptions? options = null, CancellationToken cancellationToken = default)
+        public Task BuildImagesAsync(IEnumerable<IResource> resources, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }
 
-        public Task PushImageAsync(string imageName, CancellationToken cancellationToken = default)
-        {
-            return Task.CompletedTask;
-        }
-
-        public Task TagImageAsync(string localImageName, string targetImageName, CancellationToken cancellationToken = default)
+        public Task PushImageAsync(IResource resource, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
