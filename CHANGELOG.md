@@ -1,3 +1,10 @@
+## Release 2026-02-05
+
+### Aspire.Hosting.AWS (9.3.2)
+* Update to version 0.12.0 of Lambda Test Tool
+* Update to version 1.14.2 of Amazon.Lambda.RuntimeSupport
+* Update code setting up launch profile for Lambda functions to handle Lambda Test Tool's version of Amazon.Lambda.RuntimeSupport being renamed to Amazon.Lambda.RuntimeSupport.TestTool
+
 ## Release 2026-01-22
 
 ### Aspire.Hosting.AWS (9.3.1)
