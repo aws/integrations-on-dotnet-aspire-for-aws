@@ -31,4 +31,4 @@ public interface ICloudFormationResource : IAWSResource, IResourceWithWaitSuppor
     /// Custom tags to apply to the CloudFormation stack.
     /// </summary>
     IDictionary<string, string> Tags { get; }
-    }
+}

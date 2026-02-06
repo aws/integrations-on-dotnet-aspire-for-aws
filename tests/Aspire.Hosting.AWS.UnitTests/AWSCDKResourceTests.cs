@@ -3,6 +3,7 @@
 using Amazon;
 using Amazon.CDK.AWS.S3;
 using Aspire.Hosting.AWS.UnitTests.Utils;
+using Aspire.Hosting.AWS.Utils;
 using Constructs;
 using Xunit;
 
@@ -11,8 +12,10 @@ namespace Aspire.Hosting.AWS.UnitTests;
 public class AWSCDKResourceTests
 {
     [Fact]
-    public void AddAWSCDKResourceTest()
+    public async Task AddAWSCDKResourceTest()
     {
+        await SystemCapabilityEvaluator.CheckNodeInstallationAsync();
+        
         var builder = DistributedApplication.CreateBuilder();
 
         var awsSdkConfig = builder.AddAWSSDKConfig()

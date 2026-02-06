@@ -52,4 +52,9 @@ internal static class Constants
     /// The default directory the Lambda Test Tool will be configured for storing configuration information like saved requests.
     /// </summary>
     internal const string DefaultLambdaConfigStorage = ".aws-lambda-testtool";
+
+    /// <summary>
+    /// Diagnostic ID for Aspire publishing with AWS indicating the feature is experimental.
+    /// </summary>
+    internal const string ASPIREAWSPUBLISHERS001 = "ASPIREAWSPUBLISHERS001";
 }

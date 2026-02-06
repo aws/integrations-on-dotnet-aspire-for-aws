@@ -1,27 +1,38 @@
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-using Amazon.Runtime.Internal.Util;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.CDK;
 using Aspire.Hosting.AWS.Provisioning;
+using Aspire.Hosting.Eventing;
 using Aspire.Hosting.Lifecycle;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Aspire.Hosting.AWS;
 
-internal sealed class AWSLifecycleHook(
-    ILogger<AWSLifecycleHook> logger,
-    DistributedApplicationExecutionContext executionContext,
-    IServiceProvider serviceProvider,
-    ResourceNotificationService notificationService,
-    ResourceLoggerService loggerService) : IDistributedApplicationLifecycleHook
+internal class AWSBeforeStartEventHandler(
+ILogger<AWSBeforeStartEventHandler> logger,
+DistributedApplicationExecutionContext executionContext,
+IServiceProvider serviceProvider,
+ResourceNotificationService notificationService,
+ResourceLoggerService loggerService) : IDistributedApplicationEventingSubscriber
 {
-    public Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
+    public Task SubscribeAsync(IDistributedApplicationEventing eventing, DistributedApplicationExecutionContext executionContext, CancellationToken cancellationToken)
     {
+        eventing.Subscribe<BeforeStartEvent>(OnBeforeResourceStartedAsync);
+        return Task.CompletedTask;
+    }
+
+    public Task OnBeforeResourceStartedAsync(BeforeStartEvent @event, CancellationToken cancellationToken)
+    {
+        if (executionContext.IsPublishMode)
+        {
+            return Task.CompletedTask;
+        }
+
         SdkUtilities.BackgroundSDKDefaultConfigValidation(logger);
 
-        var awsResources = appModel.Resources.OfType<IAWSResource>().ToList();
+        var awsResources = @event.Model.Resources.OfType<IAWSResource>().ToList();
         if (awsResources.Count == 0) // Skip when no AWS resources are found
         {
             return Task.CompletedTask;
@@ -30,7 +41,7 @@ internal sealed class AWSLifecycleHook(
         // Create a lookup for all resources implementing IResourceWithParent and have IAWSResource as parent in the tree.
         // Typical children that are listed here are IStackResource with IConstructResource as children.
         // This is important for state reporting so that a stack and it child resources are handled.
-        var parentChildLookup = appModel.Resources.OfType<IResourceWithParent>()
+        var parentChildLookup = @event.Model.Resources.OfType<IResourceWithParent>()
             .Select(x => (Child: x, Root: x.Parent.TrySelectParentResource<IAWSResource>()))
             .Where(x => x.Root is not null)
             .ToLookup(x => x.Root, x => x.Child);

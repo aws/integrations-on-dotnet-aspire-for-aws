@@ -4,7 +4,8 @@
 		<TargetFramework>$(DefaultTargetFramework)</TargetFramework>
 		<IsTestProject>true</IsTestProject>
 		<NoWarn>$(NoWarn);CS8002</NoWarn>
-		<OutputType>Exe</OutputType>		
+		<OutputType>Exe</OutputType>
+		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 		<!-- AWS CDK packages are not signed -->
 	</PropertyGroup>
 
@@ -12,6 +13,7 @@
 		<ProjectReference Include="..\..\playground\Lambda\Lambda.AppHost\Lambda.AppHost.csproj" />
 		<ProjectReference Include="..\..\playground\CloudFormationProvisioning\AWS.AppHost\AWS.AppHost.csproj" />
 		<ProjectReference Include="..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" />
+		<ProjectReference Include="..\..\testapps\DeploymentTestApps\DeploymentTestApp.AppHost\DeploymentTestApp.AppHost.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

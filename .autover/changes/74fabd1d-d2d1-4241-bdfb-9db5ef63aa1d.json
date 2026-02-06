@@ -1,0 +1,12 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Major",
+      "ChangelogMessages": [
+        "Updated to Aspire 13.0.0 packages",
+		"[Experimental] Add initial publish/deploy support using the `AddAWSCDKEnvironment` extension method on `IDistributedApplicationBuilder`"
+      ]
+    }
+  ]
+}
