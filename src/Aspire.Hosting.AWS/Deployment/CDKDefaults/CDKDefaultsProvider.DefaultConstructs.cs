@@ -151,7 +151,6 @@ public partial class CDKDefaultsProvider
             AllowAllOutbound = true
         });
 
-        //defaultElastiCacheSecurityGroup.AddIngressRule(Peer.AnyIpv4(), Port.Tcp(ElasticCacheNodeClusterPort), "Allow Redis access");
         return defaultElastiCacheSecurityGroup;
     }
 
