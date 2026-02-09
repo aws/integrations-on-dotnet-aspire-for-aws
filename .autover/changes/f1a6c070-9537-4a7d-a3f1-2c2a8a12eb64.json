@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Change generation of Lambda launch settings profile to evaluate OutputPath property for launch profile working directory"
+      ]
+    }
+  ]
+}

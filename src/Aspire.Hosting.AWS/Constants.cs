@@ -46,7 +46,7 @@ internal static class Constants
     /// <summary>
     /// The default version of Amazon.Lambda.TestTool that will be automatically installed
     /// </summary>
-    internal const string DefaultLambdaTestToolVersion = "0.12.0";
+    internal const string DefaultLambdaTestToolVersion = "0.13.0";
 
     /// <summary>
     /// The default directory the Lambda Test Tool will be configured for storing configuration information like saved requests.
