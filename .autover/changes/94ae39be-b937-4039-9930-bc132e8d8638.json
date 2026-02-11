@@ -1,0 +1,13 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Minor",
+      "ChangelogMessages": [
+        "Add HTTPS support for Lambda and API Gateway emulators",
+		"[Breaking Change] Rename `Port` property to HttpPort to match new `HttpsPort` property on APIGatewayEmulatorOptions and LambdaEmulatorOptions",
+		"Added new `DisableHttpsEndpoint` property to disable default allocation of HTTPS endpoints on APIGatewayEmulatorOptions and LambdaEmulatorOptions"
+      ]
+    }
+  ]
+}
