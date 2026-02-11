@@ -7,13 +7,13 @@ namespace Aspire.Hosting.AWS.Lambda;
 /// <summary>
 /// Annotation for the metadata of a Lambda runtime emulator resource
 /// </summary>
-/// <param name="endpoint"></param>
-internal class LambdaEmulatorAnnotation(EndpointReference endpoint) : IResourceAnnotation
+/// <param name="lambdaRuntimeEndpoint"></param>
+internal class LambdaEmulatorAnnotation(EndpointReference lambdaRuntimeEndpoint) : IResourceAnnotation
 {
-    /// <summary>
-    /// The HTTP endpoint for the Lambda runtime emulator.
+    /// <summary> 
+    /// The HTTP endpoint for the Lambda runtime api.
     /// </summary>
-    public EndpointReference Endpoint { get; init; } = endpoint;
+    public EndpointReference LambdaRuntimeEndpoint { get; init; } = lambdaRuntimeEndpoint;
 
     /// <summary>
     /// By default Amazon.Lambda.TestTool will be updated/installed during AppHost startup. Amazon.Lambda.TestTool is 

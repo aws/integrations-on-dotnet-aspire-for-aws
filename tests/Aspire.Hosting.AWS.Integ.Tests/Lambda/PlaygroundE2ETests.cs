@@ -46,7 +46,7 @@ public class PlaygroundE2ETests
             var apiGatewayEmulator = (APIGatewayEmulatorResource)appHost.Resources
                                 .Single(static r => r.Name == "APIGatewayEmulator");
             var apiGatewayEmulatorAnnotation = apiGatewayEmulator.Annotations.OfType<APIGatewayEmulatorAnnotation>().Single();
-            var apiGatewayEmulatorEndpointAnnotation = apiGatewayEmulator.Annotations.OfType<EndpointAnnotation>().Single();
+            Assert.Equal(2, apiGatewayEmulator.Annotations.OfType<EndpointAnnotation>().Count()); // Check for http and https endpoints
 
             Assert.Equal("The root page for the REST API defined in the Aspire AppHost. Try using endpoints /add/{1}/2, /minus/3/2, /multiply/6/7, /divide/20/4 or /aws/{sqs|dynamodb}",
                 await TestEndpoint("/", app, "APIGatewayEmulator"));
@@ -141,6 +141,88 @@ public class PlaygroundE2ETests
             await lambdaServiceEmulatorCommandlineAnnotation.Callback(context);
             Assert.Contains("--config-storage-path", lambdaServiceEmulatorCommandlineArguments);
             Assert.Contains(Path.Combine(Environment.CurrentDirectory, lambdaServiceEmulatorOptions.ConfigStoragePath), lambdaServiceEmulatorCommandlineArguments);
+        }
+        finally
+        {
+            cancellationSource.Cancel();
+        }
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task VerifyDisableHttpsEndpoint(bool disableHttps)
+    {
+        CancellationTokenSource cancellationSource = new CancellationTokenSource();
+        try
+        {
+            var builder = DistributedApplication.CreateBuilder();
+
+            var lambdaServiceEmulatorOptions = new LambdaEmulatorOptions { ConfigStoragePath = Path.GetTempPath(), DisableHttpsEndpoint = disableHttps };
+            var lambdaServiceEmulator = (builder.AddAWSLambdaServiceEmulator(lambdaServiceEmulatorOptions)).Resource;
+
+            var apiGatewayEmulatorOptions = new APIGatewayEmulatorOptions { DisableHttpsEndpoint = disableHttps };
+            var apiGatewayEmulator = (builder.AddAWSAPIGatewayEmulator("APIGatewayEmulator", APIGatewayType.HttpV2, apiGatewayEmulatorOptions)).Resource;
+
+            var daTask = builder.Build().RunAsync(cancellationSource.Token);
+
+            var lambdaEndpointAnnotations = lambdaServiceEmulator.Annotations.OfType<EndpointAnnotation>();
+            if (disableHttps)
+            {
+                Assert.Single(lambdaEndpointAnnotations);
+                Assert.Equal("http", lambdaEndpointAnnotations.Single().UriScheme);
+            }
+            else
+            {
+                Assert.Equal(2, lambdaEndpointAnnotations.Count());
+                Assert.Contains(lambdaEndpointAnnotations, a => a.UriScheme == "http");
+                Assert.Contains(lambdaEndpointAnnotations, a => a.UriScheme == "https");
+            }
+
+            var apiGatewyEndpointAnnotations = apiGatewayEmulator.Annotations.OfType<EndpointAnnotation>();
+            if (disableHttps)
+            {
+                Assert.Single(apiGatewyEndpointAnnotations);
+                Assert.Equal("http", apiGatewyEndpointAnnotations.Single().UriScheme);
+            }
+            else
+            {
+                Assert.Equal(2, apiGatewyEndpointAnnotations.Count());
+                Assert.Contains(apiGatewyEndpointAnnotations, a => a.UriScheme == "http");
+                Assert.Contains(apiGatewyEndpointAnnotations, a => a.UriScheme == "https");
+            }
+        }
+        finally
+        {
+            cancellationSource.Cancel();
+        }
+    }
+
+    [Fact]
+    public async Task ConfigureEmulatorPorts()
+    {
+        CancellationTokenSource cancellationSource = new CancellationTokenSource();
+        try
+        {
+            var builder = DistributedApplication.CreateBuilder();
+
+            var lambdaServiceEmulatorOptions = new LambdaEmulatorOptions { ConfigStoragePath = Path.GetTempPath(), HttpPort = 5050, HttpsPort = 5051 };
+            var lambdaServiceEmulator = (builder.AddAWSLambdaServiceEmulator(lambdaServiceEmulatorOptions)).Resource;
+
+            var apiGatewayEmulatorOptions = new APIGatewayEmulatorOptions { HttpPort = 5055, HttpsPort = 5056 };
+            var apiGatewayEmulator = (builder.AddAWSAPIGatewayEmulator("APIGatewayEmulator", APIGatewayType.HttpV2, apiGatewayEmulatorOptions)).Resource;
+
+            var daTask = builder.Build().RunAsync(cancellationSource.Token);
+
+            var lambdaEndpointAnnotations = lambdaServiceEmulator.Annotations.OfType<EndpointAnnotation>();
+            Assert.Equal(2, lambdaEndpointAnnotations.Count());
+            Assert.Contains(lambdaEndpointAnnotations, a => a.UriScheme == "http" && a.Port == 5050);
+            Assert.Contains(lambdaEndpointAnnotations, a => a.UriScheme == "https" && a.Port == 5051);
+
+            var apiGatewyEndpointAnnotations = apiGatewayEmulator.Annotations.OfType<EndpointAnnotation>();
+            Assert.Equal(2, apiGatewyEndpointAnnotations.Count());
+            Assert.Contains(apiGatewyEndpointAnnotations, a => a.UriScheme == "http" && a.Port == 5055);
+            Assert.Contains(apiGatewyEndpointAnnotations, a => a.UriScheme == "https" && a.Port == 5056);
         }
         finally
         {
