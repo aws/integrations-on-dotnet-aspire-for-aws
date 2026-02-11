@@ -199,7 +199,7 @@ public class PlaygroundE2ETests
     }
 
     [Fact]
-    public async Task ConfigureEmulatorPorts()
+    public void ConfigureEmulatorPorts()
     {
         CancellationTokenSource cancellationSource = new CancellationTokenSource();
         try
