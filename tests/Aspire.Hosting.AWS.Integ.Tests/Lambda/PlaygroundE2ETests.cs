@@ -151,7 +151,7 @@ public class PlaygroundE2ETests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task VerifyDisableHttpsEndpoint(bool disableHttps)
+    public void VerifyDisableHttpsEndpoint(bool disableHttps)
     {
         CancellationTokenSource cancellationSource = new CancellationTokenSource();
         try
