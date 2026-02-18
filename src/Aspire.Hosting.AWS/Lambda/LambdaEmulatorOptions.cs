@@ -28,12 +28,12 @@ public class LambdaEmulatorOptions
     public bool AllowDowngrade { get; set; } = false;
 
     /// <summary>
-    /// The http port that the Lambda emulator will listen on. If not set, a random port will be used.
+    /// The HTTP port that the Lambda emulator will listen on. If not set, a random port will be used.
     /// </summary>
     public int? HttpPort { get; set; } = null;
 
     /// <summary>
-    /// The https port that the Lambda emulator will listen on. If not set, a random port will be used.
+    /// The HTTPS port that the Lambda emulator will listen on. If not set, a random port will be used.
     /// </summary>
     public int? HttpsPort { get; set; } = null;
 

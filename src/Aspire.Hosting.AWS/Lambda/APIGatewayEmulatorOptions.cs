@@ -8,12 +8,12 @@ namespace Aspire.Hosting.AWS.Lambda;
 public class APIGatewayEmulatorOptions
 {
     /// <summary>
-    /// The http port that the API Gateway emulator will listen on. If not set, a random port will be used.
+    /// The HTTP port that the API Gateway emulator will listen on. If not set, a random port will be used.
     /// </summary>
     public int? HttpPort { get; set; } = null;
 
     /// <summary>
-    /// The https port that the API Gateway emulator will listen on. If not set, a random port will be used.
+    /// The HTTPS port that the API Gateway emulator will listen on. If not set, a random port will be used.
     /// </summary>
     public int? HttpsPort { get; set; } = null;
 
