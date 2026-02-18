@@ -8,6 +8,7 @@ using Amazon.SecurityToken;
 using Amazon.SecurityToken.Model;
 using Aspire.Hosting.ApplicationModel;
 using Amazon.Runtime.CredentialManagement;
+using Amazon.Runtime.Credentials;
 
 namespace Aspire.Hosting.AWS;
 internal static class SdkUtilities
@@ -28,7 +29,7 @@ internal static class SdkUtilities
 
     internal static string GetAssemblyVersion()
     {
-        var attribute = typeof(AWSLifecycleHook).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        var attribute = typeof(SdkUtilities).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
         return attribute != null ? attribute.InformationalVersion.Split('+')[0] : "Unknown";
     }
 
@@ -153,5 +154,38 @@ internal static class SdkUtilities
         {
             _semaphore.Release();
         }
+    }
+
+    internal static Dictionary<string, string> CreateDictionaryOfAWSCredentialsAndRegion(AmazonServiceClient serviceClient)
+    {
+        var environment = new Dictionary<string, string>();
+        var credentials = serviceClient.Config.DefaultAWSCredentials;
+        if (credentials != null)
+        {
+            credentials = DefaultAWSCredentialsIdentityResolver.GetCredentials(serviceClient.Config);
+        }
+
+        if (credentials != null)
+        {
+            var immutableCredentials = credentials.GetCredentials();
+            if (immutableCredentials != null)
+            {
+                environment["AWS_ACCESS_KEY_ID"] = immutableCredentials.AccessKey;
+                environment["AWS_SECRET_ACCESS_KEY"] = immutableCredentials.SecretKey;
+                if (!string.IsNullOrEmpty(immutableCredentials.Token))
+                {
+                    environment["AWS_SESSION_TOKEN"] = immutableCredentials.Token;
+                }
+            }
+        }
+
+        var region = serviceClient.Config.RegionEndpoint?.SystemName;
+        if (!string.IsNullOrEmpty(region))
+        {
+            environment["AWS_REGION"] = region;
+            environment["AWS_DEFAULT_REGION"] = region;
+        }
+
+        return environment;
     }
 }

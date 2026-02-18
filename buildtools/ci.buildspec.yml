@@ -3,7 +3,11 @@ version: 0.2
 phases:
   install:
     runtime-versions:
+      nodejs: 22
       dotnet: 8.x
+    commands:
+      - npm install -g aws-cdk@2.1106.0
+      - cdk --version      
   build:
     commands:
       - dotnet test --verbosity normal integrations-on-dotnet-aspire-for-aws.sln --configuration Release --logger "console;verbosity=detailed" --logger trx --results-directory ./testresults

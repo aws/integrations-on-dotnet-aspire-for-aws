@@ -3,14 +3,14 @@
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS;
 using Aspire.Hosting.AWS.Lambda;
-using Microsoft.Extensions.Hosting;
+using Aspire.Hosting.AWS.Utils;
 using Aspire.Hosting.AWS.Utils.Internal;
 using Aspire.Hosting.Lifecycle;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.Versioning;
-using Aspire.Hosting.AWS.Utils;
 
 #pragma warning disable IDE0130
 namespace Aspire.Hosting;
@@ -34,7 +34,6 @@ public static class LambdaExtensions
         options ??= new LambdaFunctionOptions();
         var metadata = new TLambdaProject();
 
-        var serviceEmulator = AddOrGetLambdaServiceEmulatorResource(builder);
         IResourceBuilder<LambdaProjectResource> resource;
         // The Lambda function handler for a Class Library contains "::".
         // This is an example of a class library function handler "WebCalculatorFunctions::WebCalculatorFunctions.Functions::AddFunctionHandler".
@@ -54,17 +53,45 @@ public static class LambdaExtensions
                             .WithAnnotation(new TLambdaProject());
         }
 
-        resource.WithParentRelationship(serviceEmulator);
+        ExecutableResource? serviceEmulator = null;
+        if (builder.ExecutionContext.IsRunMode)
+        {
+            serviceEmulator = AddOrGetLambdaServiceEmulatorResource(builder);
+            resource.WithParentRelationship(serviceEmulator);
+        }
 
         resource.WithOpenTelemetry();
 
-        resource.WithEnvironment(context =>
+        resource.WithEnvironment(async context =>
         {
+            // If we are in publishing mode we do not need to connect the Lambda emulator which is only used for local development and testing.
+            if (context.ExecutionContext.IsPublishMode || serviceEmulator == null)
+                return;
+
             var serviceEmulatorEndpoint = serviceEmulator.GetEndpoint("http");
+
+            if (!serviceEmulator.TryGetLastAnnotation<LambdaEmulatorAnnotation>(out var lambdaEmulatorAnnotation) || lambdaEmulatorAnnotation == null)
+            {
+                return;
+            }
+
+            var serviceEmulatorEndpointRef = lambdaEmulatorAnnotation.Endpoint;
+
+            string hostAndPort;
+            try
+            {
+                hostAndPort = await serviceEmulatorEndpointRef.Property(EndpointProperty.HostAndPort).GetValueAsync(context.CancellationToken).ConfigureAwait(false)
+                                          ?? serviceEmulatorEndpointRef.Property(EndpointProperty.HostAndPort).ValueExpression;
+            }
+            catch
+            {
+                // Fallback to the expression if resolution failed
+                hostAndPort = serviceEmulatorEndpointRef.Property(EndpointProperty.HostAndPort).ValueExpression;
+            }
 
             // Add the Lambda function resource on the path so the emulator can distinguish request
             // for each Lambda function.
-            var apiPath = $"{serviceEmulatorEndpoint.Host}:{serviceEmulatorEndpoint.Port}/{name}";
+            var apiPath = $"{hostAndPort}/{name}";
             context.EnvironmentVariables["AWS_EXECUTION_ENV"] = $"aspire.hosting.aws#{SdkUtilities.GetAssemblyVersion()}";
             context.EnvironmentVariables["AWS_LAMBDA_RUNTIME_API"] = apiPath;
             context.EnvironmentVariables["AWS_LAMBDA_FUNCTION_NAME"] = name;
@@ -73,11 +100,11 @@ public static class LambdaExtensions
             context.EnvironmentVariables["AWS_LAMBDA_LOG_FORMAT"] = options.LogFormat.Value;
             context.EnvironmentVariables["AWS_LAMBDA_LOG_LEVEL"] = options.ApplicationLogLevel.Value;
 
-            var lambdaEmulatorEndpoint = $"http://{serviceEmulatorEndpoint.Host}:{serviceEmulatorEndpoint.Port}/?function={Uri.EscapeDataString(name)}";
-            
+            var lambdaEmulatorEndpoint = $"http://{hostAndPort}/?function={Uri.EscapeDataString(name)}";
+
             resource.WithAnnotation(new ResourceCommandAnnotation(
-                name: "LambdaEmulator", 
-                displayName: "Lambda Service Emulator", 
+                name: "LambdaEmulator",
+                displayName: "Lambda Service Emulator",
                 updateState: context =>
                 {
                     if (string.Equals(context.ResourceSnapshot.State?.Text, KnownResourceStates.Running))
@@ -161,7 +188,7 @@ public static class LambdaExtensions
         }));
 
         serviceEmulator = lambdaEmulator.Resource;
-        builder.Services.TryAddLifecycleHook<LambdaLifecycleHook>();
+        builder.Services.TryAddEventingSubscriber<LambdaBeforeStartEventHandler>();
 
         return lambdaEmulator;
     }

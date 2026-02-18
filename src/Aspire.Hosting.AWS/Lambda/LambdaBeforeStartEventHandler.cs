@@ -1,30 +1,48 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.AWS.Utils;
 using Aspire.Hosting.AWS.Utils.Internal;
+using Aspire.Hosting.Eventing;
 using Aspire.Hosting.Lifecycle;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aspire.Hosting.AWS.Utils;
 
 namespace Aspire.Hosting.AWS.Lambda;
 
 /// <summary>
-/// Lambda lifecycle hook takes care of getting Amazon.Lambda.TestTool installed if there was
-/// a Lambda service emulator added to the resources.
+/// Handles the subscription and processing of events that occur before a Lambda resource starts within a distributed
+/// application environment.
 /// </summary>
-/// <param name="logger"></param>
-internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProcessCommandService processCommandService) : IDistributedApplicationLifecycleHook
+/// <remarks>This event handler is responsible for configuring Lambda project resources prior to their startup,
+/// including validation and setup of local emulation tools when required. It supports both IDE and non-IDE scenarios
+/// for Lambda function execution and ensures that necessary dependencies are installed and configured. This class is
+/// intended for internal use within the distributed application eventing infrastructure.</remarks>
+/// <param name="logger">The logger used to record diagnostic and operational information during event handling.</param>
+/// <param name="processCommandService">The service used to execute and manage external process commands required for Lambda resource preparation.</param>
+/// <param name="executionContext">The execution context representing the current distributed application run mode and environment.</param>
+internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> logger, IProcessCommandService processCommandService, DistributedApplicationExecutionContext executionContext) : IDistributedApplicationEventingSubscriber
 {
-    public async Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
+    public Task SubscribeAsync(IDistributedApplicationEventing eventing, DistributedApplicationExecutionContext executionContext, CancellationToken cancellationToken)
     {
+        eventing.Subscribe<BeforeStartEvent>(OnBeforeResourceStartedAsync);
+        return Task.CompletedTask;
+    }
+
+    public async Task OnBeforeResourceStartedAsync(BeforeStartEvent @event, CancellationToken cancellationToken)
+    {
+        if (!executionContext.IsRunMode)
+        {
+            return;
+        }
+
         SdkUtilities.BackgroundSDKDefaultConfigValidation(logger);
 
         // The Lambda function handler for a Class Library contains "::".
         // This is an example of a class library function handler "WebCalculatorFunctions::WebCalculatorFunctions.Functions::AddFunctionHandler".
-        var classLibraryProjectPaths = 
-            appModel.Resources
+        var classLibraryProjectPaths =
+            @event.Model.Resources
                 .OfType<LambdaProjectResource>()
                 .Where(x =>
                 {
@@ -37,9 +55,9 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
                     return true;
                 })
                 .ToList();
-        
+
         LambdaEmulatorAnnotation? emulatorAnnotation = null;
-        if (appModel.Resources.FirstOrDefault(x => x.TryGetLastAnnotation<LambdaEmulatorAnnotation>(out emulatorAnnotation)) != null && emulatorAnnotation != null)
+        if (@event.Model.Resources.FirstOrDefault(x => x.TryGetLastAnnotation<LambdaEmulatorAnnotation>(out emulatorAnnotation)) != null && emulatorAnnotation != null)
         {
             await ApplyLambdaEmulatorAnnotationAsync(emulatorAnnotation, cancellationToken);
 
@@ -51,7 +69,7 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
                 var lambdaFunctionAnnotation = projectResource.Annotations
                     .OfType<LambdaFunctionAnnotation>()
                     .First();
-                
+
                 // If we are running Aspire through an IDE where a debugger is attached,
                 // we want to configure the Aspire resource to use a Launch Setting Profile that will be able to run the class library Lambda function.
                 if (AspireUtilities.IsRunningInDebugger)
@@ -113,18 +131,18 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
                         logger.LogError("Cannot determine the target framework of the project '{ProjectPath}'", projectMetadata.ProjectPath);
                         continue;
                     }
-                    
+
                     projectResource.Annotations.Remove(projectMetadata);
 
                     var projectPath =
                         ProjectUtilities.CreateExecutableWrapperProject(projectMetadata.ProjectPath, lambdaFunctionAnnotation.Handler, targetFramework);
-                
+
                     projectResource.Annotations.Add(new LambdaProjectMetadata(projectPath));
-                    
+
                     var projectName = new FileInfo(projectPath).Name;
                     var workingDirectory = Directory.GetParent(projectPath)!.FullName;
-                    processCommandService.RunProcess(logger, "dotnet", $"build {projectName}", workingDirectory);
-                    processCommandService.RunProcess(logger, "dotnet", $"build -c Release {projectName}", workingDirectory);
+                    processCommandService.RunProcess(logger, "dotnet", $"build {projectName}", workingDirectory, streamOutputToLogger: false);
+                    processCommandService.RunProcess(logger, "dotnet", $"build -c Release {projectName}", workingDirectory, streamOutputToLogger: false);
                 }
             }
         }
@@ -154,7 +172,7 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
                 commandLineArgument += " --allow-downgrade";
             }
 
-            var result = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", commandLineArgument, cancellationToken);
+            var result = await processCommandService.RunProcessAndCaptureOutputAsync(logger, "dotnet", commandLineArgument, null, cancellationToken);
             if (result.ExitCode == 0)
             {
                 if (!string.IsNullOrEmpty(installedVersion))
@@ -199,7 +217,7 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
 
     private async Task<string> GetCurrentInstalledVersionAsync(CancellationToken cancellationToken)
     {
-        var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", "lambda-test-tool info --format json", cancellationToken);
+        var results = await processCommandService.RunProcessAndCaptureOutputAsync(logger, "dotnet", "lambda-test-tool info --format json", null, cancellationToken);
         if (results.ExitCode != 0)
         {
             return string.Empty;
@@ -227,7 +245,7 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
 
     internal async Task<string> GetCurrentInstallPathAsync(CancellationToken cancellationToken)
     {
-        var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", "lambda-test-tool info --format json", cancellationToken);
+        var results = await processCommandService.RunProcessAndCaptureOutputAsync(logger, "dotnet", "lambda-test-tool info --format json", null, cancellationToken);
         if (results.ExitCode != 0)
         {
             return string.Empty;
@@ -257,7 +275,7 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
     {
         try
         {
-            var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", $"msbuild \"{projectPath}\" -nologo -v:q -getProperty:AssemblyName", cancellationToken);
+            var results = await processCommandService.RunProcessAndCaptureOutputAsync(logger, "dotnet", $"msbuild \"{projectPath}\" -nologo -v:q -getProperty:AssemblyName", null, cancellationToken);
             if (results.ExitCode != 0)
             {
                 return string.Empty;
@@ -277,7 +295,7 @@ internal class LambdaLifecycleHook(ILogger<LambdaEmulatorResource> logger, IProc
     {
         try
         {
-            var results = await processCommandService.RunProcessAndCaptureOuputAsync(logger, "dotnet", $"msbuild \"{projectPath}\" -nologo -v:q -getProperty:TargetFramework", cancellationToken);
+            var results = await processCommandService.RunProcessAndCaptureOutputAsync(logger, "dotnet", $"msbuild \"{projectPath}\" -nologo -v:q -getProperty:TargetFramework", null, cancellationToken);
             if (results.ExitCode != 0)
             {
                 return string.Empty;
