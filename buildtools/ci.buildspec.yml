@@ -6,7 +6,7 @@ phases:
       nodejs: 22
       dotnet: 8.x
     commands:
-      - npm install -g aws-cdk
+      - npm install -g aws-cdk@2.1106.0
       - cdk --version      
   build:
     commands:

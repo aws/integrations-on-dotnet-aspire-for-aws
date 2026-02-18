@@ -14,8 +14,6 @@ cdkStackResource.WithTag("aws-repo", "integrations-on-dotnet-aspire-for-aws");
 var sqsDemoQueue1 = cdkStackResource.AddSQSQueue("DemoQueue1");
 var sqsDemoQueue2 = cdkStackResource.AddSQSQueue("DemoQueue2");
 
-
-
 builder.AddAWSLambdaFunction<Projects.ToUpperLambdaFunctionExecutable>("ToUpperFunction", lambdaHandler: "ToUpperLambdaFunctionExecutable", new LambdaFunctionOptions { ApplicationLogLevel = ApplicationLogLevel.DEBUG, LogFormat = LogFormat.JSON });
 
 var defaultRouteLambda = builder.AddAWSLambdaFunction<Projects.WebDefaultLambdaFunction>("LambdaDefaultRoute", lambdaHandler: "WebDefaultLambdaFunction");

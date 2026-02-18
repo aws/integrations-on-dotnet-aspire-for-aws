@@ -11,6 +11,17 @@ using System.Text.Json.Nodes;
 
 namespace Aspire.Hosting.AWS.Lambda;
 
+/// <summary>
+/// Handles the subscription and processing of events that occur before a Lambda resource starts within a distributed
+/// application environment.
+/// </summary>
+/// <remarks>This event handler is responsible for configuring Lambda project resources prior to their startup,
+/// including validation and setup of local emulation tools when required. It supports both IDE and non-IDE scenarios
+/// for Lambda function execution and ensures that necessary dependencies are installed and configured. This class is
+/// intended for internal use within the distributed application eventing infrastructure.</remarks>
+/// <param name="logger">The logger used to record diagnostic and operational information during event handling.</param>
+/// <param name="processCommandService">The service used to execute and manage external process commands required for Lambda resource preparation.</param>
+/// <param name="executionContext">The execution context representing the current distributed application run mode and environment.</param>
 internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> logger, IProcessCommandService processCommandService, DistributedApplicationExecutionContext executionContext) : IDistributedApplicationEventingSubscriber
 {
     public Task SubscribeAsync(IDistributedApplicationEventing eventing, DistributedApplicationExecutionContext executionContext, CancellationToken cancellationToken)
