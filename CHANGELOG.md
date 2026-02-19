@@ -1,3 +1,11 @@
+## Release 2026-02-19
+
+### Aspire.Hosting.AWS (9.4.0)
+* Add HTTPS support for Lambda and API Gateway emulators
+* [Breaking Change] Rename `Port` property to HttpPort to match new `HttpsPort` property on APIGatewayEmulatorOptions and LambdaEmulatorOptions
+* Added new `DisableHttpsEndpoint` property to disable default allocation of HTTPS endpoints on APIGatewayEmulatorOptions and LambdaEmulatorOptions
+* Change generation of Lambda launch settings profile to evaluate OutputPath property for launch profile working directory
+
 ## Release 2026-02-05
 
 ### Aspire.Hosting.AWS (9.3.2)
