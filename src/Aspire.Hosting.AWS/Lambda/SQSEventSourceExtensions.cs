@@ -107,7 +107,7 @@ public static class SQSEventSourceExtensions
             // configure the SQS event source with the same config to access the SQS queue.
             var awsSdkConfig = lambdaFunction.Resource.Annotations.OfType<SDKResourceAnnotation>().FirstOrDefault()?.SdkConfig;
 
-            var sqsEventConfig = SQSEventSourceResource.CreateSQSEventConfig(queueUrl, lambdaFunction.Resource.Name, lambdaEmulatorAnnotation.Endpoint.Url, options, awsSdkConfig);
+            var sqsEventConfig = SQSEventSourceResource.CreateSQSEventConfig(queueUrl, lambdaFunction.Resource.Name, lambdaEmulatorAnnotation.LambdaRuntimeEndpoint.Url, options, awsSdkConfig);
             context.EnvironmentVariables[SQSEventSourceResource.SQS_EVENT_CONFIG_ENV_VAR] = sqsEventConfig;
         });
 

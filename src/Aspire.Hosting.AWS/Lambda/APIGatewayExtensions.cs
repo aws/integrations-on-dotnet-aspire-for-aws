@@ -35,20 +35,41 @@ public static class APIGatewayExtensions
             apiGatewayEmulator.Resource.AddCommandLineArguments(context.Args);
         });
 
-        var annotation = new EndpointAnnotation(
+        var annotationHttp = new EndpointAnnotation(
             protocol: ProtocolType.Tcp,
             uriScheme: "http",
-            port: options.Port);
+            port: options.HttpPort);
+        apiGatewayEmulator.WithAnnotation(annotationHttp);
+        var endpointHttpReference = new EndpointReference(apiGatewayEmulator.Resource, annotationHttp);
 
-        apiGatewayEmulator.WithAnnotation(annotation);
-        apiGatewayEmulator.WithUrlForEndpoint("http", u => u.DisplayText = "API Gateway Endpoint");
+        EndpointReference? endpointHttpsReference = null;
 
-        var endpointReference = new EndpointReference(apiGatewayEmulator.Resource, annotation);
+        if (!options.DisableHttpsEndpoint)
+        {
+            var annotationHttps = new EndpointAnnotation(
+                protocol: ProtocolType.Tcp,
+                uriScheme: "https",
+                port: options.HttpsPort);
+            apiGatewayEmulator.WithAnnotation(annotationHttps);
+            endpointHttpsReference = new EndpointReference(apiGatewayEmulator.Resource, annotationHttps);
+
+            apiGatewayEmulator.WithUrlForEndpoint("https", u => u.DisplayText = "API Gateway Endpoint");
+        }
+        else
+        {
+            apiGatewayEmulator.WithUrlForEndpoint("http", u => u.DisplayText = "API Gateway Endpoint");
+        }
+
 
         apiGatewayEmulator.WithAnnotation(new EnvironmentCallbackAnnotation(context =>
         {
             context.EnvironmentVariables[Constants.IsAspireHostedEnvVariable] = "true";
-            context.EnvironmentVariables["API_GATEWAY_EMULATOR_PORT"] = endpointReference.Property(EndpointProperty.TargetPort);
+            context.EnvironmentVariables["API_GATEWAY_EMULATOR_PORT"] = endpointHttpReference.Property(EndpointProperty.TargetPort);
+
+            if (endpointHttpsReference != null)
+            {
+                context.EnvironmentVariables["API_GATEWAY_EMULATOR_HTTPS_PORT"] = endpointHttpsReference.Property(EndpointProperty.TargetPort);
+            }
         }));
 
         apiGatewayEmulator.WithAnnotation(new APIGatewayEmulatorAnnotation(apiGatewayType));
@@ -74,12 +95,12 @@ public static class APIGatewayExtensions
             return builder;
         }
 
-        builder.WithReference(lambdaEmulatorAnnotation.Endpoint);
+        builder.WithReference(lambdaEmulatorAnnotation.LambdaRuntimeEndpoint);
 
         builder.WithEnvironment(context =>
         {
             var envName = "APIGATEWAY_EMULATOR_ROUTE_CONFIG_" + lambda.Resource.Name;
-            var config = new RouteConfig(lambda.Resource.Name, lambdaEmulatorAnnotation.Endpoint.Url, httpMethod, path);
+            var config = new RouteConfig(lambda.Resource.Name, lambdaEmulatorAnnotation.LambdaRuntimeEndpoint.Url, httpMethod, path);
             var configJson = JsonSerializer.Serialize(config);
             context.EnvironmentVariables[envName] = configJson;
         });
