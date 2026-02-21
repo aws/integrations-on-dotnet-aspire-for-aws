@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Add checks for dev cert when choosing to enable Lambda HTTPS ports by default"
+      ]
+    }
+  ]
+}

@@ -7,6 +7,11 @@ namespace Aspire.Hosting.AWS.Lambda;
 /// </summary>
 public class APIGatewayEmulatorOptions
 {
+    public APIGatewayEmulatorOptions()
+    {
+        DisableHttpsEndpoint = !Utils.DevCertificateDetector.HasAspNetCoreDevCert();
+    }
+
     /// <summary>
     /// The HTTP port that the API Gateway emulator will listen on. If not set, a random port will be used.
     /// </summary>
