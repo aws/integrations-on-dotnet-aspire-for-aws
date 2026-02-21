@@ -7,6 +7,11 @@ namespace Aspire.Hosting.AWS.Lambda;
 /// </summary>
 public class LambdaEmulatorOptions
 {
+    public LambdaEmulatorOptions()
+    {
+        DisableHttpsEndpoint = !Utils.DevCertificateDetector.HasAspNetCoreDevCert();
+    }
+
     /// <summary>
     /// By default Amazon.Lambda.TestTool will be updated/installed during AppHost startup. Amazon.Lambda.TestTool is 
     /// a .NET Tool that will be installed globally.
