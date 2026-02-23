@@ -1,5 +1,6 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
+using Amazon.CDK.AWS.CloudWatch;
 using System.Security.Cryptography.X509Certificates;
 
 namespace Aspire.Hosting.AWS.Utils;
@@ -18,14 +19,12 @@ internal class DevCertificateDetector
             using var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
             store.Open(OpenFlags.ReadOnly);
 
-            var now = DateTimeOffset.UtcNow;
-
             foreach (var cert in store.Certificates)
             {
                 if (!IsLocalhost(cert))
                     continue;
 
-                if (!IsValid(cert, now))
+                if (!IsValid(cert))
                     continue;
 
                 if (!HasServerAuthEku(cert))
@@ -51,8 +50,12 @@ internal class DevCertificateDetector
     private static bool IsLocalhost(X509Certificate2 cert) =>
         string.Equals(cert.Subject, LocalhostSubject, StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsValid(X509Certificate2 cert, DateTimeOffset now) =>
-        now >= cert.NotBefore && now <= cert.NotAfter;
+    private static bool IsValid(X509Certificate2 cert)
+    {
+        // Use local time to match the certificate's NotBefore and NotAfter properties, which are in local time.
+        var now = DateTime.Now;
+        return now >= cert.NotBefore && now <= cert.NotAfter;
+    }
 
     private static bool HasServerAuthEku(X509Certificate2 cert)
     {
