@@ -1,3 +1,8 @@
+## Release 2026-02-23
+
+### Aspire.Hosting.AWS (9.4.1)
+* Add checks for dev cert when choosing to enable Lambda HTTPS ports by default
+
 ## Release 2026-02-19
 
 ### Aspire.Hosting.AWS (9.4.0)
