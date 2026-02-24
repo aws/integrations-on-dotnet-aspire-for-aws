@@ -18,7 +18,6 @@ namespace Aspire.Hosting;
 /// <summary>
 /// Extension methods for adding Lambda functions as Aspire resources.
 /// </summary>
-[RequiresPreviewFeatures(Constants.LambdaPreviewMessage)]
 public static class LambdaExtensions
 {   
     /// <summary>
@@ -62,7 +61,7 @@ public static class LambdaExtensions
 
         resource.WithOpenTelemetry();
 
-        resource.WithEnvironment(async context =>
+        resource.WithEnvironment(context =>
         {
             // If we are in publishing mode we do not need to connect the Lambda emulator which is only used for local development and testing.
             if (context.ExecutionContext.IsPublishMode || serviceEmulator == null)
