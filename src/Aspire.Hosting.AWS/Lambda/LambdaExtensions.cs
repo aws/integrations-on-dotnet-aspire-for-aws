@@ -18,7 +18,6 @@ namespace Aspire.Hosting;
 /// <summary>
 /// Extension methods for adding Lambda functions as Aspire resources.
 /// </summary>
-[RequiresPreviewFeatures(Constants.LambdaPreviewMessage)]
 public static class LambdaExtensions
 {   
     /// <summary>

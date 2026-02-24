@@ -16,7 +16,6 @@ namespace Aspire.Hosting;
 /// <summary>
 /// Extension methods adding SQS event source for Lambda functions.
 /// </summary>
-[RequiresPreviewFeatures(Constants.LambdaPreviewMessage)]
 public static class SQSEventSourceExtensions
 {
     /// <summary>

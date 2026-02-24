@@ -4,7 +4,6 @@ using Aspire.Hosting.AWS.Deployment;
 
 using Environment = System.Environment;
 
-#pragma warning disable CA2252 // This API requires opting into preview features
 #pragma warning disable ASPIREAWSPUBLISHERS001
 #pragma warning disable ASPIRECOMPUTE001
 #pragma warning disable ASPIREINTERACTION001

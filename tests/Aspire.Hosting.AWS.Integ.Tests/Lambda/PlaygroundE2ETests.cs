@@ -6,8 +6,6 @@ using Amazon.SQS.Model;
 using Aspire.Hosting.AWS.CDK;
 using Aspire.Hosting.AWS.Lambda;
 
-#pragma warning disable CA2252
-
 namespace Aspire.Hosting.AWS.Integ.Tests.Lambda;
 
 public class PlaygroundE2ETests

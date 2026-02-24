@@ -1,6 +1,5 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-#pragma warning disable CA2252 // This API requires opting into preview features
 #pragma warning disable ASPIREAWSPUBLISHERS001
 #pragma warning disable ASPIRECOMPUTE001
 #pragma warning disable ASPIREINTERACTION001

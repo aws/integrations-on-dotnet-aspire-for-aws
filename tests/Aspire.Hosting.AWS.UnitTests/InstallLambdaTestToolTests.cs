@@ -8,8 +8,6 @@ using Xunit;
 using Moq;
 
 namespace Aspire.Hosting.AWS.UnitTests;
-
-#pragma warning disable CA2252
 public class InstallLambdaTestToolTests
 {
     [Fact]

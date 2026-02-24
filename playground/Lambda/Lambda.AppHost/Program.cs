@@ -2,8 +2,6 @@
 using Amazon.Lambda;
 using Aspire.Hosting.AWS.Lambda;
 
-#pragma warning disable CA2252 // This API requires opting into preview features
-
 var builder = DistributedApplication.CreateBuilder(args);
 
 var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.USWest2);

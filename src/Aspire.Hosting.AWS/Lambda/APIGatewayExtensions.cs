@@ -13,7 +13,6 @@ namespace Aspire.Hosting;
 /// <summary>
 /// Extension methods adding and interacting with the API Gateway emulator.
 /// </summary>
-[RequiresPreviewFeatures(Constants.LambdaPreviewMessage)]
 public static class APIGatewayExtensions
 {
     /// <summary>

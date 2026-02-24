@@ -177,9 +177,6 @@ You can develop and test AWS Lambda functions locally within your .NET Aspire ap
 To add a Lambda function to your .NET Aspire AppHost, use the `AddAWSLambdaFunction` method. The method supports both executable Lambda functions and class library Lambda functions:
 
 ```csharp
-#pragma warning disable CA2252 // This API requires opting into preview features
-
-
 var awsConfig = builder.AddAWSSDKConfig()
                         .WithProfile("default")
                         .WithRegion(RegionEndpoint.USWest2);
@@ -231,8 +228,6 @@ The `LambdaEmulatorOptions` provide the following customization:
 To add an API Gateaway emulator to your .NET Aspire AppHost, use the `AddAWSAPIGatewayEmulator` method. 
 
 ```csharp
-#pragma warning disable CA2252 // This API requires opting into preview features
-
 // Add Lambda functions
 var rootWebFunction = builder.AddAWSLambdaFunction<Projects.WebApiLambdaFunction>(
     "RootLambdaFunction", 
@@ -265,8 +260,6 @@ The API Gateway emulator supports the use of wildcard path. To define a wildcard
 Here's an example of how to set up an API Gateway emulator with a wildcard path:
 
 ```csharp
-#pragma warning disable CA2252 // This API requires opting into preview features
-
 // Add an ASP.NET Core Lambda function
 var aspNetCoreLambdaFunction = builder.AddAWSLambdaFunction<Projects.AWSServerless>("Resource", "AWSServerless");
 
