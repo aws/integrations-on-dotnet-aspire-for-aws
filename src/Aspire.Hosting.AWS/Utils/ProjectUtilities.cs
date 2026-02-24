@@ -26,6 +26,7 @@ internal static class ProjectUtilities
         string projectPath, 
         string runtimeSupportAssemblyPath, 
         string targetFramework,
+        string outputPath,
         ILogger? logger = null)
     {
         try
@@ -63,7 +64,7 @@ internal static class ProjectUtilities
             // Update properties that contain a path that is environment-specific
             lambdaTester["commandLineArgs"] =
                 $"exec --depsfile ./{assemblyName}.deps.json --runtimeconfig ./{assemblyName}.runtimeconfig.json {SubstituteHomePath(runtimeSupportAssemblyPath)} {functionHandler}";
-            lambdaTester["workingDirectory"] = Path.Combine(".", "bin", "$(Configuration)", targetFramework);
+            lambdaTester["workingDirectory"] = outputPath;
 
             // Serialize the updated JSON with indentation
             var options = new JsonSerializerOptions { WriteIndented = true };

@@ -112,6 +112,13 @@ internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> log
                             continue;
                         }
                     }
+
+                    var outputPath = await GetProjectOutputPathAsync(projectMetadata.ProjectPath, cancellationToken);
+                    if (string.IsNullOrEmpty(assemblyName))
+                    {
+                        outputPath = Path.Combine(".", "bin", "$(Configuration)", targetFramework);
+                    }
+
                     ProjectUtilities.UpdateLaunchSettingsWithLambdaTester(
                         resourceName: projectResource.Name,
                         functionHandler: lambdaFunctionAnnotation.Handler,
@@ -119,6 +126,7 @@ internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> log
                         projectPath: projectMetadata.ProjectPath,
                         runtimeSupportAssemblyPath: runtimeSupportAssemblyPath,
                         targetFramework: targetFramework,
+                        outputPath: outputPath,
                         logger: logger);
                 }
                 // If we are running outside an IDE, the Launch Setting Profile approach does not work.
@@ -290,6 +298,27 @@ internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> log
             return string.Empty;
         }
     }
+
+    internal async Task<string> GetProjectOutputPathAsync(string projectPath, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var results = await processCommandService.RunProcessAndCaptureOutputAsync(logger, "dotnet", $"msbuild \"{projectPath}\" -nologo -v:q -getProperty:OutputPath", null, cancellationToken);
+            if (results.ExitCode != 0)
+            {
+                return string.Empty;
+            }
+
+            logger.LogDebug("The output path of '{projectPath}' is {outputPath}", projectPath, results.Output);
+            return results.Output.Trim();
+        }
+        catch (JsonException ex)
+        {
+            logger.LogWarning(ex, "Error retrieving the output path of '{projectPath}'", projectPath);
+            return string.Empty;
+        }
+    }
+
 
     internal async Task<string> GetProjectTargetFrameworkAsync(string projectPath, CancellationToken cancellationToken)
     {

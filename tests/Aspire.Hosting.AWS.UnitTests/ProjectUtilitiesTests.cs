@@ -50,6 +50,7 @@ public class ProjectUtilitiesTests : IDisposable
         string functionHandler = "TestNamespace.Function::Handler";
         string assemblyName = "TestAssembly";
         string targetFramework = "net8.0";
+        string outputPath = $"bin/Debug/{targetFramework}";
 
         string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         string runtimeSupportAssemblyPath = Path.Combine(userProfile, "dummy.dll");
@@ -65,7 +66,8 @@ public class ProjectUtilitiesTests : IDisposable
             assemblyName,
             projectPath,
             runtimeSupportAssemblyPath,
-            targetFramework);
+            targetFramework,
+            outputPath);
 
         // Assert
         Assert.True(Directory.Exists(propertiesDir));
@@ -97,7 +99,7 @@ public class ProjectUtilitiesTests : IDisposable
 
         // Verify the workingDirectory was set correctly.
         string workingDirectory = profile["workingDirectory"]?.GetValue<string>() ?? "";
-        string expectedWorkingDir = Path.Combine(".", "bin", "$(Configuration)", targetFramework);
+        string expectedWorkingDir = Path.Combine("bin", "Debug", targetFramework).Replace("\\", "/");
         Assert.Equal(expectedWorkingDir, workingDirectory);
     }
 
@@ -116,6 +118,7 @@ public class ProjectUtilitiesTests : IDisposable
         string functionHandler = "ExistingNamespace.Handler::Run";
         string assemblyName = "ExistingAssembly";
         string targetFramework = "net8.0";
+        string outputPath = $"bin/Debug/{targetFramework}";
 
         string runtimeSupportAssemblyPath = @"C:\path\to\support.dll";
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -130,7 +133,8 @@ public class ProjectUtilitiesTests : IDisposable
             assemblyName,
             projectPath,
             runtimeSupportAssemblyPath,
-            targetFramework);
+            targetFramework,
+            outputPath);
 
         // Assert
         string jsonContent = File.ReadAllText(launchSettingsPath);
@@ -153,7 +157,7 @@ public class ProjectUtilitiesTests : IDisposable
         Assert.Contains(functionHandler, commandLineArgs);
 
         string workingDirectory = profile["workingDirectory"]?.GetValue<string>() ?? "";
-        string expectedWorkingDir = Path.Combine(".", "bin", "$(Configuration)", targetFramework);
+        string expectedWorkingDir = Path.Combine("bin", "Debug", targetFramework).Replace("\\", "/");
         Assert.Equal(expectedWorkingDir, workingDirectory);
     }
 
@@ -166,6 +170,7 @@ public class ProjectUtilitiesTests : IDisposable
         string functionHandler = "TestNamespace.Function::Handler";
         string assemblyName = "TestAssembly";
         string targetFramework = "net8.0";
+        string outputPath = $"bin/Debug/{targetFramework}";
         string runtimeSupportAssemblyPath = @"C:\dummy.dll";
 
         // Act & Assert
@@ -176,7 +181,8 @@ public class ProjectUtilitiesTests : IDisposable
                 assemblyName,
                 invalidProjectPath,
                 runtimeSupportAssemblyPath,
-                targetFramework));
+                targetFramework,
+                outputPath));
     }
 
     [Fact]
@@ -194,6 +200,7 @@ public class ProjectUtilitiesTests : IDisposable
         string functionHandler = "MalformedNamespace.Handler::Invoke";
         string assemblyName = "MalformedAssembly";
         string targetFramework = "net8.0";
+        string outputPath = $"bin/Debug/{targetFramework}";
         string runtimeSupportAssemblyPath = @"C:\malformed.dll";
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
@@ -207,7 +214,8 @@ public class ProjectUtilitiesTests : IDisposable
             assemblyName,
             projectPath,
             runtimeSupportAssemblyPath,
-            targetFramework);
+            targetFramework,
+            outputPath);
 
         // Assert
         string jsonContent = File.ReadAllText(launchSettingsPath);

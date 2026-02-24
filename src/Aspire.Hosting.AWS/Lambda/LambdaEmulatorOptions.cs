@@ -7,6 +7,11 @@ namespace Aspire.Hosting.AWS.Lambda;
 /// </summary>
 public class LambdaEmulatorOptions
 {
+    public LambdaEmulatorOptions()
+    {
+        DisableHttpsEndpoint = !Utils.DevCertificateDetector.HasAspNetCoreDevCert();
+    }
+
     /// <summary>
     /// By default Amazon.Lambda.TestTool will be updated/installed during AppHost startup. Amazon.Lambda.TestTool is 
     /// a .NET Tool that will be installed globally.
@@ -28,13 +33,24 @@ public class LambdaEmulatorOptions
     public bool AllowDowngrade { get; set; } = false;
 
     /// <summary>
-    /// The port that the Lambda emulator will listen on. If not set, a random port will be used.
+    /// The HTTP port that the Lambda emulator will listen on. If not set, a random port will be used.
     /// </summary>
-    public int? Port { get; set; } = null;
+    public int? HttpPort { get; set; } = null;
+
+    /// <summary>
+    /// The HTTPS port that the Lambda emulator will listen on. If not set, a random port will be used.
+    /// </summary>
+    public int? HttpsPort { get; set; } = null;
 
     /// <summary>
     /// Directory for the Lambda Test Tool to save configuration information like saved requests. The default is ".aws-lambda-testtool" sub directory in the current directory.
     /// To disable the ability to save configuration set ConfigStoragePath to an empty string (i.e. string.Empty).
     /// </summary>
     public string? ConfigStoragePath { get; set; }
+
+    /// <summary>
+    /// By default both an HTTP and HTTPS endpoint will be created for the Lambda Emulator. The HTTP endpoint is required for running Lambda functions to poll and process events. 
+    /// The web ui can be accessed through the HTTPS endpoint. Setting DisableHttpsEndpoint to true will disable the creation of the HTTPS endpoint.
+    /// </summary>
+    public bool DisableHttpsEndpoint { get; set; } = false;
 }

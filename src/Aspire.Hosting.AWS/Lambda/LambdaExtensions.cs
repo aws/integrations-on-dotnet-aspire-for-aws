@@ -68,30 +68,16 @@ public static class LambdaExtensions
             if (context.ExecutionContext.IsPublishMode || serviceEmulator == null)
                 return;
 
-            var serviceEmulatorEndpoint = serviceEmulator.GetEndpoint("http");
+            var serviceRuntimeAPIEndpoint = serviceEmulator.GetEndpoint("http");
 
             if (!serviceEmulator.TryGetLastAnnotation<LambdaEmulatorAnnotation>(out var lambdaEmulatorAnnotation) || lambdaEmulatorAnnotation == null)
             {
                 return;
             }
 
-            var serviceEmulatorEndpointRef = lambdaEmulatorAnnotation.Endpoint;
-
-            string hostAndPort;
-            try
-            {
-                hostAndPort = await serviceEmulatorEndpointRef.Property(EndpointProperty.HostAndPort).GetValueAsync(context.CancellationToken).ConfigureAwait(false)
-                                          ?? serviceEmulatorEndpointRef.Property(EndpointProperty.HostAndPort).ValueExpression;
-            }
-            catch
-            {
-                // Fallback to the expression if resolution failed
-                hostAndPort = serviceEmulatorEndpointRef.Property(EndpointProperty.HostAndPort).ValueExpression;
-            }
-
             // Add the Lambda function resource on the path so the emulator can distinguish request
             // for each Lambda function.
-            var apiPath = $"{hostAndPort}/{name}";
+            var apiPath = $"{serviceRuntimeAPIEndpoint.Host}:{serviceRuntimeAPIEndpoint.Port}/{name}";
             context.EnvironmentVariables["AWS_EXECUTION_ENV"] = $"aspire.hosting.aws#{SdkUtilities.GetAssemblyVersion()}";
             context.EnvironmentVariables["AWS_LAMBDA_RUNTIME_API"] = apiPath;
             context.EnvironmentVariables["AWS_LAMBDA_FUNCTION_NAME"] = name;
@@ -100,8 +86,14 @@ public static class LambdaExtensions
             context.EnvironmentVariables["AWS_LAMBDA_LOG_FORMAT"] = options.LogFormat.Value;
             context.EnvironmentVariables["AWS_LAMBDA_LOG_LEVEL"] = options.ApplicationLogLevel.Value;
 
-            var lambdaEmulatorEndpoint = $"http://{hostAndPort}/?function={Uri.EscapeDataString(name)}";
+            var serviceEmulatorEndpoint = serviceEmulator.GetEndpoint("https");
+            if (!serviceEmulatorEndpoint.Exists)
+            {
+                serviceEmulatorEndpoint = serviceEmulator.GetEndpoint("http");
+            }
 
+            var lambdaEmulatorEndpoint = $"{serviceEmulatorEndpoint.Scheme}://{serviceEmulatorEndpoint.Host}:{serviceEmulatorEndpoint.Port}/?function={Uri.EscapeDataString(name)}";
+            
             resource.WithAnnotation(new ResourceCommandAnnotation(
                 name: "LambdaEmulator",
                 displayName: "Lambda Service Emulator",
@@ -165,16 +157,32 @@ public static class LambdaExtensions
             lambdaEmulator.Resource.AddCommandLineArguments(context.Args, options);
         });
 
-        var annotation = new EndpointAnnotation(
+        var annotationHttpApi = new EndpointAnnotation(
             protocol: ProtocolType.Tcp,
             uriScheme: "http",
-            port: options.Port);
+            port: options.HttpPort);
 
-        lambdaEmulator.WithAnnotation(annotation);
+        lambdaEmulator.WithAnnotation(annotationHttpApi);
+        var endpointHttpReference = new EndpointReference(lambdaEmulator.Resource, annotationHttpApi);
+
+        EndpointReference? endpointHttpsReference = null;
+        if (!options.DisableHttpsEndpoint)
+        {
+            var annotationUI = new EndpointAnnotation(
+                protocol: ProtocolType.Tcp,
+                uriScheme: "https",
+                port: options.HttpsPort);
+
+            lambdaEmulator.WithAnnotation(annotationUI);
+            lambdaEmulator.WithUrlForEndpoint("https", u => u.DisplayText = "Lambda Test Tool UI");
+            endpointHttpsReference = new EndpointReference(lambdaEmulator.Resource, annotationUI);
+        }
+        else
+        {
         lambdaEmulator.WithUrlForEndpoint("http", u => u.DisplayText = "Lambda Test Tool UI");
-        var endpointReference = new EndpointReference(lambdaEmulator.Resource, annotation);
+        }
 
-        lambdaEmulator.WithAnnotation(new LambdaEmulatorAnnotation(endpointReference)
+        lambdaEmulator.WithAnnotation(new LambdaEmulatorAnnotation(lambdaRuntimeEndpoint: endpointHttpReference)
         {
             DisableAutoInstall = options.DisableAutoInstall,
             OverrideMinimumInstallVersion = options.OverrideMinimumInstallVersion,
@@ -184,7 +192,12 @@ public static class LambdaExtensions
         lambdaEmulator.WithAnnotation(new EnvironmentCallbackAnnotation(context =>
         {
             context.EnvironmentVariables[Constants.IsAspireHostedEnvVariable] = "true";
-            context.EnvironmentVariables["LAMBDA_RUNTIME_API_PORT"] = endpointReference.Property(EndpointProperty.TargetPort);
+            context.EnvironmentVariables["LAMBDA_RUNTIME_API_PORT"] = endpointHttpReference.Property(EndpointProperty.TargetPort);
+
+            if (!options.DisableHttpsEndpoint && endpointHttpsReference != null)
+            {
+                context.EnvironmentVariables["LAMBDA_WEB_UI_HTTPS_PORT"] = endpointHttpsReference.Property(EndpointProperty.TargetPort);
+            }
         }));
 
         serviceEmulator = lambdaEmulator.Resource;
