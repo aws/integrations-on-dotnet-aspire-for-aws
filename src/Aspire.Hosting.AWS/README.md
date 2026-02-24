@@ -2,6 +2,15 @@
 
 Provides extension methods and resources definition for a .NET Aspire AppHost to configure the AWS SDK for .NET and AWS application resources.
 
+## Features
+
+* [Provisioning application resources with AWS CloudFormation](#provisioning-application-resources-with-aws-cloudformation)
+* [Importing existing AWS resources](#importing-existing-aws-resources)
+* [Provisioning application resources with AWS CDK](#provisioning-application-resources-with-aws-cdk)
+* [Integrating AWS Lambda Local Development](#integrating-aws-lambda-local-development)
+* [Deployment to AWS (Preview)](#deployment-to-aws-preview)
+* [Integrating Amazon DynamoDB Local](#integrating-amazon-dynamodb-local) 
+
 ## Prerequisites
 
 - [Configure AWS credentials](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html)
@@ -177,9 +186,6 @@ You can develop and test AWS Lambda functions locally within your .NET Aspire ap
 To add a Lambda function to your .NET Aspire AppHost, use the `AddAWSLambdaFunction` method. The method supports both executable Lambda functions and class library Lambda functions:
 
 ```csharp
-#pragma warning disable CA2252 // This API requires opting into preview features
-
-
 var awsConfig = builder.AddAWSSDKConfig()
                         .WithProfile("default")
                         .WithRegion(RegionEndpoint.USWest2);
@@ -231,8 +237,6 @@ The `LambdaEmulatorOptions` provide the following customization:
 To add an API Gateaway emulator to your .NET Aspire AppHost, use the `AddAWSAPIGatewayEmulator` method. 
 
 ```csharp
-#pragma warning disable CA2252 // This API requires opting into preview features
-
 // Add Lambda functions
 var rootWebFunction = builder.AddAWSLambdaFunction<Projects.WebApiLambdaFunction>(
     "RootLambdaFunction", 
@@ -265,8 +269,6 @@ The API Gateway emulator supports the use of wildcard path. To define a wildcard
 Here's an example of how to set up an API Gateway emulator with a wildcard path:
 
 ```csharp
-#pragma warning disable CA2252 // This API requires opting into preview features
-
 // Add an ASP.NET Core Lambda function
 var aspNetCoreLambdaFunction = builder.AddAWSLambdaFunction<Projects.AWSServerless>("Resource", "AWSServerless");
 
@@ -283,7 +285,152 @@ The `{proxy+}` syntax captures the entire remaining part of the URL path and pas
 
 By combining the [ASP.NET Core bridge library](https://github.com/aws/aws-lambda-dotnet/blob/master/Libraries/src/Amazon.Lambda.AspNetCoreServer/README.md) and the API Gateway emulator with wildcard paths, you can easily develop and test your serverless ASP.NET Core applications locally, providing a seamless experience between local development and deployment to AWS Lambda.
 
-## Integrating Amazon DynamoDB Local  
+## Deployment to AWS (Preview)
+
+> **Note**: This feature is currently in preview and subject to change based on feedback. We encourage you to try it out and share your feedback!
+
+The AWS deployment feature for .NET Aspire enables you to deploy your Aspire applications directly to AWS. The deployment system transforms your Aspire AppHost resources into AWS CDK constructs, which are then synthesized into CloudFormation templates and deployed to your AWS account. This provides a seamless path from local development to cloud deployment.
+
+For comprehensive documentation including advanced scenarios, implementation details, and architectural guidance, see the [Deployment Design Document](../../docs/deployment-design.md).
+
+### Prerequisites
+
+Before deploying to AWS, ensure you have:
+
+* **Node.js 22.x** - Required for AWS CDK, which the deployment system uses to generate CloudFormation templates
+* **AWS CDK** installed globally: `npm install -g aws-cdk`
+* **AWS CDK Bootstrap** - Must be run on your target AWS account and region before first deployment: `cdk bootstrap aws://ACCOUNT-NUMBER/REGION`
+
+The deployment system leverages AWS CDK to transform your Aspire resources into cloud infrastructure, which requires Node.js and the CDK CLI to be available in your environment.
+
+### Getting Started
+
+Add an AWS CDK environment to your AppHost to enable deployment:
+
+```csharp
+// Add to opt-in to using the preview publish/deployment APIs.
+#pragma warning disable ASPIREAWSPUBLISHERS001
+
+var builder = DistributedApplication.CreateBuilder(args);
+
+// Add AWS CDK environment
+builder.AddAWSCDKEnvironment(
+    name: "MyApp",
+    cdkDefaultsProviderFactory: CDKDefaultsProviderFactory.Preview_V1
+);
+
+// Add your resources
+var webApp = builder.AddProject<Projects.WebApp>("webapp");
+
+builder.Build().Run();
+```
+
+The `name` parameter identifies your application stack in AWS, and the `cdkDefaultsProviderFactory` parameter specifies which version of default behaviors to use (currently `Preview_V1` for the preview release).
+
+**Deploying Your Application:**
+
+To deploy your application to AWS, use the Aspire CLI:
+
+* **`aspire publish`** - Transforms your Aspire resources into AWS CDK constructs and synthesizes them into a `cdk.out` directory containing CloudFormation templates
+* **`aspire deploy`** - Runs the publish step and then uses the AWS CDK CLI to deploy the `cdk.out` directory to your AWS account
+
+The deployment process will prompt you for AWS credentials and region if not already configured.
+
+### Basic Workflows
+
+#### Automatic Resource Mapping
+
+By default, Aspire resources are automatically mapped to appropriate AWS services based on their type:
+
+```csharp
+// Add to opt-in to using the preview publish/deployment APIs.
+#pragma warning disable ASPIREAWSPUBLISHERS001
+
+var builder = DistributedApplication.CreateBuilder(args);
+
+builder.AddAWSCDKEnvironment(
+    name: "MyApp",
+    cdkDefaultsProviderFactory: CDKDefaultsProviderFactory.Preview_V1
+);
+
+// Web projects automatically deploy to ECS Fargate Express
+var webApp = builder.AddProject<Projects.WebApp>("webapp");
+
+// Lambda functions automatically deploy to AWS Lambda
+var function = builder.AddAWSLambdaFunction<Projects.MyFunction>("function", "<lambda-function-handler>");
+
+// Redis automatically deploys to ElastiCache
+var cache = builder.AddRedis("cache");
+
+builder.Build().Run();
+```
+
+The deployment system analyzes each resource and selects the most appropriate AWS service automatically. You don't need to specify deployment targets unless you want to customize the defaults.
+
+#### Customizing Deployment Targets
+
+You can override the default deployment target for any resource using Publish extension methods:
+
+```csharp
+// Add to opt-in to using the preview publish/deployment APIs.
+#pragma warning disable ASPIREAWSPUBLISHERS001
+
+var builder = DistributedApplication.CreateBuilder(args);
+
+builder.AddAWSCDKEnvironment(
+    name: "MyApp",
+    cdkDefaultsProviderFactory: CDKDefaultsProviderFactory.Preview_V1
+);
+
+// Deploy web app with Application Load Balancer instead of default Express service
+var webApp = builder.AddProject<Projects.WebApp>("webapp")
+    .PublishAsECSFargateServiceWithALB();
+
+builder.Build().Run();
+```
+
+Each Publish method allows you to customize the AWS service configuration through callbacks that modify CDK construct properties. See the [Deployment Design Document](../../docs/deployment-design.md) for details on available Publish methods and customization options.
+
+#### Connecting Resources
+
+Use `WithReference()` to connect resources - the deployment system automatically configures all necessary connectivity:
+
+```csharp
+var builder = DistributedApplication.CreateBuilder(args);
+
+builder.AddAWSCDKEnvironment(
+    name: "MyApp",
+    cdkDefaultsProviderFactory: CDKDefaultsProviderFactory.Preview_V1
+);
+
+var cache = builder.AddRedis("cache");
+
+// Connect the web app to the cache
+var webApp = builder.AddProject<Projects.WebApp>("webapp")
+    .WithReference(cache);
+
+builder.Build().Run();
+```
+
+When resources are connected with `WithReference()`, the system automatically:
+* Configures environment variables with connection strings and endpoints
+* Attaches resources to the same VPC when required (e.g., for ElastiCache)
+* Sets up security groups to allow network access between resources
+
+Your application code can access the referenced resource using the standard .NET Aspire configuration patterns - no AWS-specific code required.
+
+### Advanced Scenarios
+
+For advanced deployment scenarios and comprehensive implementation details, see the [Deployment Design Document](../../docs/deployment-design.md). The design document covers:
+
+- **[Custom CDK Stacks](../.../../docs/deployment-design.md#custom-cdk-stacks)**: Define your own infrastructure alongside Aspire resources, override default constructs (VPC, ECS Cluster, etc.), and integrate with existing AWS infrastructure
+- **[CDK Props and Callbacks](../../docs/deployment-design.md#cdk-props-and-construct-callbacks)**: Customize CDK construct properties and behavior through configuration callbacks
+- **[CDKDefaultsProvider System](../../docs/deployment-design.md#cdkdefaultsprovider-system)**: Control default values and behaviors with versioned providers, allowing you to opt-in to breaking changes when ready
+- **[Adding New Publish Targets](../../docs/deployment-design.md#adding-new-publish-targets)**: Extend the deployment system to support additional AWS services or alternative deployment options
+
+The design document provides detailed examples and implementation guidance for these advanced use cases, enabling you to customize deployments for production workloads.
+
+## Integrating Amazon DynamoDB Local
 
 Amazon DynamoDB provides a [local version of DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocalHistory.html) for development and testing that is distributed as a container. With version 9.1.0 of the Aspire.Hosting.AWS package, you can easily integrate the DynamoDB local container with your .NET Aspire project. This enables seamless transition between DynamoDB Local for development and the production DynamoDB service in AWS, without requiring any code changes in your application.
 
