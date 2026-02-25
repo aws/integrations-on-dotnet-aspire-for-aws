@@ -19,6 +19,7 @@ The hosting package to include in Aspire AppHost projects for provisioning and c
 * Provisioning AWS resources with AWS Cloud Development Kit (CDK)
 * Local development with DynamoDB
 * Local development with AWS Lambda and API Gateway
+* Aspire publish and deploy to AWS with CDK (Preview)
 
 Check out the package's [README](./src/Aspire.Hosting.AWS/README.md) for a deeper explanation of these features.
 
