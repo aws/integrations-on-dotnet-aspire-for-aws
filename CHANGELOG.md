@@ -1,3 +1,10 @@
+## Release 2026-02-25
+
+### Aspire.Hosting.AWS (13.0.0)
+* Remove preview flags on Lambda integration APIs
+* Updated to Aspire 13.0.0 packages
+* [Experimental] Add initial publish/deploy support using the `AddAWSCDKEnvironment` extension method on `IDistributedApplicationBuilder`
+
 ## Release 2026-02-23
 
 ### Aspire.Hosting.AWS (9.4.1)
