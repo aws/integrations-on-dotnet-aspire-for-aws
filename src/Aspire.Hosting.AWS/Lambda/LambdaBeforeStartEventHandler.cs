@@ -70,8 +70,23 @@ internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> log
                     .OfType<LambdaFunctionAnnotation>()
                     .First();
 
+                var targetFramework = await GetProjectTargetFrameworkAsync(projectMetadata.ProjectPath, cancellationToken);
+                if (string.IsNullOrEmpty(targetFramework))
+                {
+                    logger.LogError("Cannot determine the target framework of the project '{ProjectPath}'", projectMetadata.ProjectPath);
+                    continue;
+                }
+
+                // Create a wrapper executable project that can be launched with `dotnet run`.
+                // Class library Lambda projects cannot be launched directly since Aspire requires OutputType=Exe.
+                projectResource.Annotations.Remove(projectMetadata);
+
+                var wrapperProjectPath = ProjectUtilities.CreateExecutableWrapperProject(projectMetadata.ProjectPath, lambdaFunctionAnnotation.Handler, targetFramework);
+                projectResource.Annotations.Add(new LambdaProjectMetadata(wrapperProjectPath));
+
                 // If we are running Aspire through an IDE where a debugger is attached,
-                // we want to configure the Aspire resource to use a Launch Setting Profile that will be able to run the class library Lambda function.
+                // configure a Launch Setting Profile in the wrapper project so VS can use
+                // Amazon.Lambda.TestTool for a richer debugging experience.
                 if (AspireUtilities.IsRunningInDebugger)
                 {
                     var installPath = await GetCurrentInstallPathAsync(cancellationToken);
@@ -85,12 +100,6 @@ internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> log
                     {
                         logger.LogError("Failed to determine the content folder of Amazon.Lambda.TestTool NuGet package which is required for running class library Lambda functions.");
                         return;
-                    }
-                    var targetFramework = await GetProjectTargetFrameworkAsync(projectMetadata.ProjectPath, cancellationToken);
-                    if (string.IsNullOrEmpty(targetFramework))
-                    {
-                        logger.LogError("Cannot determine the target framework of the project '{ProjectPath}'", projectMetadata.ProjectPath);
-                        continue;
                     }
                     var assemblyName = await GetProjectAssemblyNameAsync(projectMetadata.ProjectPath, cancellationToken);
                     if (string.IsNullOrEmpty(assemblyName))
@@ -119,39 +128,29 @@ internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> log
                         outputPath = Path.Combine(".", "bin", "$(Configuration)", targetFramework);
                     }
 
+                    // Use an absolute output path since the launch settings are now in the wrapper project,
+                    // not the original Lambda project directory.
+                    var lambdaProjectDir = Path.GetDirectoryName(projectMetadata.ProjectPath);
+                    if (!string.IsNullOrEmpty(lambdaProjectDir) && !Path.IsPathRooted(outputPath))
+                    {
+                        outputPath = Path.GetFullPath(Path.Combine(lambdaProjectDir, outputPath));
+                    }
+
                     ProjectUtilities.UpdateLaunchSettingsWithLambdaTester(
                         resourceName: projectResource.Name,
                         functionHandler: lambdaFunctionAnnotation.Handler,
                         assemblyName: assemblyName,
-                        projectPath: projectMetadata.ProjectPath,
+                        projectPath: wrapperProjectPath,
                         runtimeSupportAssemblyPath: runtimeSupportAssemblyPath,
                         targetFramework: targetFramework,
                         outputPath: outputPath,
                         logger: logger);
                 }
-                // If we are running outside an IDE, the Launch Setting Profile approach does not work.
-                // We need to create a wrapper executable project that runs the class library project and add the wrapper project as the Aspire resource.
-                else
-                {
-                    var targetFramework = await GetProjectTargetFrameworkAsync(projectMetadata.ProjectPath, cancellationToken);
-                    if (string.IsNullOrEmpty(targetFramework))
-                    {
-                        logger.LogError("Cannot determine the target framework of the project '{ProjectPath}'", projectMetadata.ProjectPath);
-                        continue;
-                    }
 
-                    projectResource.Annotations.Remove(projectMetadata);
-
-                    var projectPath =
-                        ProjectUtilities.CreateExecutableWrapperProject(projectMetadata.ProjectPath, lambdaFunctionAnnotation.Handler, targetFramework);
-
-                    projectResource.Annotations.Add(new LambdaProjectMetadata(projectPath));
-
-                    var projectName = new FileInfo(projectPath).Name;
-                    var workingDirectory = Directory.GetParent(projectPath)!.FullName;
-                    processCommandService.RunProcess(logger, "dotnet", $"build {projectName}", workingDirectory, streamOutputToLogger: false);
-                    processCommandService.RunProcess(logger, "dotnet", $"build -c Release {projectName}", workingDirectory, streamOutputToLogger: false);
-                }
+                var wrapperProjectName = new FileInfo(wrapperProjectPath).Name;
+                var workingDirectory = Directory.GetParent(wrapperProjectPath)!.FullName;
+                processCommandService.RunProcess(logger, "dotnet", $"build {wrapperProjectName}", workingDirectory, streamOutputToLogger: false);
+                processCommandService.RunProcess(logger, "dotnet", $"build -c Release {wrapperProjectName}", workingDirectory, streamOutputToLogger: false);
             }
         }
         else
