@@ -27,10 +27,10 @@ internal class LambdaFunction(TracerProvider traceProvider) : BackgroundService
         {
             StatusCode = 200,
             Headers = new Dictionary<string, string>
-        {
-            {"Content-Type", "text/plain" }
-        },
-            Body = "The root page for the REST API defined in the Aspire AppHost. Try using endpoints /add/{1}/2, /minus/3/2, /multiply/6/7, /divide/20/4 or /aws/{sqs|dynamodb}"
+            {
+                {"Content-Type", "text/plain" }
+            },
+            Body = "The root page for the REST API defined in the Aspire AppHost. Try using endpoints /add/1/2, /minus/3/2, /multiply/6/7, /divide/20/4 or /aws/{sqs|dynamodb}"
         };
 
         return response;

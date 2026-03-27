@@ -1,0 +1,12 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Minor",
+      "ChangelogMessages": [
+        "Update Aspire dependencies to version 13.2.0",
+        "Fix issue with Lambda functions failing to start when launched in Visual Studio and using Aspire 13.2.0"
+      ]
+    }
+  ]
+}

@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using System.Diagnostics;
 using System.Net.Sockets;
-using System.Runtime.Versioning;
+using System.Text.Json.Serialization;
 
 #pragma warning disable IDE0130
 namespace Aspire.Hosting;
@@ -19,7 +19,7 @@ namespace Aspire.Hosting;
 /// Extension methods for adding Lambda functions as Aspire resources.
 /// </summary>
 public static class LambdaExtensions
-{   
+{
     /// <summary>
     /// Add a Lambda function as an Aspire resource.
     /// </summary>
@@ -41,9 +41,12 @@ public static class LambdaExtensions
             // If we are running Aspire through an IDE where a debugger is attached,
             // we want to configure the Aspire resource to use a Launch Setting Profile that will be able to run the class library Lambda function.
             var project = new LambdaProjectResource(name);
+#pragma warning disable ASPIREEXTENSION001 // WithDebugSupport is experimental
             resource = builder.AddResource(project)
                 .WithAnnotation(new LaunchProfileAnnotation($"{Constants.LaunchSettingsNodePrefix}{name}"))
-                .WithAnnotation(new TLambdaProject());
+                .WithAnnotation(new TLambdaProject())
+                .WithDebugSupport(mode => new LambdaFunctionsLaunchConfiguration { ProjectPath = metadata.ProjectPath, Mode = mode, LaunchProfile = $"{Constants.LaunchSettingsNodePrefix}{name}" }, "project");
+#pragma warning restore ASPIREEXTENSION001
         }
         else
         {
@@ -240,5 +243,23 @@ public static class LambdaExtensions
         builder.WithOtlpExporter();
 
         return builder;
+    }
+
+    private sealed class LambdaFunctionsLaunchConfiguration
+    {
+        [JsonPropertyName("type")]
+        public string Type { get; set; } = "project";
+
+        [JsonPropertyName("mode")]
+        public string Mode { get; set; } = string.Empty;
+
+        [JsonPropertyName("project_path")]
+        public string ProjectPath { get; set; } = string.Empty;
+
+        [JsonPropertyName("launch_profile")]
+        public string LaunchProfile { get; set; } = string.Empty;
+
+        [JsonPropertyName("disable_launch_profile")]
+        public bool DisableLaunchProfile { get; set; } = false;
     }
 }
