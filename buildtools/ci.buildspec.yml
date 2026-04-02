@@ -10,6 +10,7 @@ phases:
       - cdk --version      
   build:
     commands:
+      - echo '{"sdk":{"version":"8.0.0","rollForward":"latestFeature"}}' > /global.json
       - dotnet test --verbosity normal integrations-on-dotnet-aspire-for-aws.sln --configuration Release --logger "console;verbosity=detailed" --logger trx --results-directory ./testresults
 reports:
     integrations-on-dotnet-aspire-for-aws-tests:
