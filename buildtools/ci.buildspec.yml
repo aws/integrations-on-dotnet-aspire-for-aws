@@ -7,7 +7,9 @@ phases:
       dotnet: 8.x
     commands:
       - npm install -g aws-cdk@2.1106.0
-      - cdk --version      
+      - cdk --version   
+      - find / -type f -name 'global.json' -delete
+      - curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 8.0
   build:
     commands:
       - dotnet test --verbosity normal integrations-on-dotnet-aspire-for-aws.sln --configuration Release --logger "console;verbosity=detailed" --logger trx --results-directory ./testresults
