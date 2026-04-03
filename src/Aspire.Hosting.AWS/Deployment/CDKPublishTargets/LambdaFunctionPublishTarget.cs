@@ -20,7 +20,7 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
 
     public override Type PublishTargetAnnotation => typeof(PublishLambdaFunctionAnnotation);
 
-    public override Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
+    public override async Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
     {
         var lambdaFunction = resource as LambdaProjectResource
                              ?? throw new InvalidOperationException($"Resource {resource.Name} is not a valid LambdaProjectResource.");
@@ -44,7 +44,11 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
             () => CreateEmptyReferenceSecurityGroup(environment, resource, functionProps, x => x.SecurityGroups,
                 (x, v) => x.SecurityGroups = v), resource.Name);
 
-        ProcessRelationShips(referencePoints, lambdaFunction);
+        await ProcessRelationShipsAsync(referencePoints, lambdaFunction);
+
+        // Lambda functions have a 4 KB limit for environment variables (total key + value size).
+        // Warn if approaching the limit so users can diagnose deployment failures early.
+        WarnIfLambdaEnvironmentVariablesApproachLimit(functionProps, lambdaFunction.Name);
 
         publishAnnotation.Config.PropsFunctionCallback?.Invoke(CreatePublishTargetContext(environment), functionProps);
         environment.DefaultsProvider.ApplyLambdaFunctionDefaults(functionProps, lambdaFunction);
@@ -52,8 +56,6 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
         var function = new Function(environment.CDKStack, $"Function-{lambdaFunction.Name}", functionProps);
         publishAnnotation.Config.ConstructFunctionCallback?.Invoke(CreatePublishTargetContext(environment), function);
         ApplyAWSLinkedObjectsAnnotation(environment, lambdaFunction, function, this);
-
-        return Task.CompletedTask;
     }
 
     public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
@@ -76,6 +78,39 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
     public override ReferenceConnectionInfo GetReferenceConnectionInfo(AWSLinkedObjectsAnnotation linkedAnnotation)
     {
         return new ReferenceConnectionInfo();
+    }
+
+    /// <summary>
+    /// Lambda functions have a 4 KB (4096 bytes) limit for the total size of all environment variables
+    /// (sum of key + value lengths). This method warns if the current env vars approach that limit.
+    /// </summary>
+    private void WarnIfLambdaEnvironmentVariablesApproachLimit(FunctionProps functionProps, string resourceName)
+    {
+        const int lambdaEnvVarLimitBytes = 4096;
+        const double warningThreshold = 0.8; // Warn at 80% of limit
+
+        if (functionProps.Environment == null || functionProps.Environment.Count == 0)
+            return;
+
+        var totalSize = 0;
+        foreach (var kvp in functionProps.Environment)
+        {
+            totalSize += System.Text.Encoding.UTF8.GetByteCount(kvp.Key);
+            totalSize += System.Text.Encoding.UTF8.GetByteCount(kvp.Value);
+        }
+
+        if (totalSize > lambdaEnvVarLimitBytes)
+        {
+            Logger.LogError(
+                "Lambda function '{ResourceName}' environment variables total {TotalSize} bytes, which exceeds the AWS Lambda 4 KB ({LimitBytes} bytes) limit. Deployment will fail",
+                resourceName, totalSize, lambdaEnvVarLimitBytes);
+        }
+        else if (totalSize > lambdaEnvVarLimitBytes * warningThreshold)
+        {
+            Logger.LogWarning(
+                "Lambda function '{ResourceName}' environment variables total {TotalSize} bytes, approaching the AWS Lambda 4 KB ({LimitBytes} bytes) limit",
+                resourceName, totalSize, lambdaEnvVarLimitBytes);
+        }
     }
 }
 

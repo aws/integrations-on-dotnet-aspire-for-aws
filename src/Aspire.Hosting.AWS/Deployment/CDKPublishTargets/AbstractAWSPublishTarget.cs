@@ -160,7 +160,7 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
     /// </summary>
     /// <param name="referencePoints">The CDK connection points for the given Aspire resource to add connection info for resources referencing the Aspire resource.</param>
     /// <param name="resource">The Aspire resource that potentially had other resources add a reference to.</param>
-    protected virtual void ProcessRelationShips(AbstractCDKConstructConnectionPoints referencePoints, IResource resource)
+    protected virtual async Task ProcessRelationShipsAsync(AbstractCDKConstructConnectionPoints referencePoints, IResource resource)
     {
         var environmentVariables = referencePoints.EnvironmentVariables;
          
@@ -184,6 +184,57 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
             if (linkAnnotation.PublishTarget.ReferenceRequiresSecurityGroup() && referencePoints.ReferenceSecurityGroup != null)
             {
                 linkAnnotation.PublishTarget.ApplyReferenceSecurityGroup(linkAnnotation, referencePoints.ReferenceSecurityGroup);
+            }
+        }
+
+        // Resolve environment variables from WithEnvironment callbacks (EnvironmentCallbackAnnotation).
+        // These are applied after WithReference-derived env vars so explicit WithEnvironment takes precedence.
+        if (environmentVariables != null)
+        {
+            var envCallbacks = resource.Annotations.OfType<EnvironmentCallbackAnnotation>();
+            if (envCallbacks.Any())
+            {
+                var executionContext = new DistributedApplicationExecutionContext(DistributedApplicationOperation.Publish);
+                var callbackContext = new EnvironmentCallbackContext(executionContext, resource);
+
+                foreach (var callback in envCallbacks)
+                {
+                    await callback.Callback(callbackContext).ConfigureAwait(false);
+                }
+
+                foreach (var kvp in callbackContext.EnvironmentVariables)
+                {
+                    if (kvp.Value is string strValue)
+                    {
+                        environmentVariables[kvp.Key] = strValue;
+                    }
+                    else if (kvp.Value is IValueProvider valueProvider)
+                    {
+                        // Handles ReferenceExpression (references to other Aspire resources) and
+                        // ParameterResource values. ReferenceExpression.GetValueAsync resolves
+                        // the expression by calling GetValueAsync on each referenced IValueProvider.
+                        try
+                        {
+                            var resolvedValue = await valueProvider.GetValueAsync(default).ConfigureAwait(false);
+                            if (resolvedValue != null)
+                            {
+                                environmentVariables[kvp.Key] = resolvedValue;
+                            }
+                            else
+                            {
+                                Logger.LogWarning("Environment variable '{Name}' on resource '{Resource}' resolved to null and will be skipped", kvp.Key, resource.Name);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogWarning(ex, "Environment variable '{Name}' on resource '{Resource}' could not be resolved during publish and will be skipped", kvp.Key, resource.Name);
+                        }
+                    }
+                    else
+                    {
+                        Logger.LogWarning("Environment variable '{Name}' on resource '{Resource}' has an unsupported value type '{Type}' that cannot be resolved during publish and will be skipped", kvp.Key, resource.Name, kvp.Value?.GetType().Name ?? "null");
+                    }
+                }
             }
         }
 

@@ -54,7 +54,7 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
         var referencePoints = new CfnExpressGatewayServicePropsConnectionPoints(
             fargateServiceProps,
             environment.DefaultsProvider.GetDefaultECSClusterSecurityGroup());
-        ProcessRelationShips(referencePoints, projectResource);
+        await ProcessRelationShipsAsync(referencePoints, projectResource);
 
         var fargateService = new CfnExpressGatewayService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
         publishAnnotation.Config.ConstructCfnExpressGatewayServiceCallback?.Invoke(CreatePublishTargetContext(environment), fargateService);
