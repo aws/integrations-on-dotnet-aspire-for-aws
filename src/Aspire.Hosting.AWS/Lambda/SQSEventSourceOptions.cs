@@ -15,7 +15,7 @@ public class SQSEventSourceOptions
 
     /// <summary>
     /// The batch size to read and send to Lambda function.
-    /// SQS will return with less then batch size if there are not enough messages in the queue.
+    /// SQS will return with less than batch size if there are not enough messages in the queue.
     /// </summary>
     public int? BatchSize { get; set; }
 
