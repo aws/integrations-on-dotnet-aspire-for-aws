@@ -104,30 +104,6 @@ public class ProcessRelationShipsTests
     }
 
     /// <summary>
-    /// Tests that IValueProvider env var values (like ParameterResource) are resolved.
-    /// Covers issue #169 item 2: Map ParameterResource values.
-    /// </summary>
-    [Fact]
-    public async Task ProcessRelationShipsAsync_WithEnvironment_IValueProvider_ResolvesValue()
-    {
-        // Arrange
-        var (target, connectionPoints) = CreateTestTarget();
-        var resource = new TestResource("test-resource");
-
-        resource.Annotations.Add(new EnvironmentCallbackAnnotation(context =>
-        {
-            context.EnvironmentVariables["PARAM_VALUE"] = new TestValueProvider("resolved-param-value");
-            return Task.CompletedTask;
-        }));
-
-        // Act
-        await target.TestProcessRelationShipsAsync(connectionPoints, resource);
-
-        // Assert
-        Assert.Equal("resolved-param-value", connectionPoints.EnvironmentVariables!["PARAM_VALUE"]);
-    }
-
-    /// <summary>
     /// Tests that IValueProvider that resolves to null emits a warning and is skipped.
     /// </summary>
     [Fact]

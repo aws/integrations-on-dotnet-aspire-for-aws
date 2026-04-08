@@ -31,12 +31,22 @@ var localDevQueue = cdkStackResource.AddSQSQueue("LocalDevQueue");
 var cache = builder.AddValkey("cache");
 
 var frontend = builder.AddProject<Projects.Frontend>("Frontend")
+        .WithEnvironment("ENV_LAMBDA_1", "LambdaValue1")
+        .WithEnvironment(callback: (env) =>
+        {
+            env.EnvironmentVariables.Add("ENV_LAMBDA_2", "LambdaValue2");
+        })
         .WithExternalHttpEndpoints()
         .WithReference(cache)
         .WaitFor(cache);
 
 
 builder.AddProject<Projects.Backend>("backend")
+        .WithEnvironment("ENV_LAMBDA_1", "LambdaValue1")
+        .WithEnvironment(callback: (env) =>
+        {
+            env.EnvironmentVariables.Add("ENV_LAMBDA_2", "LambdaValue2");
+        })
         .WithReference(frontend)
         .WithReference(cache)
         .WaitFor(cache);
@@ -52,6 +62,11 @@ builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunctio
                     Enabled = true
                 }));
             }
+        })
+        .WithEnvironment("ENV_LAMBDA_1", "LambdaValue1")
+        .WithEnvironment(callback: (env) =>
+        {
+            env.EnvironmentVariables.Add("ENV_LAMBDA_2", "LambdaValue2");
         })
         .WithReference(awsSdkConfig)
         .WithSQSEventSource(localDevQueue);

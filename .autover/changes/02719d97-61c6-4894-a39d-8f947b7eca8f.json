@@ -5,7 +5,6 @@
       "Type": "Patch",
       "ChangelogMessages": [
         "Resolve WithEnvironment callbacks during publish for all compute targets (ECS Fargate, ECS Fargate Express, Lambda)",
-        "Resolve ParameterResource and ReferenceExpression values in WithEnvironment during publish via IValueProvider",
         "Add warning when Lambda function environment variables approach or exceed the 4 KB limit"
       ]
     }

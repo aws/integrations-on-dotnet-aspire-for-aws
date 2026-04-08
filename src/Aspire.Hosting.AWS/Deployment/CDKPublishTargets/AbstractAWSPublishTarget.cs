@@ -204,35 +204,11 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
 
                 foreach (var kvp in callbackContext.EnvironmentVariables)
                 {
+                    // Currently the AWS deployment supports only strings not ReferenceExpressions because CDK requires the values to be resolved at the publishing stage which 
+                    // ReferenceExpressions are not.
                     if (kvp.Value is string strValue)
                     {
                         environmentVariables[kvp.Key] = strValue;
-                    }
-                    else if (kvp.Value is IValueProvider valueProvider)
-                    {
-                        // Handles ReferenceExpression (references to other Aspire resources) and
-                        // ParameterResource values. ReferenceExpression.GetValueAsync resolves
-                        // the expression by calling GetValueAsync on each referenced IValueProvider.
-                        try
-                        {
-                            var resolvedValue = await valueProvider.GetValueAsync(default).ConfigureAwait(false);
-                            if (resolvedValue != null)
-                            {
-                                environmentVariables[kvp.Key] = resolvedValue;
-                            }
-                            else
-                            {
-                                Logger.LogWarning("Environment variable '{Name}' on resource '{Resource}' resolved to null and will be skipped", kvp.Key, resource.Name);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.LogWarning(ex, "Environment variable '{Name}' on resource '{Resource}' could not be resolved during publish and will be skipped", kvp.Key, resource.Name);
-                        }
-                    }
-                    else
-                    {
-                        Logger.LogWarning("Environment variable '{Name}' on resource '{Resource}' has an unsupported value type '{Type}' that cannot be resolved during publish and will be skipped", kvp.Key, resource.Name, kvp.Value?.GetType().Name ?? "null");
                     }
                 }
             }
