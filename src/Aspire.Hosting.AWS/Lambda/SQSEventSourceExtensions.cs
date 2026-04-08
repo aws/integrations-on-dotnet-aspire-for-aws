@@ -1,6 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Amazon.CDK.AWS.Events.Targets;
+using Amazon.CDK.AWS.SQS;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS;
 using Aspire.Hosting.AWS.CDK;
@@ -96,7 +97,7 @@ public static class SQSEventSourceExtensions
             return queueUrl;
         };
 
-        return WithSQSEventSource(lambdaFunction, resolver, options, queueName: null);
+        return WithSQSEventSource(lambdaFunction, resolver, options, queueCfnOutputReference.Name);
     }
 
     private static IResourceBuilder<LambdaProjectResource> WithSQSEventSource(IResourceBuilder<LambdaProjectResource> lambdaFunction, Func<ValueTask<string>> queueUrlResolver, SQSEventSourceOptions? options = null, string? queueName = null)
