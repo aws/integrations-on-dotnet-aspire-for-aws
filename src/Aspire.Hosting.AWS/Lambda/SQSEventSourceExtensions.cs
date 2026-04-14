@@ -1,6 +1,7 @@
-﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Amazon.CDK.AWS.Events.Targets;
+using Amazon.CDK.AWS.SQS;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS;
 using Aspire.Hosting.AWS.CDK;
@@ -8,6 +9,7 @@ using Aspire.Hosting.AWS.CloudFormation;
 using Aspire.Hosting.AWS.Lambda;
 using Constructs;
 using System.Runtime.Versioning;
+using System.Security.Cryptography;
 using System.Text;
 
 #pragma warning disable IDE0130
@@ -18,6 +20,8 @@ namespace Aspire.Hosting;
 /// </summary>
 public static class SQSEventSourceExtensions
 {
+    private const int MaxResourceNameLength = 64;
+
     /// <summary>
     /// Add an SQS event source to a Lambda function. This feature emulates adding an SQS event source to a Lambda function when deployed to AWS. 
     /// A separate sub resource will be added to the .NET Aspire application that polls the SQS queue. As messages 
@@ -30,7 +34,7 @@ public static class SQSEventSourceExtensions
     /// <exception cref="InvalidOperationException"></exception>
     public static IResourceBuilder<LambdaProjectResource> WithSQSEventSource(this IResourceBuilder<LambdaProjectResource> lambdaFunction, string queueUrl, SQSEventSourceOptions? options = null)
     {
-        return WithSQSEventSource(lambdaFunction, () => ValueTask.FromResult(queueUrl), options);
+        return WithSQSEventSource(lambdaFunction, () => ValueTask.FromResult(queueUrl), options, queueName: null);
     }
 
     /// <summary>
@@ -45,8 +49,24 @@ public static class SQSEventSourceExtensions
     /// <exception cref="InvalidOperationException"></exception>
     public static IResourceBuilder<LambdaProjectResource> WithSQSEventSource(this IResourceBuilder<LambdaProjectResource> lambdaFunction, IResourceBuilder<IConstructResource<Amazon.CDK.AWS.SQS.Queue>> queue, SQSEventSourceOptions? options = null)
     {
-        var queueOutputReference = queue.GetOutput("QueueUrl", queue => queue.QueueUrl);
-        return WithSQSEventSource(lambdaFunction, queueOutputReference, options);
+        var queueOutputReference = queue.GetOutput("QueueUrl", q => q.QueueUrl);
+        var queueName = queue.Resource.Name;
+        Func<ValueTask<string>> resolver = async () =>
+        {
+            var queueUrl = await queueOutputReference.GetValueAsync();
+            if (string.IsNullOrEmpty(queueUrl))
+            {
+                throw new InvalidOperationException("Output parameter for queue url failed to resolve");
+            }
+
+            if (!Uri.TryCreate(queueUrl, UriKind.Absolute, out _))
+            {
+                throw new InvalidOperationException($"Output parameter value {queueUrl} is not a SQS queue url.");
+            }
+
+            return queueUrl;
+        };
+        return WithSQSEventSource(lambdaFunction, resolver, options, queueName);
     }
 
     /// <summary>
@@ -77,12 +97,21 @@ public static class SQSEventSourceExtensions
             return queueUrl;
         };
 
-        return WithSQSEventSource(lambdaFunction, resolver, options);
+        return WithSQSEventSource(lambdaFunction, resolver, options, queueCfnOutputReference.Name);
     }
 
-    private static IResourceBuilder<LambdaProjectResource> WithSQSEventSource(IResourceBuilder<LambdaProjectResource> lambdaFunction, Func<ValueTask<string>> queueUrlResolver, SQSEventSourceOptions? options = null)
+    private static IResourceBuilder<LambdaProjectResource> WithSQSEventSource(IResourceBuilder<LambdaProjectResource> lambdaFunction, Func<ValueTask<string>> queueUrlResolver, SQSEventSourceOptions? options = null, string? queueName = null)
     {
-        var sqsEventSourceResource = lambdaFunction.ApplicationBuilder.AddResource(new SQSEventSourceResource($"SQSEventSource-{lambdaFunction.Resource.Name}"))
+        var lambdaName = lambdaFunction.Resource.Name;
+        var resourceName = !string.IsNullOrEmpty(options?.ResourceName)
+            ? options.ResourceName
+            : !string.IsNullOrEmpty(queueName)
+                ? $"SQSEventSource-{lambdaName}-{queueName}"
+                : $"SQSEventSource-{lambdaName}";
+
+        resourceName = EnsureResourceNameLength(resourceName, lambdaName, queueName);
+
+        var sqsEventSourceResource = lambdaFunction.ApplicationBuilder.AddResource(new SQSEventSourceResource(resourceName))
                                     .WithParentRelationship(lambdaFunction)
                                     .ExcludeFromManifest();
 
@@ -111,5 +140,39 @@ public static class SQSEventSourceExtensions
         });
 
         return lambdaFunction;
+    }
+
+    /// <summary>
+    /// Ensures the resource name does not exceed Aspire's 64-character limit.
+    /// When truncation is needed, uses a short hash of the queue name to preserve uniqueness.
+    /// </summary>
+    private static string EnsureResourceNameLength(string resourceName, string lambdaName, string? queueName)
+    {
+        if (resourceName.Length <= MaxResourceNameLength)
+            return resourceName;
+
+        if (!string.IsNullOrEmpty(queueName))
+        {
+            var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(queueName)))[..8].ToLowerInvariant();
+
+            // Always keep the hash at the end; truncate only the prefix if needed.
+            if (MaxResourceNameLength <= hash.Length)
+            {
+                // Degenerate case: not enough room for the full hash; use as much as fits.
+                return hash[..MaxResourceNameLength];
+            }
+
+            var prefix = $"SQSEventSource-{lambdaName}-";
+            var maxPrefixLength = MaxResourceNameLength - hash.Length;
+
+            if (prefix.Length > maxPrefixLength)
+            {
+                prefix = prefix[..maxPrefixLength];
+            }
+
+            return prefix + hash;
+        }
+
+        return resourceName[..MaxResourceNameLength];
     }
 }
