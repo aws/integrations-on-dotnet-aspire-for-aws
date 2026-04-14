@@ -466,4 +466,4 @@ If you want the tables and data to persist between .NET Aspire debug sessions, s
 
 ## Feedback & contributing
 
-https://github.com/dotnet/aspire
+https://github.com/aws/integrations-on-dotnet-aspire-for-aws
