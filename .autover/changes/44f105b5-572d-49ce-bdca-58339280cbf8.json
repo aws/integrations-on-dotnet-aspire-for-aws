@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Upgrade OpenTelemetry.Exporter.OpenTelemetryProtocol to 1.15.3 to fix CVE-2026-40182 and CVE-2026-40891"
+      ]
+    }
+  ]
+}
