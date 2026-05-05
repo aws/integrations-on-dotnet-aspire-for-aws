@@ -30,20 +30,20 @@ jobs:
         with:
           role-to-assume: ${{ secrets.RELEASE_WORKFLOW_ACCESS_TOKEN_ROLE_ARN }}
           aws-region: us-west-2
-      # Retrieve the Access Token from Secrets Manager
-      - name: Retrieve secret from AWS Secrets Manager
+      # Retrieve the per-repo deploy key + FG PAT from Secrets Manager
+      - name: Retrieve secrets from AWS Secrets Manager
         uses: aws-actions/aws-secretsmanager-get-secrets@v2
         with:
           secret-ids: |
-            AWS_SECRET, ${{ secrets.RELEASE_WORKFLOW_ACCESS_TOKEN_NAME }}
-          parse-json-secrets: true
-      # Checkout a full clone of the repo
+            DEPLOY_KEY, prod/devops/integrations-on-dotnet-aspire-for-aws-deploy-key
+            FG_PAT, prod/devops/integrations-on-dotnet-aspire-for-aws-fg-pat
+      # Checkout a full clone of the repo using the deploy key (push runs over SSH)
       - name: Checkout code
         uses: actions/checkout@v6
         with:
           ref: dev
           fetch-depth: 0
-          token: ${{ env.AWS_SECRET_TOKEN }}
+          ssh-key: ${{ env.DEPLOY_KEY }}
       # Install .NET8 which is needed for AutoVer
       - name: Setup .NET 9.0
         uses: actions/setup-dotnet@v5
@@ -85,7 +85,7 @@ jobs:
       # Create the GitHub Release
       - name: Create GitHub Release
         env:
-          GITHUB_TOKEN: ${{ env.AWS_SECRET_TOKEN }}
+          GITHUB_TOKEN: ${{ env.FG_PAT }}
         run: |
           gh release create "${{ steps.read-tag-name.outputs.TAG }}" --title "${{ steps.read-release-name.outputs.VERSION }}" --notes "${{ steps.read-changelog.outputs.CHANGELOG }}"
       # Delete the `releases/next-release` branch
@@ -104,7 +104,7 @@ jobs:
       github.event.pull_request.base.ref == 'dev'
     runs-on: ubuntu-latest
     steps:
-      # Checkout a full clone of the repo
+      # Checkout a full clone of the repo using the deploy key (push runs over SSH)
       - name: Checkout code
         uses: actions/checkout@v6
         with:
