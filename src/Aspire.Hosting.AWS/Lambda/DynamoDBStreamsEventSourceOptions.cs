@@ -17,4 +17,16 @@ public class DynamoDBStreamsEventSourceOptions
     /// The batch size to read from the DynamoDB stream and send to the Lambda function.
     /// </summary>
     public int? BatchSize { get; set; }
+
+    /// <summary>
+    /// The shard iterator type to use when reading from the stream.
+    /// Valid values: LATEST, TRIM_HORIZON. Default is LATEST.
+    /// </summary>
+    public string? ShardIteratorType { get; set; }
+
+    /// <summary>
+    /// The polling interval in milliseconds between stream reads when no records are found.
+    /// Default is 1000.
+    /// </summary>
+    public int? PollingIntervalMs { get; set; }
 }

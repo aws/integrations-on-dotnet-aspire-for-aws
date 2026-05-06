@@ -35,6 +35,16 @@ internal class DynamoDBStreamsEventSourceResource(string name) : ExecutableResou
             configBuilder.Append($",BatchSize={options.BatchSize.Value}");
         }
 
+        if (!string.IsNullOrEmpty(options?.ShardIteratorType))
+        {
+            configBuilder.Append($",ShardIteratorType={options.ShardIteratorType}");
+        }
+
+        if (options?.PollingIntervalMs.HasValue == true)
+        {
+            configBuilder.Append($",PollingIntervalMs={options.PollingIntervalMs.Value}");
+        }
+
         if (awsSdkConfig != null)
         {
             if (!string.IsNullOrEmpty(awsSdkConfig.Profile))
