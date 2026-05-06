@@ -55,8 +55,7 @@ builder.AddAWSLambdaFunction<Projects.DynamoDBProcessorFunction>("DynamoDBProces
         .WithDynamoDBStreamsEventSource(table, new DynamoDBStreamsEventSourceOptions
         {
             BatchSize = 5
-        })
-        .WithDynamoDBStreamsEventSource("StreamingTest");
+        });
 
 
 builder.Build().Run();
