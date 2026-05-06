@@ -1,0 +1,8 @@
+{
+  "appHost": {
+    "path": "Publishing.AppHost.csproj"
+  },
+  "features": {
+    "execCommandEnabled": true
+  }
+}

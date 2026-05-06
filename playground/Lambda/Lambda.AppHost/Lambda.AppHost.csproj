@@ -13,6 +13,7 @@
 		<PackageReference Include="AWSSDK.SQS" />
 		<ProjectReference Include="..\..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" IsAspireProjectResource="false" />
 		<PackageReference Include="Aspire.Hosting.AppHost" />
+		<ProjectReference Include="..\DynamoDBProcessorFunction\DynamoDBProcessorFunction.csproj" />
 		<ProjectReference Include="..\SQSProcessorFunction\SQSProcessorFunction.csproj" />
 		<ProjectReference Include="..\ToUpperLambdaFunctionExecutable\ToUpperLambdaFunctionExecutable.csproj" />
 		<ProjectReference Include="..\WebAWSCallsLambdaFunction\WebAWSCallsLambdaFunction.csproj" />
