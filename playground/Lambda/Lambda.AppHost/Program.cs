@@ -5,11 +5,6 @@ using Aspire.Hosting.AWS.Lambda;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-builder.AddAWSLambdaServiceEmulator(new LambdaEmulatorOptions
-{
-    DisableAutoInstall = true
-});
-
 var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.USWest2);
 
 var cdkStackResource = builder.AddAWSCDKStack("AWSLambdaPlaygroundResources");
@@ -49,6 +44,7 @@ builder.AddAWSAPIGatewayEmulator("APIGatewayEmulator", Aspire.Hosting.AWS.Lambda
 builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")
         .WithReference(awsSdkConfig)
         .WithSQSEventSource(sqsDemoQueue1)
+        .WithSQSEventSource(sqsDemoQueue2)
         // These references are not necessary. It is added to confirm duplicate
         // CDK output parameters are not attempted to be added.
         .WithReference(sqsDemoQueue1)

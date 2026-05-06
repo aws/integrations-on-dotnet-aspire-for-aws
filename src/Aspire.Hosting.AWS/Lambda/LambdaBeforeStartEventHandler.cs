@@ -344,4 +344,10 @@ internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> log
 internal sealed class LambdaProjectMetadata(string projectPath) : IProjectMetadata
 {
     public string ProjectPath { get; } = projectPath;
+
+    // The wrapper project is already built explicitly before DCP starts it.
+    // Setting SuppressBuild=true causes Aspire to pass --no-build to `dotnet run`,
+    // preventing an incremental build that skips GenerateBuildRuntimeConfigurationFiles
+    // and leaves runtimeconfig.json missing on first launch.
+    public bool SuppressBuild => true;
 }

@@ -1,3 +1,13 @@
+## Release 2026-05-05 #3
+
+### Aspire.Hosting.AWS (13.0.2)
+* Fix Lambda class library WrapperProject failing to start on first `aspire run` due to missing runtimeconfig.json
+
+## Release 2026-04-29
+
+### Aspire.Hosting.AWS (13.0.1)
+* Fix duplicate resource name when adding more than one SQS Event Source to a resource
+
 ## Release 2026-02-25
 
 ### Aspire.Hosting.AWS (13.0.0)
