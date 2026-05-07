@@ -120,6 +120,15 @@ public static class DynamoDBStreamsEventSourceExtensions
 
             var dynamoDBStreamsEventConfig = DynamoDBStreamsEventSourceResource.CreateDynamoDBStreamsEventConfig(resolvedTableName, lambdaFunction.Resource.Name, lambdaEmulatorAnnotation.LambdaRuntimeEndpoint.Url, options, awsSdkConfig);
             context.EnvironmentVariables[DynamoDBStreamsEventSourceResource.DYNAMODB_STREAMS_EVENT_CONFIG_ENV_VAR] = dynamoDBStreamsEventConfig;
+
+            if (lambdaFunction.Resource.DynamoDBLocalInstance != null)
+            {
+                // If the Lambda function has a reference to a DynamoDB local instance, then set the AWS_ENDPOINT_URL_DYNAMODB_STREAMS and AWS_ENDPOINT_URL_DYNAMODB_STREAMS environment variables to the endpoint of the DynamoDB local container.
+                // This will allow the DynamoDB Streams event source to connect to the DynamoDB local instance when polling for stream records.
+                var dynamoDBLocalEndpoint = lambdaFunction.Resource.DynamoDBLocalInstance.GetEndpoint("http");
+                context.EnvironmentVariables["AWS_ENDPOINT_URL_DYNAMODB"] = dynamoDBLocalEndpoint;
+                context.EnvironmentVariables["AWS_ENDPOINT_URL_DYNAMODB_STREAMS"] = dynamoDBLocalEndpoint;
+            }
         });
 
         return lambdaFunction;
