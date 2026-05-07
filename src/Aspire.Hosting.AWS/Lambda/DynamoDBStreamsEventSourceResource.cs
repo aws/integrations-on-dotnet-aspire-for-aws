@@ -35,16 +35,6 @@ internal class DynamoDBStreamsEventSourceResource(string name) : ExecutableResou
             configBuilder.Append($",BatchSize={options.BatchSize.Value}");
         }
 
-        if (options?.ShardIteratorType.HasValue == true)
-        {
-            var iteratorTypeValue = options.ShardIteratorType.Value switch
-            {
-                DynamoDBStreamsIteratorType.TrimHorizon => "TRIM_HORIZON",
-                _ => "LATEST"
-            };
-            configBuilder.Append($",ShardIteratorType={iteratorTypeValue}");
-        }
-
         if (options?.PollingIntervalMs.HasValue == true)
         {
             configBuilder.Append($",PollingIntervalMs={options.PollingIntervalMs.Value}");
