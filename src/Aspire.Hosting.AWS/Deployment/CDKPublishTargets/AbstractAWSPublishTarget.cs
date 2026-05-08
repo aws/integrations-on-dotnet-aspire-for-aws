@@ -8,7 +8,6 @@ using System.Diagnostics.CodeAnalysis;
 using Amazon.CDK.AWS.EC2;
 using Aspire.Hosting.AWS.Deployment.CDKDefaults;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
-using IValueProvider = Aspire.Hosting.ApplicationModel.IValueProvider;
 
 namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
 
@@ -220,7 +219,7 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
             }
             catch (Exception ex)
             {
-                Logger.LogTrace("Skipping environment callback for {ResourceName}: {Message}", resource.Name, ex.Message);
+                Logger.LogTrace(ex, "Skipping environment callback for {ResourceName}", resource.Name);
             }
         }
 
@@ -234,8 +233,11 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
         }
     }
 
-    private string? ResolveEnvironmentValue(object value, AWSCDKEnvironmentResource? environment)
+    private string? ResolveEnvironmentValue(object? value, AWSCDKEnvironmentResource? environment)
     {
+        if (value is null)
+            return null;
+
         if (value is ParameterResource parameterResource && environment != null)
         {
             return GetOrCreateCfnParameter(parameterResource, environment).ValueAsString;
@@ -245,7 +247,6 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
         {
             string s => s,
             IManifestExpressionProvider manifest => manifest.ValueExpression,
-            IValueProvider valueProvider => valueProvider.GetValueAsync(default).GetAwaiter().GetResult(),
             _ => value.ToString()
         };
     }
