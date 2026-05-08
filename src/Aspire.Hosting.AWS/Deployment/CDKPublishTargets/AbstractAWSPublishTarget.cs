@@ -8,6 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using Amazon.CDK.AWS.EC2;
 using Aspire.Hosting.AWS.Deployment.CDKDefaults;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
+using IValueProvider = Aspire.Hosting.ApplicationModel.IValueProvider;
 
 namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
 
@@ -160,10 +161,16 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
     /// </summary>
     /// <param name="referencePoints">The CDK connection points for the given Aspire resource to add connection info for resources referencing the Aspire resource.</param>
     /// <param name="resource">The Aspire resource that potentially had other resources add a reference to.</param>
-    protected virtual void ProcessRelationShips(AbstractCDKConstructConnectionPoints referencePoints, IResource resource)
+    /// <param name="environment">The CDK environment resource, used to add CloudFormation parameters for Aspire parameter references.</param>
+    protected virtual void ProcessRelationShips(AbstractCDKConstructConnectionPoints referencePoints, IResource resource, AWSCDKEnvironmentResource? environment = null)
     {
         var environmentVariables = referencePoints.EnvironmentVariables;
-         
+
+        if (environmentVariables != null)
+        {
+            ApplyEnvironmentCallbackAnnotations(environmentVariables, resource, environment);
+        }
+
         var allLinkReferences = GetAllReferencesLinks(resource);
         foreach (var linkAnnotation in allLinkReferences)
         {
@@ -173,7 +180,7 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
             if (environmentVariables != null && results.EnvironmentVariables != null)
             {
                 foreach (var kvp in results.EnvironmentVariables)
-                    environmentVariables[kvp.Key] = kvp.Value;  
+                    environmentVariables[kvp.Key] = kvp.Value;
             }
 
             if (linkAnnotation.PublishTarget.ReferenceRequiresVPC())
@@ -191,5 +198,81 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
         {
             referencePoints.EnvironmentVariables = environmentVariables;
         }
-    }    
+    }
+
+    private void ApplyEnvironmentCallbackAnnotations(IDictionary<string, string> environmentVariables, IResource resource, AWSCDKEnvironmentResource? environment)
+    {
+        if (!resource.TryGetEnvironmentVariables(out var envAnnotations))
+            return;
+
+        var callbackEnv = new Dictionary<string, object>();
+        var context = new EnvironmentCallbackContext(
+            new DistributedApplicationExecutionContext(DistributedApplicationOperation.Publish),
+            resource,
+            callbackEnv,
+            cancellationToken: default);
+
+        foreach (var annotation in envAnnotations)
+        {
+            try
+            {
+                annotation.Callback(context);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogTrace("Skipping environment callback for {ResourceName}: {Message}", resource.Name, ex.Message);
+            }
+        }
+
+        foreach (var kvp in callbackEnv)
+        {
+            var value = ResolveEnvironmentValue(kvp.Value, environment);
+            if (value != null)
+            {
+                environmentVariables[kvp.Key] = value;
+            }
+        }
+    }
+
+    private string? ResolveEnvironmentValue(object value, AWSCDKEnvironmentResource? environment)
+    {
+        if (value is ParameterResource parameterResource && environment != null)
+        {
+            return GetOrCreateCfnParameter(parameterResource, environment).ValueAsString;
+        }
+
+        return value switch
+        {
+            string s => s,
+            IManifestExpressionProvider manifest => manifest.ValueExpression,
+            IValueProvider valueProvider => valueProvider.GetValueAsync(default).GetAwaiter().GetResult(),
+            _ => value.ToString()
+        };
+    }
+
+    private readonly Dictionary<string, CfnParameter> _cfnParameters = new();
+
+    private CfnParameter GetOrCreateCfnParameter(ParameterResource parameterResource, AWSCDKEnvironmentResource environment)
+    {
+        if (_cfnParameters.TryGetValue(parameterResource.Name, out var existing))
+            return existing;
+
+        var paramId = $"Param-{parameterResource.Name}";
+
+        if (environment.CDKStack.Node.TryFindChild(paramId) is CfnParameter existingOnStack)
+        {
+            _cfnParameters[parameterResource.Name] = existingOnStack;
+            return existingOnStack;
+        }
+
+        var cfnParam = new CfnParameter(environment.CDKStack, paramId, new CfnParameterProps
+        {
+            Type = "String",
+            Description = $"Parameter for Aspire resource '{parameterResource.Name}'",
+            NoEcho = parameterResource.Secret
+        });
+
+        _cfnParameters[parameterResource.Name] = cfnParam;
+        return cfnParam;
+    }
 }

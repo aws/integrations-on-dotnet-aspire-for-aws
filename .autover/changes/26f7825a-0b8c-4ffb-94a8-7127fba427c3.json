@@ -1,0 +1,12 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Resolve WithEnvironment callbacks during publish for all compute targets (ECS Fargate, ECS Fargate Express, ECS Fargate with ALB, Lambda)",
+        "Support ParameterResource in WithEnvironment by mapping to CloudFormation parameters at deploy time"
+      ]
+    }
+  ]
+}

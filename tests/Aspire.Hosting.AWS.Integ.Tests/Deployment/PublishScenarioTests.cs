@@ -1578,6 +1578,96 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
     }
 
 
+    [Fact]
+    public async Task TestPublishWithEnvironment()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1");
+
+            var myStaticVar = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/PrimaryContainer/Environment/{Name=MY_STATIC_VAR}/Value");
+            Assert.Equal("static-value", myStaticVar.GetString());
+
+            var anotherVar = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/PrimaryContainer/Environment/{Name=ANOTHER_VAR}/Value");
+            Assert.Equal("another-value", anotherVar.GetString());
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishWithEnvironment), cloudFormationValidation);
+    }
+
+    [Fact]
+    public async Task TestPublishWithEnvironmentParameter()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            var lambdaFunctions = GetResourcesOfType(cfTemplateDoc, "AWS::Lambda::Function");
+            Assert.Single(lambdaFunctions);
+            var lambdaFunction = lambdaFunctions[0];
+
+            // Validate a CloudFormation Parameter was created for the Aspire parameter
+            var parameters = cfTemplateDoc.RootElement.GetProperty("Parameters");
+            var foundParam = false;
+            string? paramLogicalId = null;
+            foreach (var param in parameters.EnumerateObject())
+            {
+                if (param.Name.Contains("api-key", StringComparison.OrdinalIgnoreCase) ||
+                    (param.Value.TryGetProperty("Description", out var desc) && desc.GetString()?.Contains("api-key") == true))
+                {
+                    foundParam = true;
+                    paramLogicalId = param.Name;
+                    break;
+                }
+            }
+            Assert.True(foundParam, "Should have a CloudFormation parameter for api-key");
+
+            // Validate Lambda env var references the CFN parameter via Ref
+            var apiKeyEnvVar = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Environment/Variables/API_KEY");
+            var refValue = AssertElementExistsAtPath(apiKeyEnvVar, "Ref");
+            Assert.Equal(paramLogicalId, refValue.GetString());
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishWithEnvironmentParameter), cloudFormationValidation);
+    }
+
+    [Fact]
+    public async Task TestPublishWithEnvironmentAndReference()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp2");
+
+            // Validate the explicit WithEnvironment var is present
+            var customVar = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp2/Properties/PrimaryContainer/Environment/{Name=MY_CUSTOM_VAR}/Value");
+            Assert.Equal("custom-value", customVar.GetString());
+
+            // Validate the WithReference-derived env var is also present
+            var webApp1Ref = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp2/Properties/PrimaryContainer/Environment/{Name=services__WebApp1__https__0}/Value/Fn::Join");
+            AssertJsonEquals("""
+            [
+             "",
+             [
+              "https://",
+              {
+               "Fn::GetAtt": [
+                "ProjectWebApp1",
+                "Endpoint"
+               ]
+              },
+              "/"
+             ]
+            ]
+            """, webApp1Ref);
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishWithEnvironmentAndReference), cloudFormationValidation);
+    }
+
     private async Task ExecutePublishAsync(string scenario, Func<JsonDocument, Task> cfTemplateValidation)
     {
         var outputPath = GetTempOutputPath();
