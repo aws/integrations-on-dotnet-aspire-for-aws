@@ -52,7 +52,7 @@ internal class ECSFargateServiceWithALBPublishTarget(ITarballContainerImageBuild
         var referencePoints = new ApplicationLoadBalancedFargateServicePropsConnectionPoints(
             fargateServiceProps,
                 () => CreateEmptyReferenceSecurityGroup(environment, projectResource, fargateServiceProps, x => x.SecurityGroups, (x, v) => x.SecurityGroups = v));
-        ProcessRelationShips(referencePoints, projectResource);
+        ProcessRelationShips(referencePoints, projectResource, environment);
 
         var fargateService = new ApplicationLoadBalancedFargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
         publishAnnotation.Config.ConstructApplicationLoadBalancedFargateServiceCallback?.Invoke(CreatePublishTargetContext(environment), fargateService);

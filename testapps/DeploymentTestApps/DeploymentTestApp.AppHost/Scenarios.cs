@@ -231,6 +231,52 @@ namespace DeploymentTestApp.AppHost
             await ExecuteApp(builder);
         }
 
+        public static async Task PublishWithEnvironment()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishWithEnvironment));
+
+            builder.AddProject<Projects.DeploymentTestApps_WebApp1>("WebApp1")
+                .WithEnvironment("MY_STATIC_VAR", "static-value")
+                .WithEnvironment("ANOTHER_VAR", "another-value")
+                .WithExternalHttpEndpoints();
+
+            await ExecuteApp(builder);
+        }
+
+        public static async Task PublishWithEnvironmentParameter()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+            builder.Configuration["Parameters:api-key"] = "test-api-key-value";
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishWithEnvironmentParameter));
+
+            var apiKey = builder.AddParameter("api-key");
+
+            builder.AddAWSLambdaFunction<Projects.DeploymentTestApp_LambdaFunction1>("LambdaFunction1", "DeploymentTestApp.LambdaFunction1::DeploymentTestApp.LambdaFunction1.Function::FunctionHandler")
+                .WithEnvironment("API_KEY", apiKey);
+
+            await ExecuteApp(builder);
+        }
+
+        public static async Task PublishWithEnvironmentAndReference()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishWithEnvironmentAndReference));
+
+            var webApp1 = builder.AddProject<Projects.DeploymentTestApps_WebApp1>("WebApp1")
+                .WithExternalHttpEndpoints();
+
+            builder.AddProject<Projects.DeploymentTestApps_WebApp2>("WebApp2")
+                .WithEnvironment("MY_CUSTOM_VAR", "custom-value")
+                .WithReference(webApp1)
+                .WithExternalHttpEndpoints();
+
+            await ExecuteApp(builder);
+        }
+
         /// <summary>
         /// When running the IDistributedApplication through tests for publishing there are exceptions thrown 
         /// when the IDistributedApplication is shutting down. This method catches and ignores those exceptions to allow for clean test runs.
