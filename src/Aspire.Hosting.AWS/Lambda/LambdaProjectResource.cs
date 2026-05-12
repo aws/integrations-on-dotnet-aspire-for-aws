@@ -51,7 +51,7 @@ public class LambdaProjectResource : ProjectResource
     }
 
     /// <summary>
-    /// A reference to an instance of DynamoDB local that the Lambda function can use. This is set when the WithAWSDynamoDBLocal extension method is used on the project.
+    /// A reference to an instance of DynamoDB local that the Lambda function can use. This is set when the WithReference extension method is used on the project.
     /// </summary>
     internal IResourceBuilder<DynamoDBLocalResource>? DynamoDBLocalInstance { get; set; }
 

@@ -20,7 +20,7 @@ public class DynamoDBStreamsEventSourceOptions
 
     /// <summary>
     /// The polling interval in milliseconds between stream reads when no records are found.
-    /// Default is 1000.
+    /// If not set, uses the Lambda test tool default (currently 1000ms).
     /// </summary>
     public int? PollingIntervalMs { get; set; }
 }

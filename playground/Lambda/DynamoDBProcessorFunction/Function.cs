@@ -1,6 +1,5 @@
 using Amazon.Lambda.Core;
 using Amazon.Lambda.DynamoDBEvents;
-using Amazon.Lambda.SQSEvents;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenTelemetry.Instrumentation.AWSLambda;

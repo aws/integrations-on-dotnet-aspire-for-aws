@@ -123,7 +123,7 @@ public static class DynamoDBStreamsEventSourceExtensions
 
             if (lambdaFunction.Resource.DynamoDBLocalInstance != null)
             {
-                // If the Lambda function has a reference to a DynamoDB local instance, then set the AWS_ENDPOINT_URL_DYNAMODB_STREAMS and AWS_ENDPOINT_URL_DYNAMODB_STREAMS environment variables to the endpoint of the DynamoDB local container.
+                // If the Lambda function has a reference to a DynamoDB local instance, then set the AWS_ENDPOINT_URL_DYNAMODB and AWS_ENDPOINT_URL_DYNAMODB_STREAMS environment variables to the endpoint of the DynamoDB local container.
                 // This will allow the DynamoDB Streams event source to connect to the DynamoDB local instance when polling for stream records.
                 var dynamoDBLocalEndpoint = lambdaFunction.Resource.DynamoDBLocalInstance.GetEndpoint("http");
                 context.EnvironmentVariables["AWS_ENDPOINT_URL_DYNAMODB"] = dynamoDBLocalEndpoint;
@@ -145,7 +145,7 @@ public static class DynamoDBStreamsEventSourceExtensions
 
         if (!string.IsNullOrEmpty(tableName))
         {
-            var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(tableName)))[..8].ToLowerInvariant();
+            var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(lambdaName + ":" + tableName)))[..8].ToLowerInvariant();
 
             if (MaxResourceNameLength <= hash.Length)
             {
