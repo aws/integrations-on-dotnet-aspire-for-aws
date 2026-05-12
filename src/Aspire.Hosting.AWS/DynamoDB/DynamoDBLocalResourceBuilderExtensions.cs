@@ -2,6 +2,7 @@
 
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.DynamoDB;
+using Aspire.Hosting.AWS.Lambda;
 
 namespace Aspire.Hosting;
 
@@ -71,6 +72,12 @@ public static class DynamoDBLocalResourceBuilderExtensions
         if (builder is IResourceBuilder<IResourceWithWaitSupport> waitSupport)
         {
             waitSupport.WaitFor(dynamoDBLocalResourceBuilder);
+        }
+
+        if (builder is IResourceBuilder<LambdaProjectResource> lambdaFunction)
+        {
+            // Store a reference to the DDB local in case the Lambda function is using the DynamoDB stream emulator and needs to configure the stream polling to connect to the DDB local instance.
+            lambdaFunction.Resource.DynamoDBLocalInstance = dynamoDBLocalResourceBuilder;
         }
 
         builder.WithEnvironment(context =>
