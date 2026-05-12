@@ -74,6 +74,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeploymentTestApp.AppHost",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeploymentTestApp.LambdaFunction1", "testapps\DeploymentTestApps\DeploymentTestApp.LambdaFunction1\DeploymentTestApp.LambdaFunction1.csproj", "{1C19A43F-0B3D-F24C-7273-0434B4843BAC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DynamoDBProcessorFunction", "playground\Lambda\DynamoDBProcessorFunction\DynamoDBProcessorFunction.csproj", "{5A0B69C6-71C9-3F8E-AF38-2081A36F1342}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -180,6 +182,10 @@ Global
 		{1C19A43F-0B3D-F24C-7273-0434B4843BAC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1C19A43F-0B3D-F24C-7273-0434B4843BAC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1C19A43F-0B3D-F24C-7273-0434B4843BAC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A0B69C6-71C9-3F8E-AF38-2081A36F1342}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A0B69C6-71C9-3F8E-AF38-2081A36F1342}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A0B69C6-71C9-3F8E-AF38-2081A36F1342}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A0B69C6-71C9-3F8E-AF38-2081A36F1342}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -214,6 +220,7 @@ Global
 		{C75623F1-F0F8-4987-9577-105A06D66A37} = {D368C2F8-4037-440F-8E3D-C6C889399394}
 		{37C6999B-0176-AF8C-645C-0CB0BE706A40} = {D368C2F8-4037-440F-8E3D-C6C889399394}
 		{1C19A43F-0B3D-F24C-7273-0434B4843BAC} = {D368C2F8-4037-440F-8E3D-C6C889399394}
+		{5A0B69C6-71C9-3F8E-AF38-2081A36F1342} = {C3C0B096-DB7C-4D1B-B8A0-91631B32B4DE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FBA55172-92F1-4495-A082-E0ABE4F4AF09}

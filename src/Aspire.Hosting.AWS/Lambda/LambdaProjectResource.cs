@@ -2,6 +2,7 @@
 
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Deployment.Services;
+using Aspire.Hosting.AWS.DynamoDB;
 using Aspire.Hosting.Pipelines;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -48,6 +49,11 @@ public class LambdaProjectResource : ProjectResource
         }));
 
     }
+
+    /// <summary>
+    /// A reference to an instance of DynamoDB local that the Lambda function can use. This is set when the WithReference extension method is used on the project.
+    /// </summary>
+    internal IResourceBuilder<DynamoDBLocalResource>? DynamoDBLocalInstance { get; set; }
 
     private async Task BuildLambdaDeploymentBundle(PipelineStepContext ctx)
     {

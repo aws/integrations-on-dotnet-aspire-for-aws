@@ -36,6 +36,7 @@
     <PackageVersion Include="Amazon.Lambda.Core" Version="3.0.0" />
     <PackageVersion Include="Amazon.Lambda.Serialization.SystemTextJson" Version="3.0.0" />
     <PackageVersion Include="Amazon.Lambda.APIGatewayEvents" Version="3.0.0" />
+    <PackageVersion Include="Amazon.Lambda.DynamoDBEvents" Version="4.0.0" />
     <PackageVersion Include="Amazon.Lambda.SQSEvents" Version="3.0.0" />
     <PackageVersion Include="Amazon.AspNetCore.DataProtection.SSM" Version="4.0.1" />
     <!-- AWS CDK dependencies -->
