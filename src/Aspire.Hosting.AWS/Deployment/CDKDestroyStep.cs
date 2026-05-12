@@ -1,19 +1,16 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
 using Amazon.CloudFormation;
 using Amazon.CloudFormation.Model;
 using Aspire.Hosting.ApplicationModel;
-using Aspire.Hosting.AWS.Utils;
-using Aspire.Hosting.AWS.Utils.Internal;
 using Aspire.Hosting.Pipelines;
 using Microsoft.Extensions.Logging;
 
 namespace Aspire.Hosting.AWS.Deployment;
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-internal class CDKDestroyStep(ILogger<CDKDeployStep> logger)
+internal class CDKDestroyStep(ILogger<CDKDestroyStep> logger)
 {
     // CloudFormation statuses for when the stack is in transition all end with IN_PROGRESS
     const string IN_PROGRESS_SUFFIX = "IN_PROGRESS";
@@ -75,7 +72,7 @@ internal class CDKDestroyStep(ILogger<CDKDeployStep> logger)
         Stack? stack;
         do
         {
-            await Task.Delay(StackPollingDelay);
+            await Task.Delay(StackPollingDelay, cancellationToken);
             stack = await GetExistingStackAsync(cfClient, stackName, cancellationToken);
             
             var events = await GetLatestEventsAsync(cfClient, stackName, mintimeStampForEvents, mostRecentEventId, cancellationToken);
