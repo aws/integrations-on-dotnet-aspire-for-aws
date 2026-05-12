@@ -1,3 +1,13 @@
+## Release 2026-05-12
+
+### Aspire.Hosting.AWS (13.1.0)
+* Resolve WithEnvironment callbacks during publish for all compute targets (ECS Fargate, ECS Fargate Express, ECS Fargate with ALB, Lambda)
+* Support ParameterResource in WithEnvironment by mapping to CloudFormation parameters at deploy time
+* Update the AWS dependencies
+* Add support emulating Lambda DynamoDB Stream event source using the WithDynamoDBStreamsEventSource extension method
+* Update to Aspire 13.3
+* Add support for deleting the CloudFormation stack as part of the 'aspire destroy' command
+
 ## Release 2026-05-05 #3
 
 ### Aspire.Hosting.AWS (13.0.2)

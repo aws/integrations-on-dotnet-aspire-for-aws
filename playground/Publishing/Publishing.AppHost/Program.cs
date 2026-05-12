@@ -30,13 +30,31 @@ var localDevQueue = cdkStackResource.AddSQSQueue("LocalDevQueue");
 
 var cache = builder.AddValkey("cache");
 
+// ParameterResource examples — these become CloudFormation parameters at deploy time
+builder.Configuration["Parameters:api-key"] = "default-api-key";
+builder.Configuration["Parameters:db-connection"] = "Server=localhost;Database=mydb";
+var apiKey = builder.AddParameter("api-key");
+var dbConnection = builder.AddParameter("db-connection", secret: true);
+
 var frontend = builder.AddProject<Projects.Frontend>("Frontend")
+        .WithEnvironment("ENV_LAMBDA_1", "LambdaValue1")
+        .WithEnvironment("API_KEY", apiKey)
+        .WithEnvironment(callback: (env) =>
+        {
+            env.EnvironmentVariables.Add("ENV_LAMBDA_2", "LambdaValue2");
+        })
         .WithExternalHttpEndpoints()
         .WithReference(cache)
         .WaitFor(cache);
 
 
 builder.AddProject<Projects.Backend>("backend")
+        .WithEnvironment("ENV_LAMBDA_1", "LambdaValue1")
+        .WithEnvironment("DB_CONNECTION", dbConnection)
+        .WithEnvironment(callback: (env) =>
+        {
+            env.EnvironmentVariables.Add("ENV_LAMBDA_2", "LambdaValue2");
+        })
         .WithReference(frontend)
         .WithReference(cache)
         .WaitFor(cache);
@@ -52,6 +70,12 @@ builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunctio
                     Enabled = true
                 }));
             }
+        })
+        .WithEnvironment("ENV_LAMBDA_1", "LambdaValue1")
+        .WithEnvironment("API_KEY", apiKey)
+        .WithEnvironment(callback: (env) =>
+        {
+            env.EnvironmentVariables.Add("ENV_LAMBDA_2", "LambdaValue2");
         })
         .WithReference(awsSdkConfig)
         .WithSQSEventSource(localDevQueue);

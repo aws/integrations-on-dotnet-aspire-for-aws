@@ -44,7 +44,7 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
             () => CreateEmptyReferenceSecurityGroup(environment, resource, functionProps, x => x.SecurityGroups,
                 (x, v) => x.SecurityGroups = v), resource.Name);
 
-        ProcessRelationShips(referencePoints, lambdaFunction);
+        ProcessRelationShips(referencePoints, lambdaFunction, environment);
 
         publishAnnotation.Config.PropsFunctionCallback?.Invoke(CreatePublishTargetContext(environment), functionProps);
         environment.DefaultsProvider.ApplyLambdaFunctionDefaults(functionProps, lambdaFunction);

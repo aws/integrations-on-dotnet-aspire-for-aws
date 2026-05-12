@@ -43,7 +43,7 @@ internal class ECSFargateServicePublishTarget(ITarballContainerImageBuilder imag
             Image = ContainerImage.FromTarball(imageTarballPath),
             Environment = new Dictionary<string, string>()
         };
-        ProcessRelationShips(new ContainerDefinitionPropsConnectionPoints(containerDefinitionProps), projectResource);
+        ProcessRelationShips(new ContainerDefinitionPropsConnectionPoints(containerDefinitionProps), projectResource, environment);
 
         publishAnnotation.Config.PropsContainerDefinitionCallback?.Invoke(CreatePublishTargetContext(environment), containerDefinitionProps);
         environment.DefaultsProvider.ApplyECSFargateServiceDefaults(projectResource.Name, containerDefinitionProps);
@@ -60,7 +60,7 @@ internal class ECSFargateServicePublishTarget(ITarballContainerImageBuilder imag
         environment.DefaultsProvider.ApplyECSFargateServiceDefaults(fargateServiceProps);
         ProcessRelationShips(new FargateServicePropsConnectionPoints(
             () => CreateEmptyReferenceSecurityGroup(environment, projectResource, fargateServiceProps, x => x.SecurityGroups, (x, v) => x.SecurityGroups = v)),
-            resource);
+            resource, environment);
 
         var fargateService = new FargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
         publishAnnotation.Config.ConstructFargateServiceCallback?.Invoke(CreatePublishTargetContext(environment), fargateService);

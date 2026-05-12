@@ -69,6 +69,7 @@ public abstract class AWSCDKEnvironmentResource : Resource, IComputeEnvironmentR
 
         Annotations.Add(new PipelineStepAnnotation(ConfigurePublishPipelineStep));
         Annotations.Add(new PipelineStepAnnotation(ConfigureDeployPipelineStep));
+        Annotations.Add(new PipelineStepAnnotation(ConfigureDestroyPipelineStep));
     }
 
     private App? _cdkApp;
@@ -158,6 +159,25 @@ public abstract class AWSCDKEnvironmentResource : Resource, IComputeEnvironmentR
 
         return deployStep;
     }
+    
+    private PipelineStep ConfigureDestroyPipelineStep(PipelineStepFactoryContext factoryContext)
+    {
+        var model = factoryContext.PipelineContext.Model;
+
+        var step = new PipelineStep
+        {
+            Name = $"destroy-{Name}",
+            Action = async (context) =>
+            {
+                var cdkCtx = context.Services.GetRequiredService<CDKDestroyStep>();
+                await cdkCtx.ExecuteCDKDestroyAsync(context, model, this);
+            },
+            RequiredBySteps = [WellKnownPipelineSteps.Destroy],
+            DependsOnSteps = [WellKnownPipelineSteps.DestroyPrereq]
+        };
+
+        return step;
+    }    
 
     protected IEnvironment GetCDKEnvironment()
     {

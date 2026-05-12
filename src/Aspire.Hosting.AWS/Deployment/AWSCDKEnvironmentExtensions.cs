@@ -27,6 +27,7 @@ public static class AWSCDKEnvironmentExtensions
         builder.Services.TryAddSingleton<IAWSEnvironmentService, DefaultAWSEnvironmentService>();
         builder.Services.TryAddSingleton<CDKPublishingStep, CDKPublishingStep>();
         builder.Services.TryAddSingleton<CDKDeployStep, CDKDeployStep>();
+        builder.Services.TryAddSingleton<CDKDestroyStep, CDKDestroyStep>();
         builder.Services.TryAddSingleton<ITarballContainerImageBuilder, DefaultTarballContainerImageBuilder>();
         builder.Services.TryAddSingleton<IProcessCommandService, ProcessCommandService>();
         builder.Services.TryAddSingleton<ILambdaDeploymentPackager, DefaultLambdaDeploymentPackager>();
