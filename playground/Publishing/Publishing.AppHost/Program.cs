@@ -73,6 +73,7 @@ builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunctio
         })
         .WithEnvironment("ENV_LAMBDA_1", "LambdaValue1")
         .WithEnvironment("API_KEY", apiKey)
+        .WithEnvironment("DB_CONNECTION", dbConnection)
         .WithEnvironment(callback: (env) =>
         {
             env.EnvironmentVariables.Add("ENV_LAMBDA_2", "LambdaValue2");
