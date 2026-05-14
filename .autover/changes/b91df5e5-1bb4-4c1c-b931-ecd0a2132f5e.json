@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Fix issue with CloudFormation template include Aspire value expressions"
+      ]
+    }
+  ]
+}

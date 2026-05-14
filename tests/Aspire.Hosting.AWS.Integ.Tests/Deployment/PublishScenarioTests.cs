@@ -1704,6 +1704,9 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             Assert.DoesNotContain("dummy1a", cfTemplateContent);
             Assert.DoesNotContain("vpc-12345", cfTemplateContent);
 
+            // Look to make sure no Aspire binding values slipped into the CF template which would not be resolved.
+            Assert.DoesNotContain(".bindings.", cfTemplateContent);
+
             var cfTemplateDoc = JsonDocument.Parse(File.ReadAllText(cfTemplatePath));
 
             await cfTemplateValidation(cfTemplateDoc);
