@@ -434,6 +434,28 @@ Before synthesizing CDK constructs, the publish target runs the application's bu
 
 > **Tip**: You can safely call Aspire's `PublishAsStaticWebsite()` and `PublishAsS3StaticWebsite()` on the same resource. `PublishAsStaticWebsite()` sets up a local YARP proxy for development, while `PublishAsS3StaticWebsite()` handles the AWS deployment. They coexist cleanly — the CDK deployment pipeline uses the S3 target and ignores the local-only proxy setup.
 
+##### Routing backend API paths through CloudFront
+
+When using `WithCloudFront`, requests that don't match any file in S3 fall back to `index.html` for SPA routing. This means any path your frontend app uses as an API prefix (e.g. `/api`, `/agents`) would also return `index.html` instead of reaching the backend.
+
+Use `AddBackendBehavior` to add a CloudFront path behavior that routes a path pattern directly to a backend ALB origin, bypassing the S3 bucket and SPA fallback entirely:
+
+```csharp
+var backend = builder.AddProject<Projects.Backend>("backend")
+    .PublishAsECSFargateServiceWithALB();
+
+var frontend = builder.AddViteApp("frontend", "../frontend")
+    .WithReference(backend)
+    .PublishAsStaticWebsite("/agents", backend)   // local dev YARP proxy
+    .PublishAsS3StaticWebsite(config =>
+    {
+        config.WithCloudFront = true;
+        config.AddBackendBehavior("/agents/*", backend);  // CloudFront → ALB
+    });
+```
+
+CloudFront evaluates behaviors in order of specificity. Requests matching `/agents/*` are forwarded to the backend ALB with all methods allowed and caching disabled; everything else is served from S3 with the normal SPA index-fallback. The backend resource must appear before the frontend resource in the AppHost.
+
 #### Connecting Resources
 
 Use `WithReference()` to connect resources - the deployment system automatically configures all necessary connectivity:

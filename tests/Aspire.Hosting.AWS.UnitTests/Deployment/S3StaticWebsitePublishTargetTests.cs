@@ -8,7 +8,6 @@ using Amazon.CDK.AWS.CloudFront;
 using Amazon.CDK.AWS.S3;
 using Aspire.Hosting.AWS.Deployment;
 using Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
-using AWSLinkedObjectsAnnotation = Aspire.Hosting.AWS.Deployment.CDKPublishTargets.AWSLinkedObjectsAnnotation;
 using Aspire.Hosting.AWS.Deployment.Services;
 using Aspire.Hosting.JavaScript;
 using Microsoft.Extensions.Logging.Abstractions;
