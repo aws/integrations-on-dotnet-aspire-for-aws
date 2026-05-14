@@ -225,8 +225,8 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
 
                         if (imageObject["source"]?["executable"] is JsonArray)
                         {
-                            // Replace the executable array
-                            imageObject["source"]!["executable"] = new JsonArray("powershell", "-Command", $"docker load -i asset.{image.Key}.tar | ForEach-Object {{ ($_ -replace '^Loaded image: ', '') }}");
+                            var runtime = Environment.GetEnvironmentVariable("ASPIRE_CONTAINER_RUNTIME") ?? "docker";
+                            imageObject["source"]!["executable"] = new JsonArray("powershell", "-Command", $"{runtime} load -i asset.{image.Key}.tar | ForEach-Object {{ ($_ -replace '^Loaded image: ', '') }}");
                             changed = true;
                         }
                     }

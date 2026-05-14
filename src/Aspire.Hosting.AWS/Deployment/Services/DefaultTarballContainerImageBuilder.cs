@@ -14,7 +14,8 @@ internal class DefaultTarballContainerImageBuilder(ILogger<DefaultTarballContain
         var tarballFilePath = Path.GetTempFileName() + ".tar";
 
         var imageTag = resource.Name.ToLower() + ":latest";
-        var dockerSaveCommand = $"docker save -o {tarballFilePath} {imageTag}";
+        var runtime = Environment.GetEnvironmentVariable("ASPIRE_CONTAINER_RUNTIME") ?? "docker";
+        var dockerSaveCommand = $"{runtime} save -o {tarballFilePath} {imageTag}";
         string shellCommand;
         string arguments;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
