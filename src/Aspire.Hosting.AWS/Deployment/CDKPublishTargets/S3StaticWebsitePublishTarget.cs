@@ -125,7 +125,7 @@ internal class S3StaticWebsitePublishTarget(
                             $"Backend resource '{backendBehavior.BackendResource.Name}' (construct: {linkedAnnotation.Construct.GetType().Name}) " +
                             $"is not supported as a CloudFront backend behavior origin. Only ECS Fargate with ALB is currently supported.");
 
-                    additionalBehaviors[backendBehavior.PathPattern] = new BehaviorOptions
+                    var behavior = new BehaviorOptions
                     {
                         Origin = new HttpOrigin(albDns, new HttpOriginProps
                         {
@@ -136,6 +136,18 @@ internal class S3StaticWebsitePublishTarget(
                         OriginRequestPolicy = OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
                         ViewerProtocolPolicy = ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                     };
+
+                    additionalBehaviors[backendBehavior.PathPattern] = behavior;
+
+                    // CloudFront's "/foo/*" pattern matches "/foo/bar" and "/foo/" but NOT "/foo".
+                    // Register the bare path as a separate exact-match behavior so requests without
+                    // a trailing slash also reach the backend instead of falling through to S3.
+                    if (backendBehavior.PathPattern.EndsWith("/*"))
+                    {
+                        var basePath = backendBehavior.PathPattern[..^2]; // strip trailing "/*"
+                        if (!additionalBehaviors.ContainsKey(basePath))
+                            additionalBehaviors[basePath] = behavior;
+                    }
                 }
                 distributionProps.AdditionalBehaviors = additionalBehaviors;
             }

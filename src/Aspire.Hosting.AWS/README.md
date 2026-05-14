@@ -454,7 +454,7 @@ var frontend = builder.AddViteApp("frontend", "../frontend")
     });
 ```
 
-CloudFront evaluates behaviors in order of specificity. Requests matching `/agents/*` are forwarded to the backend ALB with all methods allowed and caching disabled; everything else is served from S3 with the normal SPA index-fallback. The backend resource must appear before the frontend resource in the AppHost.
+CloudFront evaluates behaviors in order of specificity. Requests matching `/agents/*` are forwarded to the backend ALB with all methods allowed and caching disabled; everything else is served from S3 with the normal SPA index-fallback. The bare path `/agents` (without a trailing slash) is automatically registered as a second exact-match behavior so it also reaches the backend rather than falling through to the SPA fallback. The backend resource must appear before the frontend resource in the AppHost.
 
 #### Connecting Resources
 
