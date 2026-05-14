@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Minor",
+      "ChangelogMessages": [
+        "Apply Aspire parameters to CloudFormation template parameters as part of deployment"
+      ]
+    }
+  ]
+}

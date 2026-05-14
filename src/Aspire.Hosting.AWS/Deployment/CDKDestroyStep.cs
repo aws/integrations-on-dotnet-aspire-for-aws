@@ -74,6 +74,8 @@ internal class CDKDestroyStep(ILogger<CDKDestroyStep> logger)
         {
             await Task.Delay(StackPollingDelay, cancellationToken);
             stack = await GetExistingStackAsync(cfClient, stackName, cancellationToken);
+            if (stack == null)
+                break;
             
             var events = await GetLatestEventsAsync(cfClient, stackName, mintimeStampForEvents, mostRecentEventId, cancellationToken);
             if (events.Count > 0)
