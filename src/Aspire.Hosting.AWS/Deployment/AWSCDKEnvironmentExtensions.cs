@@ -8,6 +8,7 @@ using Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
 using Aspire.Hosting.AWS.Deployment.Services;
 using Aspire.Hosting.AWS.Lambda;
 using Aspire.Hosting.AWS.Utils.Internal;
+using Aspire.Hosting.JavaScript;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Diagnostics.CodeAnalysis;
@@ -31,6 +32,7 @@ public static class AWSCDKEnvironmentExtensions
         builder.Services.TryAddSingleton<ITarballContainerImageBuilder, DefaultTarballContainerImageBuilder>();
         builder.Services.TryAddSingleton<IProcessCommandService, ProcessCommandService>();
         builder.Services.TryAddSingleton<ILambdaDeploymentPackager, DefaultLambdaDeploymentPackager>();
+        builder.Services.TryAddSingleton<IStaticSiteBuilder, DefaultStaticSiteBuilder>();
 
         builder.Services.AddTransient<IAWSPublishTarget, ECSFargateExpressServicePublishTarget>();
         builder.Services.AddTransient<IAWSPublishTarget, ECSFargateServicePublishTarget>();
@@ -38,6 +40,7 @@ public static class AWSCDKEnvironmentExtensions
         builder.Services.AddTransient<IAWSPublishTarget, ElastiCacheProvisionClusterPublishTarget>();
         builder.Services.AddTransient<IAWSPublishTarget, ElastiCacheServerlessClusterPublishTarget>();
         builder.Services.AddTransient<IAWSPublishTarget, LambdaFunctionPublishTarget>();
+        builder.Services.AddTransient<IAWSPublishTarget, S3StaticWebsitePublishTarget>();
     }
 
     /// <summary>
@@ -332,5 +335,47 @@ public static class AWSCDKEnvironmentExtensions
         builder.Resource.Annotations.Add(annotation);
 
         return builder;
-    }    
+    }
+
+    /// <summary>
+    /// Deploys the JavaScript application as a static website hosted on Amazon S3, with an optional
+    /// CloudFront distribution for HTTPS and global CDN delivery.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// When <see cref="PublishS3StaticWebsiteConfig.WithCloudFront"/> is <see langword="false"/> (the default),
+    /// an S3 bucket with static website hosting enabled is created and its website endpoint is emitted as a
+    /// CloudFormation output.
+    /// </para>
+    /// <para>
+    /// When <see cref="PublishS3StaticWebsiteConfig.WithCloudFront"/> is <see langword="true"/>, the bucket
+    /// is kept private and accessed by CloudFront via Origin Access Control (OAC). The CloudFront domain name
+    /// is emitted as a CloudFormation output. SPA client-side routing is supported: 403 and 404 responses from
+    /// S3 are rewritten to <c>index.html</c> with HTTP 200.
+    /// </para>
+    /// <para>
+    /// Before synthesising CDK constructs, the publish target runs the application's build script (e.g.
+    /// <c>npm run build</c>) and passes any environment variables injected by Aspire references (such as
+    /// <c>VITE_*</c> variables) into the build process.
+    /// </para>
+    /// </remarks>
+    /// <typeparam name="T">The JavaScript resource type.</typeparam>
+    /// <param name="builder">The resource builder for the JavaScript application to configure.</param>
+    /// <param name="configure">Optional callback to configure <see cref="PublishS3StaticWebsiteConfig"/>.</param>
+    /// <returns>The same resource builder instance for chaining additional configuration.</returns>
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+    public static IResourceBuilder<T> PublishAsS3StaticWebsite<T>(
+        this IResourceBuilder<T> builder,
+        Action<PublishS3StaticWebsiteConfig>? configure = null)
+        where T : JavaScriptAppResource
+    {
+        var annotation = new PublishS3StaticWebsiteAnnotation
+        {
+            WorkingDirectory = builder.Resource.WorkingDirectory,
+        };
+        configure?.Invoke(annotation.Config);
+        builder.Resource.Annotations.Add(annotation);
+
+        return builder;
+    }
 }

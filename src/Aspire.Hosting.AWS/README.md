@@ -362,6 +362,9 @@ var function = builder.AddAWSLambdaFunction<Projects.MyFunction>("function", "<l
 // Redis automatically deploys to ElastiCache
 var cache = builder.AddRedis("cache");
 
+// JavaScript apps (Vite, Node) automatically deploy as S3 static websites
+var frontend = builder.AddViteApp("frontend", "../frontend");
+
 builder.Build().Run();
 ```
 
@@ -390,6 +393,46 @@ builder.Build().Run();
 ```
 
 Each Publish method allows you to customize the AWS service configuration through callbacks that modify CDK construct properties. See the [Deployment Design Document](../../docs/deployment-design.md) for details on available Publish methods and customization options.
+
+#### Deploying JavaScript Apps as S3 Static Websites
+
+JavaScript applications added with `AddViteApp`, `AddNpmApp`, or similar methods are automatically deployed as S3 static websites. You can customize the deployment using `PublishAsS3StaticWebsite`:
+
+```csharp
+// Add to opt-in to using the preview publish/deployment APIs.
+#pragma warning disable ASPIREAWSPUBLISHERS001
+#pragma warning disable ASPIREJAVASCRIPT001
+
+var builder = DistributedApplication.CreateBuilder(args);
+
+builder.AddAWSCDKEnvironment(
+    name: "MyApp",
+    cdkDefaultsProviderFactory: CDKDefaultsProviderFactory.Preview_V1
+);
+
+var backend = builder.AddProject<Projects.Backend>("backend")
+    .PublishAsECSFargateServiceWithALB();
+
+// S3-only (default): public bucket with website hosting enabled
+var frontend = builder.AddViteApp("frontend", "../frontend")
+    .WithReference(backend)
+    .PublishAsS3StaticWebsite();
+
+// With CloudFront: private bucket + CloudFront distribution (recommended for production)
+var frontendCf = builder.AddViteApp("frontend", "../frontend")
+    .WithReference(backend)
+    .PublishAsS3StaticWebsite(config =>
+    {
+        config.WithCloudFront = true;
+        config.OutputPath = "dist/browser"; // Angular default; Vite default is "dist"
+    });
+
+builder.Build().Run();
+```
+
+Before synthesizing CDK constructs, the publish target runs the application's build script (e.g. `npm run build`) and injects any environment variables from Aspire `WithReference()` connections (such as `VITE_*` variables) into the build process. No extra configuration is needed to pass backend URLs into your frontend build.
+
+> **Tip**: You can safely call Aspire's `PublishAsStaticWebsite()` and `PublishAsS3StaticWebsite()` on the same resource. `PublishAsStaticWebsite()` sets up a local YARP proxy for development, while `PublishAsS3StaticWebsite()` handles the AWS deployment. They coexist cleanly — the CDK deployment pipeline uses the S3 target and ignores the local-only proxy setup.
 
 #### Connecting Resources
 
