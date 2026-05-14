@@ -66,7 +66,7 @@ internal class CDKDeployStep(IProcessCommandService processCommandService, ILogg
 
             foreach (var param in resolvedParameters)
             {
-                cdkDeployCommand += $" --parameters \"{param.TemplateParameterName}={param.Value}\"";
+                cdkDeployCommand += $" --parameters \'{param.TemplateParameterName}={param.Value}\'";
             }
 
             string shellCommand;

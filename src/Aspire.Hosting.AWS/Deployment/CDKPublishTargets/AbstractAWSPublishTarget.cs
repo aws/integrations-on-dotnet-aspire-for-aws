@@ -246,7 +246,10 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
         return value switch
         {
             string s => s,
-            IManifestExpressionProvider manifest => manifest.ValueExpression,
+            // Expressions are not supported because they wouldn't be resolved in the CF template during deployment.
+            // these values are most likely local runtime generated values which won't be valid when deployed. For
+            // example this would write out an HTTP_PORTS field but that is configured by an ECS Task Definition.
+            IManifestExpressionProvider _ => null, 
             _ => value.ToString()
         };
     }
