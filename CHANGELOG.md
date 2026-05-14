@@ -1,3 +1,9 @@
+## Release 2026-05-14
+
+### Aspire.Hosting.AWS (13.2.0)
+* Apply Aspire parameters to CloudFormation template parameters as part of deployment
+* Fix issue with CloudFormation template include Aspire value expressions
+
 ## Release 2026-05-12
 
 ### Aspire.Hosting.AWS (13.1.0)
