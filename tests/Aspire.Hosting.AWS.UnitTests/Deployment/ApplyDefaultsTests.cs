@@ -96,6 +96,31 @@ public class ApplyDefaultsTests
     }
 
     [Fact]
+    public void ApplyCfnExpressGatewayServiceDefaults_DoesNotCreateVpcEndpoints_WhenCustomNetworkConfigurationProvided()
+    {
+        // Arrange
+        var environment = CreateProviderAndEnvironment();
+        var props = new CfnExpressGatewayServiceProps
+        {
+            PrimaryContainer = new ExpressGatewayContainerProperty(),
+            NetworkConfiguration = new CfnExpressGatewayService.ExpressGatewayServiceNetworkConfigurationProperty
+            {
+                SecurityGroups = new[] { "sg-custom123" },
+                Subnets = new[] { "subnet-custom1" }
+            }
+        };
+
+        // Act
+        environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(props);
+
+        // Assert — endpoints must NOT be created when the caller manages network configuration
+        var nodes = environment.CDKStack.Node.FindAll();
+        Assert.DoesNotContain(nodes, n => n is InterfaceVpcEndpoint && n.Node.Id == "ECSExpressEcrApiEndpoint");
+        Assert.DoesNotContain(nodes, n => n is InterfaceVpcEndpoint && n.Node.Id == "ECSExpressEcrDkrEndpoint");
+        Assert.DoesNotContain(nodes, n => n is GatewayVpcEndpoint && n.Node.Id == "ECSExpressS3Endpoint");
+    }
+
+    [Fact]
     public void ApplyCfnExpressGatewayServiceDefaults_OverrideDefaults()
     {
         // Arrange

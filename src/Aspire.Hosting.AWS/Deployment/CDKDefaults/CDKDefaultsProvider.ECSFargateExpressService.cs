@@ -1,6 +1,5 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.ECS;
 
 namespace Aspire.Hosting.AWS.Deployment.CDKDefaults;
@@ -79,52 +78,24 @@ public partial class CDKDefaultsProvider
                 // Otherwise if you use private subnets the ALB will be internal only to the VPC.
                 Subnets = GetDefaultVpc().PublicSubnets.Select(s => s.SubnetId).ToArray()
             };
-        }
 
-        EnsureECSExpressVpcEndpoints();
+            EnsureECSExpressVpcEndpoints();
+        }
     }
 
-    private bool _ecsExpressVpcEndpointsCreated;
-
     /// <summary>
-    /// Creates VPC Interface Endpoints for ECR and a Gateway Endpoint for S3 so that ECS Express
+    /// Ensures VPC Interface Endpoints for ECR and a Gateway Endpoint for S3 exist so that ECS Express
     /// tasks running in public subnets without a public IP can pull images via AWS PrivateLink.
     /// </summary>
     /// <remarks>
-    /// ECS Express tasks land in public subnets but the API does not support assigning a public IP,
-    /// so they have no outbound internet access. VPC endpoints provide a private path to ECR and S3
-    /// without requiring a NAT Gateway. Safe to call multiple times; endpoints are created only once.
+    /// Only called when the defaults provider is also responsible for setting NetworkConfiguration,
+    /// i.e. when the caller has not supplied a custom network configuration. Safe to call multiple times;
+    /// each endpoint is created at most once via the GetDefault accessor caching pattern.
     /// </remarks>
     protected virtual void EnsureECSExpressVpcEndpoints()
     {
-        if (_ecsExpressVpcEndpointsCreated) return;
-        _ecsExpressVpcEndpointsCreated = true;
-
-        var vpc = GetDefaultVpc();
-        var stack = EnvironmentResource.CDKStack;
-        var subnets = new SubnetSelection { SubnetType = SubnetType.PUBLIC };
-
-        new InterfaceVpcEndpoint(stack, "ECSExpressEcrApiEndpoint", new InterfaceVpcEndpointProps
-        {
-            Vpc = vpc,
-            Service = InterfaceVpcEndpointAwsService.ECR,
-            PrivateDnsEnabled = true,
-            Subnets = subnets
-        });
-
-        new InterfaceVpcEndpoint(stack, "ECSExpressEcrDkrEndpoint", new InterfaceVpcEndpointProps
-        {
-            Vpc = vpc,
-            Service = InterfaceVpcEndpointAwsService.ECR_DOCKER,
-            PrivateDnsEnabled = true,
-            Subnets = subnets
-        });
-
-        // ECR stores image layers in S3; gateway endpoints are free and route-table based
-        new GatewayVpcEndpoint(stack, "ECSExpressS3Endpoint", new GatewayVpcEndpointProps
-        {
-            Vpc = vpc,
-            Service = GatewayVpcEndpointAwsService.S3
-        });
+        GetDefaultECSExpressEcrApiEndpoint();
+        GetDefaultECSExpressEcrDkrEndpoint();
+        GetDefaultECSExpressS3Endpoint();
     }
 }
