@@ -1,13 +1,11 @@
 ﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-#pragma warning disable ASPIREPUBLISHERS001
-#pragma warning disable ASPIREAWSPUBLISHERS001
-
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.CDK;
 using Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
 using Aspire.Hosting.AWS.Utils.Internal;
 using Aspire.Hosting.Pipelines;
+using Aspire.Hosting.Publishing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
@@ -219,14 +217,14 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
 
                 if (root["dockerImages"] is JsonObject dockerImages)
                 {
+                    var runtime = serviceProvider.GetRequiredService<IContainerRuntime>().Name;
                     foreach (var image in dockerImages)
                     {
                         JsonObject imageObject = image.Value!.AsObject();
 
                         if (imageObject["source"]?["executable"] is JsonArray)
                         {
-                            var runtime = Environment.GetEnvironmentVariable("ASPIRE_CONTAINER_RUNTIME") ?? "docker";
-                            imageObject["source"]!["executable"] = new JsonArray("powershell", "-Command", $"{runtime} load -i asset.{image.Key}.tar | ForEach-Object {{ ($_ -replace '^Loaded image: ', '') }}");
+                            imageObject["source"]!["executable"] = new JsonArray("powershell", "-Command", $"& '{runtime}' load -i asset.{image.Key}.tar | ForEach-Object {{ ($_ -replace '^Loaded image: ', '') }}");
                             changed = true;
                         }
                     }
