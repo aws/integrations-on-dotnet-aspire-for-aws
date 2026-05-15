@@ -45,7 +45,8 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !environment.Config.DisablePlatformCorrection)
             {
-                FixCDKAssetsFileForWindows(outputPath);
+                var containerRuntime = await serviceProvider.GetRequiredService<IContainerRuntimeResolver>().ResolveAsync(cancellationToken);
+                FixCDKAssetsFileForWindows(outputPath, containerRuntime.Name);
             }
 
             await step.SucceedAsync(cancellationToken: cancellationToken);
@@ -205,7 +206,7 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
         }
     }
 
-    private void FixCDKAssetsFileForWindows(string outputPath)
+    private void FixCDKAssetsFileForWindows(string outputPath, string runtimeName)
     {
         foreach (var file in Directory.EnumerateFiles(outputPath, "*.assets.json", SearchOption.AllDirectories))
         {
@@ -217,14 +218,13 @@ internal class CDKPublishingStep(IServiceProvider serviceProvider, ILogger<CDKPu
 
                 if (root["dockerImages"] is JsonObject dockerImages)
                 {
-                    var runtime = serviceProvider.GetRequiredService<IContainerRuntime>().Name;
                     foreach (var image in dockerImages)
                     {
                         JsonObject imageObject = image.Value!.AsObject();
 
                         if (imageObject["source"]?["executable"] is JsonArray)
                         {
-                            imageObject["source"]!["executable"] = new JsonArray("powershell", "-Command", $"& '{runtime}' load -i asset.{image.Key}.tar | ForEach-Object {{ ($_ -replace '^Loaded image: ', '') }}");
+                            imageObject["source"]!["executable"] = new JsonArray("powershell", "-Command", $"& '{runtimeName}' load -i asset.{image.Key}.tar | ForEach-Object {{ ($_ -replace '^Loaded image: ', '') }}");
                             changed = true;
                         }
                     }
