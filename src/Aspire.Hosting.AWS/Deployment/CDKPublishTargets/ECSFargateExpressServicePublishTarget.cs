@@ -49,7 +49,7 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
             ServiceName = projectResource.Name
         };
         publishAnnotation.Config.PropsCfnExpressGatewayServicePropsCallback?.Invoke(CreatePublishTargetContext(environment), fargateServiceProps);
-        environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(fargateServiceProps);
+        environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(fargateServiceProps, publishAnnotation.Config);
 
         var referencePoints = new CfnExpressGatewayServicePropsConnectionPoints(
             fargateServiceProps,

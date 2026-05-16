@@ -391,6 +391,34 @@ builder.Build().Run();
 
 Each Publish method allows you to customize the AWS service configuration through callbacks that modify CDK construct properties. See the [Deployment Design Document](../../docs/deployment-design.md) for details on available Publish methods and customization options.
 
+#### ECS Fargate Express — VPC Endpoints for ECR image pulls
+
+ECS Express tasks run in public subnets but are not assigned a public IP address, so they cannot reach ECR through the internet gateway by default. If your VPC subnets do not have **Auto-assign public IPv4 address** enabled, image pulls will fail at deploy time.
+
+To fix this, set `EnableVpcEndpoints = true` on the config. This creates VPC Interface Endpoints for `ecr.api` and `ecr.dkr` plus an S3 Gateway Endpoint, allowing image pulls via AWS PrivateLink entirely within the VPC:
+
+```csharp
+// Add to opt-in to using the preview publish/deployment APIs.
+#pragma warning disable ASPIREAWSPUBLISHERS001
+
+var builder = DistributedApplication.CreateBuilder(args);
+
+builder.AddAWSCDKEnvironment(
+    name: "MyApp",
+    cdkDefaultsProviderFactory: CDKDefaultsProviderFactory.Preview_V1
+);
+
+var webApp = builder.AddProject<Projects.WebApp>("webapp")
+    .PublishAsECSFargateExpressService(new PublishECSFargateExpressServiceConfig
+    {
+        EnableVpcEndpoints = true
+    });
+
+builder.Build().Run();
+```
+
+Note that VPC Interface Endpoints incur additional AWS charges. If your subnets already auto-assign public IPs, you do not need this option.
+
 #### Connecting Resources
 
 Use `WithReference()` to connect resources - the deployment system automatically configures all necessary connectivity:

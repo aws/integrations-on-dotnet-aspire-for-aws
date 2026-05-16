@@ -38,7 +38,7 @@ public partial class CDKDefaultsProvider
     /// recommended defaults for an Express Gateway service.</param>
     /// <exception cref="InvalidDataException">Thrown if the <paramref name="props"/>.PrimaryContainer property is not set or is not of type <see
     /// cref="CfnExpressGatewayService.ExpressGatewayContainerProperty"/>.</exception>
-    protected internal virtual void ApplyCfnExpressGatewayServiceDefaults(CfnExpressGatewayServiceProps props)
+    protected internal virtual void ApplyCfnExpressGatewayServiceDefaults(CfnExpressGatewayServiceProps props, PublishECSFargateExpressServiceConfig? config = null)
     {
         if (props.Cluster == null)
             props.Cluster = GetDefaultECSCluster().ClusterName;
@@ -79,7 +79,8 @@ public partial class CDKDefaultsProvider
                 Subnets = GetDefaultVpc().PublicSubnets.Select(s => s.SubnetId).ToArray()
             };
 
-            EnsureECSExpressVpcEndpoints();
+            if (config?.EnableVpcEndpoints == true)
+                EnsureECSExpressVpcEndpoints();
         }
     }
 
