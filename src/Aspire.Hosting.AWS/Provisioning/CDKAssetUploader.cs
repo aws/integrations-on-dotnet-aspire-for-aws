@@ -46,6 +46,9 @@ internal sealed class CDKAssetUploader
     internal async Task UploadFileAssetsAsync(IDictionary<string, IFileAsset> fileAssets, string assemblyDirectory, CancellationToken cancellationToken)
     {
         var (accountId, region) = await GetCallerAccountAndRegionAsync(cancellationToken).ConfigureAwait(false);
+
+        // All CDK bootstrap bucket destinations for a single stack target the same region
+        // (${AWS::Region} resolves to the deployment region), so one S3 client covers all destinations.
         using var s3Client = CreateS3Client();
 
         foreach (var (_, fileAsset) in fileAssets)
@@ -109,6 +112,12 @@ internal sealed class CDKAssetUploader
         {
             return false;
         }
+        catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
+        {
+            // The CDK bootstrap bucket policy may return 403 for a missing object when the caller
+            // lacks s3:ListBucket. Treat this as not-found and attempt the upload.
+            return false;
+        }
     }
 
     private static async Task UploadFileAsync(IAmazonS3 s3Client, string filePath, string bucketName, string objectKey, CancellationToken cancellationToken)
@@ -160,7 +169,13 @@ internal sealed class CDKAssetUploader
     {
         using var stsClient = CreateStsClient();
         var response = await stsClient.GetCallerIdentityAsync(new GetCallerIdentityRequest(), cancellationToken).ConfigureAwait(false);
-        var region = stsClient.Config.RegionEndpoint?.SystemName ?? "us-east-1";
+        var region = stsClient.Config.RegionEndpoint?.SystemName;
+        if (string.IsNullOrEmpty(region))
+        {
+            throw new AWSProvisioningException(
+                "Failed to determine the AWS region for CDK asset upload. " +
+                "Configure a region via IAWSSDKConfig, the AWS_REGION environment variable, or your AWS config file.");
+        }
         return (response.Account, region);
     }
 

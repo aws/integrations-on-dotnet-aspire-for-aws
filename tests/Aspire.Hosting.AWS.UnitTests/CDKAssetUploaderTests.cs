@@ -188,6 +188,63 @@ public class CDKAssetUploaderTests
         mockS3.Verify(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task UploadFileAssetsAsync_Treats403AsNotFound_AndUploads()
+    {
+        var tempFile = Path.GetTempFileName();
+        File.WriteAllText(tempFile, "lambda code");
+        var tempDir = Path.GetDirectoryName(tempFile)!;
+
+        try
+        {
+            var mockS3 = new Mock<IAmazonS3>();
+            // Bootstrap bucket policy may return 403 when caller lacks s3:ListBucket
+            mockS3.Setup(s => s.GetObjectMetadataAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                  .ThrowsAsync(new AmazonS3Exception("Forbidden") { StatusCode = System.Net.HttpStatusCode.Forbidden });
+            mockS3.Setup(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
+                  .ReturnsAsync(new PutObjectResponse());
+
+            var mockSts = BuildMockSts("123456789012", "us-east-1");
+            var uploader = new CDKAssetUploader(NullLogger.Instance, () => mockS3.Object, () => mockSts.Object);
+
+            var assets = BuildFileAssets(Path.GetFileName(tempFile), FileAssetPackaging.FILE,
+                "cdk-assets-${AWS::AccountId}-${AWS::Region}", "abc123.bin");
+
+            await uploader.UploadFileAssetsAsync(assets, tempDir, CancellationToken.None);
+
+            mockS3.Verify(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task UploadFileAssetsAsync_ThrowsWhenNoRegionConfigured()
+    {
+        var mockS3 = new Mock<IAmazonS3>();
+
+        // IClientConfig.RegionEndpoint is an interface member, so it can be mocked to return
+        // null regardless of environment variables — unlike the concrete ClientConfig getter
+        // which falls back to the SDK's region resolution chain.
+        var mockConfig = new Mock<Amazon.Runtime.IClientConfig>();
+        mockConfig.Setup(c => c.RegionEndpoint).Returns((Amazon.RegionEndpoint?)null!);
+
+        var mockSts = new Mock<IAmazonSecurityTokenService>();
+        mockSts.Setup(s => s.Config).Returns(mockConfig.Object);
+        mockSts.Setup(s => s.GetCallerIdentityAsync(It.IsAny<GetCallerIdentityRequest>(), It.IsAny<CancellationToken>()))
+               .ReturnsAsync(new GetCallerIdentityResponse { Account = "123456789012" });
+
+        var uploader = new CDKAssetUploader(NullLogger.Instance, () => mockS3.Object, () => mockSts.Object);
+        var assets = BuildFileAssets("file.zip", FileAssetPackaging.FILE, "my-bucket", "key.zip");
+
+        var ex = await Assert.ThrowsAsync<AWSProvisioningException>(
+            () => uploader.UploadFileAssetsAsync(assets, Path.GetTempPath(), CancellationToken.None));
+
+        Assert.Contains("region", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static Mock<IAmazonSecurityTokenService> BuildMockSts(string accountId, string region)
     {
         var mockSts = new Mock<IAmazonSecurityTokenService>();

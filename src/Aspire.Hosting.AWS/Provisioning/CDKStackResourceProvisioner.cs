@@ -1,5 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
+using Amazon.CDK.CloudAssemblySchema;
 using Amazon.CDK.CXAPI;
 using Amazon.CloudFormation;
 using Aspire.Hosting.ApplicationModel;
@@ -27,18 +28,36 @@ internal sealed class CDKStackResourceProvisioner(
             throw new AWSProvisioningException("Failed to provision stack assets. Could not retrieve stack artifact.");
         }
 
-        var assetArtifacts = artifact.Dependencies.OfType<AssetManifestArtifact>().ToList();
+        var manifests = artifact.Dependencies
+            .OfType<AssetManifestArtifact>()
+            .Select(a => a.Contents)
+            .ToList();
 
-        if (assetArtifacts.Any(a => a.Contents.DockerImages?.Count > 0))
+        await CheckAndUploadManifestsAsync(manifests, artifact.Assembly.Directory, resource.AWSSDKConfig, logger, cancellationToken).ConfigureAwait(false);
+    }
+
+    internal static async Task CheckAndUploadManifestsAsync(
+        IEnumerable<IAssetManifest> manifests,
+        string assemblyDirectory,
+        IAWSSDKConfig? awsSdkConfig,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        var manifestList = manifests.ToList();
+
+        if (manifestList.Any(m => m.DockerImages?.Count > 0))
         {
             logger.LogError("Container image assets are currently not supported");
             throw new AWSProvisioningException("Failed to provision stack assets. Provisioning container image assets are currently not supported.");
         }
 
-        var uploader = new CDKAssetUploader(resource.AWSSDKConfig, logger);
-        foreach (var assetArtifact in assetArtifacts)
+        var uploader = new CDKAssetUploader(awsSdkConfig, logger);
+        foreach (var manifest in manifestList)
         {
-            await uploader.UploadAssetsAsync(assetArtifact, cancellationToken).ConfigureAwait(false);
+            if (manifest.Files is { Count: > 0 })
+            {
+                await uploader.UploadFileAssetsAsync(manifest.Files, assemblyDirectory, cancellationToken).ConfigureAwait(false);
+            }
         }
     }
 
