@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Minor",
+      "ChangelogMessages": [
+        "Add support for S3 assets when provisioning AWS app resources"
+      ]
+    }
+  ]
+}

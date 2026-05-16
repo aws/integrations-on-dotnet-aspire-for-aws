@@ -16,30 +16,30 @@ internal sealed class CDKStackResourceProvisioner(
     protected override async Task GetOrCreateResourceAsync(StackResource resource, CancellationToken cancellationToken)
     {
         var logger = LoggerService.GetLogger(resource);
-        await ProvisionCDKStackAssetsAsync((StackResource)resource, logger).ConfigureAwait(false);
+        await ProvisionCDKStackAssetsAsync(resource, logger, cancellationToken).ConfigureAwait(false);
         await base.GetOrCreateResourceAsync(resource, cancellationToken).ConfigureAwait(false);
     }
 
-    private static Task ProvisionCDKStackAssetsAsync(StackResource resource, ILogger logger)
+    private static async Task ProvisionCDKStackAssetsAsync(StackResource resource, ILogger logger, CancellationToken cancellationToken)
     {
-        // Currently CDK Stack Assets like S3 and Container images are not supported. When a stack contains those assets
-        // we stop provisioning as it can introduce unwanted issues.
         if (!resource.TryGetStackArtifact(out var artifact))
         {
             throw new AWSProvisioningException("Failed to provision stack assets. Could not retrieve stack artifact.");
         }
 
-        if (!artifact.Dependencies
-                .OfType<AssetManifestArtifact>()
-                .Any(dependency =>
-                    dependency.Contents.Files?.Count > 1
-                    || dependency.Contents.DockerImages?.Count > 0))
+        var assetArtifacts = artifact.Dependencies.OfType<AssetManifestArtifact>().ToList();
+
+        if (assetArtifacts.Any(a => a.Contents.DockerImages?.Count > 0))
         {
-            return Task.CompletedTask;
+            logger.LogError("Container image assets are currently not supported");
+            throw new AWSProvisioningException("Failed to provision stack assets. Provisioning container image assets are currently not supported.");
         }
 
-        logger.LogError("File or container image assets are currently not supported");
-        throw new AWSProvisioningException("Failed to provision stack assets. Provisioning file or container image assets are currently not supported.");
+        var uploader = new CDKAssetUploader(resource.AWSSDKConfig, logger);
+        foreach (var assetArtifact in assetArtifacts)
+        {
+            await uploader.UploadAssetsAsync(assetArtifact, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     protected override void HandleTemplateProvisioningException(Exception ex, StackResource resource, ILogger logger)
