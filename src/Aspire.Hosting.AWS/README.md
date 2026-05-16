@@ -394,9 +394,9 @@ builder.Build().Run();
 
 Each Publish method allows you to customize the AWS service configuration through callbacks that modify CDK construct properties. See the [Deployment Design Document](../../docs/deployment-design.md) for details on available Publish methods and customization options.
 
-#### Deploying JavaScript Apps as S3 Static Websites
+#### Deploying JavaScript Apps as S3 + CloudFront
 
-JavaScript applications added with `AddViteApp`, `AddNpmApp`, or similar methods are automatically deployed as S3 static websites. You can customize the deployment using `PublishAsS3StaticWebsite`:
+JavaScript applications added with `AddViteApp`, `AddNpmApp`, or similar methods are deployed as a private S3 bucket behind a CloudFront distribution. Use `PublishAsS3WithCloudFront` to customize the deployment:
 
 ```csharp
 // Add to opt-in to using the preview publish/deployment APIs.
@@ -413,17 +413,10 @@ builder.AddAWSCDKEnvironment(
 var backend = builder.AddProject<Projects.Backend>("backend")
     .PublishAsECSFargateServiceWithALB();
 
-// S3-only (default): public bucket with website hosting enabled
 var frontend = builder.AddViteApp("frontend", "../frontend")
     .WithReference(backend)
-    .PublishAsS3StaticWebsite();
-
-// With CloudFront: private bucket + CloudFront distribution (recommended for production)
-var frontendCf = builder.AddViteApp("frontend", "../frontend")
-    .WithReference(backend)
-    .PublishAsS3StaticWebsite(config =>
+    .PublishAsS3WithCloudFront(config =>
     {
-        config.WithCloudFront = true;
         config.OutputPath = "dist/browser"; // Angular default; Vite default is "dist"
     });
 
@@ -432,29 +425,25 @@ builder.Build().Run();
 
 Before synthesizing CDK constructs, the publish target runs the application's build script (e.g. `npm run build`) and injects any environment variables from Aspire `WithReference()` connections (such as `VITE_*` variables) into the build process. No extra configuration is needed to pass backend URLs into your frontend build.
 
-> **Tip**: You can safely call Aspire's `PublishAsStaticWebsite()` and `PublishAsS3StaticWebsite()` on the same resource. `PublishAsStaticWebsite()` sets up a local YARP proxy for development, while `PublishAsS3StaticWebsite()` handles the AWS deployment. They coexist cleanly — the CDK deployment pipeline uses the S3 target and ignores the local-only proxy setup.
-
 ##### Routing backend API paths through CloudFront
 
-When using `WithCloudFront`, requests that don't match any file in S3 fall back to `index.html` for SPA routing. This means any path your frontend app uses as an API prefix (e.g. `/api`, `/agents`) would also return `index.html` instead of reaching the backend.
+Requests that don't match any file in S3 fall back to `index.html` for SPA routing. This means any path your frontend app uses as an API prefix (e.g. `/api`, `/todos`) would also return `index.html` instead of reaching the backend.
 
-Use `AddBackendBehavior` to add a CloudFront path behavior that routes a path pattern directly to a backend ALB origin, bypassing the S3 bucket and SPA fallback entirely:
+Use `WithCloudFrontBackendBehavior` to add a CloudFront path behavior that routes a path pattern directly to a backend origin, bypassing the S3 bucket and SPA fallback entirely:
 
 ```csharp
 var backend = builder.AddProject<Projects.Backend>("backend")
     .PublishAsECSFargateServiceWithALB();
 
 var frontend = builder.AddViteApp("frontend", "../frontend")
-    .WithReference(backend)
-    .PublishAsStaticWebsite("/agents", backend)   // local dev YARP proxy
-    .PublishAsS3StaticWebsite(config =>
-    {
-        config.WithCloudFront = true;
-        config.AddBackendBehavior("/agents/*", backend);  // CloudFront → ALB
-    });
+    .WithReference(backend)                              // service discovery + env vars
+    .WithCloudFrontBackendBehavior("/todos/*", backend)  // CloudFront → backend
+    .PublishAsS3WithCloudFront();
 ```
 
-CloudFront evaluates behaviors in order of specificity. Requests matching `/agents/*` are forwarded to the backend ALB with all methods allowed and caching disabled; everything else is served from S3 with the normal SPA index-fallback. The bare path `/agents` (without a trailing slash) is automatically registered as a second exact-match behavior so it also reaches the backend rather than falling through to the SPA fallback. The backend resource must appear before the frontend resource in the AppHost.
+CloudFront evaluates behaviors in order of specificity. Requests matching `/todos/*` are forwarded to the backend with all methods allowed and caching disabled; everything else is served from S3 with the normal SPA index-fallback. The bare path `/todos` (without a trailing slash) is automatically registered as a second exact-match behavior so it also reaches the backend rather than falling through to the SPA fallback.
+
+> **See it in action**: The [SPA & API playground](../../playground/SpaAndApi/README.md) demonstrates a full-stack Angular + .NET minimal API app deployed to S3 + CloudFront + ECS Fargate using this pattern.
 
 #### Connecting Resources
 

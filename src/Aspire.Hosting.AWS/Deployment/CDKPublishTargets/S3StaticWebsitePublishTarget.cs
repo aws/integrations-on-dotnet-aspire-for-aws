@@ -5,7 +5,6 @@
 using Amazon.CDK;
 using Amazon.CDK.AWS.CloudFront;
 using Amazon.CDK.AWS.CloudFront.Origins;
-using Amazon.CDK.AWS.ECS.Patterns;
 using Amazon.CDK.AWS.S3;
 using Amazon.CDK.AWS.S3.Deployment;
 using Aspire.Hosting.ApplicationModel;
@@ -23,9 +22,9 @@ internal class S3StaticWebsitePublishTarget(
     IStaticSiteBuilder siteBuilder,
     ILogger<S3StaticWebsitePublishTarget> logger) : AbstractAWSPublishTarget(logger)
 {
-    public override string PublishTargetName => "S3 Static Website";
+    public override string PublishTargetName => "S3 with CloudFront";
 
-    public override Type PublishTargetAnnotation => typeof(PublishS3StaticWebsiteAnnotation);
+    public override Type PublishTargetAnnotation => typeof(PublishS3WithCloudFrontAnnotation);
 
     public override async Task GenerateConstructAsync(
         AWSCDKEnvironmentResource environment,
@@ -33,17 +32,16 @@ internal class S3StaticWebsitePublishTarget(
         IAWSPublishTargetAnnotation annotation,
         CancellationToken cancellationToken)
     {
-        var publishAnnotation = annotation as PublishS3StaticWebsiteAnnotation
-            ?? throw new InvalidOperationException($"Annotation for resource '{resource.Name}' is not a valid {nameof(PublishS3StaticWebsiteAnnotation)}.");
+        var publishAnnotation = annotation as PublishS3WithCloudFrontAnnotation
+            ?? throw new InvalidOperationException($"Annotation for resource '{resource.Name}' is not a valid {nameof(PublishS3WithCloudFrontAnnotation)}.");
 
         var config = publishAnnotation.Config;
 
         var workingDirectory = publishAnnotation.WorkingDirectory
             ?? throw new InvalidOperationException(
                 $"Resource '{resource.Name}' is missing a working directory. " +
-                $"Ensure PublishAsS3StaticWebsite() is called on a JavaScript resource.");
+                $"Ensure PublishAsS3WithCloudFront() is called on a JavaScript resource.");
 
-        // Collect environment variables from Aspire references so they are available during npm build
         var connectionPoints = new StaticSiteConnectionPoints();
         ProcessRelationShips(connectionPoints, resource, environment);
         var buildEnvVars = connectionPoints.EnvironmentVariables ?? new Dictionary<string, string>();
@@ -51,147 +49,101 @@ internal class S3StaticWebsitePublishTarget(
         await siteBuilder.BuildAsync(resource, workingDirectory, buildEnvVars, cancellationToken);
 
         var buildOutputPath = Path.GetFullPath(Path.Combine(workingDirectory, config.OutputPath));
-
         var context = CreatePublishTargetContext(environment);
 
         // --- S3 Bucket ---
-        var bucketProps = config.WithCloudFront
-            ? new BucketProps
-            {
-                // Private bucket — CloudFront accesses via OAC
-                BlockPublicAccess = BlockPublicAccess.BLOCK_ALL,
-                EnforceSSL = true,
-            }
-            : new BucketProps
-            {
-                // Public S3 website hosting
-                WebsiteIndexDocument = "index.html",
-                WebsiteErrorDocument = "index.html",
-                PublicReadAccess = true,
-                BlockPublicAccess = BlockPublicAccess.BLOCK_ACLS_ONLY,
-            };
-
+        var bucketProps = new BucketProps();
         config.PropsBucketCallback?.Invoke(context, bucketProps);
+        environment.DefaultsProvider.ApplyS3WithCloudFrontBucketDefaults(bucketProps);
 
         var bucket = new Bucket(environment.CDKStack, $"Project-{resource.Name}-Bucket", bucketProps);
         config.ConstructBucketCallback?.Invoke(context, bucket);
 
-        // --- CloudFront distribution (optional) ---
-        Distribution? distribution = null;
-        if (config.WithCloudFront)
+        // --- CloudFront distribution ---
+        var behaviorOptions = new BehaviorOptions
         {
-            var distributionProps = new DistributionProps
+            Origin = S3BucketOrigin.WithOriginAccessControl(bucket),
+        };
+
+        var distributionProps = new DistributionProps
+        {
+            DefaultBehavior = behaviorOptions,
+        };
+
+        // Attach backend behaviors declared via WithCloudFrontBackendBehavior
+        var backendBehaviorAnnotations = resource.Annotations.OfType<CloudFrontBehaviorAnnotation>().ToList();
+        if (backendBehaviorAnnotations.Count > 0)
+        {
+            var additionalBehaviors = new Dictionary<string, IBehaviorOptions>();
+            foreach (var behaviorAnnotation in backendBehaviorAnnotations)
             {
-                DefaultBehavior = new BehaviorOptions
+                if (!behaviorAnnotation.BackendResource.TryGetLastAnnotation<AWSLinkedObjectsAnnotation>(out var linkedAnnotation))
+                    throw new InvalidOperationException(
+                        $"Backend resource '{behaviorAnnotation.BackendResource.Name}' has not been published yet. " +
+                        $"Ensure it is defined before the static website resource in your AppHost.");
+
+                var originHostname = ResolveBackendHostname(linkedAnnotation, behaviorAnnotation.BackendResource.Name);
+
+                var behavior = new BehaviorOptions
                 {
-                    Origin = S3BucketOrigin.WithOriginAccessControl(bucket),
-                    ViewerProtocolPolicy = ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-                    CachePolicy = CachePolicy.CACHING_OPTIMIZED,
-                },
-                DefaultRootObject = "index.html",
-                // SPA routing: map 403 and 404 back to index.html so client-side routes resolve
-                ErrorResponses =
-                [
-                    new ErrorResponse
+                    Origin = new HttpOrigin(originHostname, new HttpOriginProps
                     {
-                        HttpStatus = 403,
-                        ResponseHttpStatus = 200,
-                        ResponsePagePath = "/index.html",
-                    },
-                    new ErrorResponse
-                    {
-                        HttpStatus = 404,
-                        ResponseHttpStatus = 200,
-                        ResponsePagePath = "/index.html",
-                    },
-                ],
-            };
+                        ProtocolPolicy = OriginProtocolPolicy.HTTP_ONLY,
+                    }),
+                };
+                environment.DefaultsProvider.ApplyS3WithCloudFrontBackendBehaviorDefaults(behavior);
 
-            if (config.BackendBehaviors.Count > 0)
-            {
-                var additionalBehaviors = new Dictionary<string, IBehaviorOptions>();
-                foreach (var backendBehavior in config.BackendBehaviors)
+                additionalBehaviors[behaviorAnnotation.PathPattern] = behavior;
+
+                // CloudFront's "/foo/*" matches "/foo/bar" but NOT "/foo".
+                // Register the bare path as a separate exact-match behavior.
+                if (behaviorAnnotation.PathPattern.EndsWith("/*"))
                 {
-                    if (!backendBehavior.BackendResource.TryGetLastAnnotation<AWSLinkedObjectsAnnotation>(out var linkedAnnotation))
-                        throw new InvalidOperationException(
-                            $"Backend resource '{backendBehavior.BackendResource.Name}' has not been published yet. " +
-                            $"Ensure it is defined before the static website resource in your AppHost.");
-
-                    string albDns;
-                    if (linkedAnnotation.Construct is ApplicationLoadBalancedFargateService albService)
-                        albDns = Token.AsString(albService.LoadBalancer.LoadBalancerDnsName);
-                    else
-                        throw new InvalidOperationException(
-                            $"Backend resource '{backendBehavior.BackendResource.Name}' (construct: {linkedAnnotation.Construct.GetType().Name}) " +
-                            $"is not supported as a CloudFront backend behavior origin. Only ECS Fargate with ALB is currently supported.");
-
-                    var behavior = new BehaviorOptions
-                    {
-                        Origin = new HttpOrigin(albDns, new HttpOriginProps
-                        {
-                            ProtocolPolicy = OriginProtocolPolicy.HTTP_ONLY,
-                        }),
-                        AllowedMethods = AllowedMethods.ALLOW_ALL,
-                        CachePolicy = CachePolicy.CACHING_DISABLED,
-                        OriginRequestPolicy = OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
-                        ViewerProtocolPolicy = ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-                    };
-
-                    additionalBehaviors[backendBehavior.PathPattern] = behavior;
-
-                    // CloudFront's "/foo/*" pattern matches "/foo/bar" and "/foo/" but NOT "/foo".
-                    // Register the bare path as a separate exact-match behavior so requests without
-                    // a trailing slash also reach the backend instead of falling through to S3.
-                    if (backendBehavior.PathPattern.EndsWith("/*"))
-                    {
-                        var basePath = backendBehavior.PathPattern[..^2]; // strip trailing "/*"
-                        if (!additionalBehaviors.ContainsKey(basePath))
-                            additionalBehaviors[basePath] = behavior;
-                    }
+                    var basePath = behaviorAnnotation.PathPattern[..^2];
+                    additionalBehaviors.TryAdd(basePath, behavior);
                 }
-                distributionProps.AdditionalBehaviors = additionalBehaviors;
             }
-
-            config.PropsDistributionCallback?.Invoke(context, distributionProps);
-
-            distribution = new Distribution(environment.CDKStack, $"Project-{resource.Name}-Distribution", distributionProps);
-            config.ConstructDistributionCallback?.Invoke(context, distribution);
-
-            new CfnOutput(environment.CDKStack, $"{resource.Name}-CloudFrontUrl", new CfnOutputProps
-            {
-                Value = $"https://{distribution.DomainName}",
-            });
+            distributionProps.AdditionalBehaviors = additionalBehaviors;
         }
-        else
+
+        config.PropsDistributionCallback?.Invoke(context, distributionProps);
+        environment.DefaultsProvider.ApplyS3WithCloudFrontDistributionDefaults(distributionProps);
+
+        var distribution = new Distribution(environment.CDKStack, $"Project-{resource.Name}-Distribution", distributionProps);
+        config.ConstructDistributionCallback?.Invoke(context, distribution);
+
+        new CfnOutput(environment.CDKStack, $"{resource.Name}-CloudFrontUrl", new CfnOutputProps
         {
-            new CfnOutput(environment.CDKStack, $"{resource.Name}-S3WebsiteUrl", new CfnOutputProps
-            {
-                Value = bucket.BucketWebsiteUrl,
-            });
-        }
+            Value = $"https://{distribution.DomainName}",
+        });
 
         // --- Bucket deployment ---
         var deploymentProps = new BucketDeploymentProps
         {
             Sources = [Source.Asset(buildOutputPath)],
             DestinationBucket = bucket,
+            Distribution = distribution,
+            DistributionPaths = ["/*"],
         };
-
-        if (distribution != null)
-        {
-            // Invalidate CloudFront cache on every deployment
-            deploymentProps.Distribution = distribution;
-            deploymentProps.DistributionPaths = ["/*"];
-        }
-
         config.PropsBucketDeploymentCallback?.Invoke(context, deploymentProps);
         new BucketDeployment(environment.CDKStack, $"Project-{resource.Name}-Deployment", deploymentProps);
 
-        ApplyAWSLinkedObjectsAnnotation(environment, resource, distribution ?? (Constructs.Construct)bucket, this);
+        ApplyAWSLinkedObjectsAnnotation(environment, resource, distribution, this);
     }
 
     public override ReferenceConnectionInfo GetReferenceConnectionInfo(AWSLinkedObjectsAnnotation linkedAnnotation)
-        => new();
+    {
+        var result = new ReferenceConnectionInfo();
+        if (linkedAnnotation.Construct is not Distribution distribution)
+            return result;
+
+        result.EnvironmentVariables = new Dictionary<string, string>
+        {
+            [$"services__{linkedAnnotation.Resource.Name}__https__0"] =
+                Fn.Join("", ["https://", distribution.DomainName, "/"]),
+        };
+        return result;
+    }
 
     public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
     {
@@ -200,12 +152,42 @@ internal class S3StaticWebsitePublishTarget(
             return new IsDefaultPublishTargetMatchResult
             {
                 IsMatch = true,
-                PublishTargetAnnotation = new PublishS3StaticWebsiteAnnotation { WorkingDirectory = jsResource.WorkingDirectory },
+                PublishTargetAnnotation = new PublishS3WithCloudFrontAnnotation { WorkingDirectory = jsResource.WorkingDirectory },
                 Rank = IsDefaultPublishTargetMatchResult.DEFAULT_MATCH_RANK,
             };
         }
 
         return IsDefaultPublishTargetMatchResult.NO_MATCH;
+    }
+
+    /// <summary>
+    /// Resolves the backend origin hostname by calling <see cref="IAWSPublishTarget.GetReferenceConnectionInfo"/>
+    /// on the linked resource and extracting the host from the returned service-discovery URL. Supports any
+    /// publish target that exposes <c>services__{name}__https__0</c> or <c>services__{name}__http__0</c>.
+    /// </summary>
+    private static string ResolveBackendHostname(AWSLinkedObjectsAnnotation linkedAnnotation, string resourceName)
+    {
+        var connectionInfo = linkedAnnotation.PublishTarget.GetReferenceConnectionInfo(linkedAnnotation);
+        var envVars = connectionInfo.EnvironmentVariables ?? new Dictionary<string, string>();
+
+        envVars.TryGetValue($"services__{resourceName}__https__0", out var httpsUrl);
+        envVars.TryGetValue($"services__{resourceName}__http__0", out var httpUrl);
+        string? originUrl = httpsUrl ?? httpUrl;
+
+        if (originUrl == null)
+            throw new InvalidOperationException(
+                $"Backend resource '{resourceName}' (construct: {linkedAnnotation.Construct.GetType().Name}) " +
+                $"is not supported as a CloudFront backend behavior origin. The publish target must expose " +
+                $"'services__{resourceName}__https__0' or 'services__{resourceName}__http__0' via GetReferenceConnectionInfo.");
+
+        // The URL is a CDK token string such as "https://HOST/" or "http://HOST:PORT/".
+        // Use CloudFormation intrinsic functions to extract just the hostname at deploy time.
+        // Step 1: strip scheme   → "HOST/" or "HOST:PORT/"
+        var withoutScheme = Fn.Select(1, Fn.Split("//", originUrl));
+        // Step 2: strip port     → "HOST/" (handles both with-port and without-port)
+        var withoutPort = Fn.Select(0, Fn.Split(":", withoutScheme));
+        // Step 3: strip trailing slash
+        return Fn.Select(0, Fn.Split("/", withoutPort));
     }
 }
 

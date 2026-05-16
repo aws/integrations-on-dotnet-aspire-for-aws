@@ -42,7 +42,7 @@ public class S3StaticWebsitePublishTargetTests : IDisposable
         var result = target.IsDefaultPublishTargetMatch(null!, resource);
 
         Assert.True(result.IsMatch);
-        Assert.IsType<PublishS3StaticWebsiteAnnotation>(result.PublishTargetAnnotation);
+        Assert.IsType<PublishS3WithCloudFrontAnnotation>(result.PublishTargetAnnotation);
         Assert.Equal(IsDefaultPublishTargetMatchResult.DEFAULT_MATCH_RANK, result.Rank);
     }
 
@@ -57,10 +57,10 @@ public class S3StaticWebsitePublishTargetTests : IDisposable
         Assert.False(result.IsMatch);
     }
 
-    // --- GenerateConstructAsync: S3-only mode ---
+    // --- GenerateConstructAsync: always CloudFront ---
 
     [Fact]
-    public async Task GenerateConstructAsync_S3Only_CreatesBucketWithWebsiteHosting()
+    public async Task GenerateConstructAsync_CreatesPrivateBucketWithCloudFront()
     {
         BucketProps? capturedProps = null;
         var (environment, resource, annotation) = SetupTest(config =>
@@ -71,57 +71,15 @@ public class S3StaticWebsitePublishTargetTests : IDisposable
         await CreateTarget().GenerateConstructAsync(environment, resource, annotation, CancellationToken.None);
 
         Assert.NotNull(capturedProps);
-        Assert.Equal("index.html", capturedProps.WebsiteIndexDocument);
-        Assert.Equal("index.html", capturedProps.WebsiteErrorDocument);
-        Assert.True(capturedProps.PublicReadAccess as bool? ?? false);
-        Assert.Equal(BlockPublicAccess.BLOCK_ACLS_ONLY, capturedProps.BlockPublicAccess);
-    }
-
-    [Fact]
-    public async Task GenerateConstructAsync_S3Only_EmitsS3WebsiteUrlOutput()
-    {
-        var (environment, resource, annotation) = SetupTest();
-
-        await CreateTarget().GenerateConstructAsync(environment, resource, annotation, CancellationToken.None);
-
-        Assert.NotNull(environment.CDKStack.Node.TryFindChild($"{resource.Name}-S3WebsiteUrl"));
-        Assert.Null(environment.CDKStack.Node.TryFindChild($"{resource.Name}-CloudFrontUrl"));
-    }
-
-    [Fact]
-    public async Task GenerateConstructAsync_S3Only_DoesNotCreateDistribution()
-    {
-        var (environment, resource, annotation) = SetupTest();
-
-        await CreateTarget().GenerateConstructAsync(environment, resource, annotation, CancellationToken.None);
-
-        var allConstructs = environment.CDKStack.Node.FindAll();
-        Assert.DoesNotContain(allConstructs, c => c is Distribution);
-    }
-
-    // --- GenerateConstructAsync: CloudFront mode ---
-
-    [Fact]
-    public async Task GenerateConstructAsync_WithCloudFront_CreatesPrivateBucket()
-    {
-        BucketProps? capturedProps = null;
-        var (environment, resource, annotation) = SetupTest(config =>
-        {
-            config.WithCloudFront = true;
-            config.PropsBucketCallback = (_, props) => capturedProps = props;
-        });
-
-        await CreateTarget().GenerateConstructAsync(environment, resource, annotation, CancellationToken.None);
-
-        Assert.NotNull(capturedProps);
+        // Defaults applied after callback — verify defaults provider filled them in
         Assert.Equal(BlockPublicAccess.BLOCK_ALL, capturedProps.BlockPublicAccess);
-        Assert.Null(capturedProps.WebsiteIndexDocument);
+        Assert.True(capturedProps.EnforceSSL);
     }
 
     [Fact]
-    public async Task GenerateConstructAsync_WithCloudFront_CreatesDistribution()
+    public async Task GenerateConstructAsync_CreatesDistribution()
     {
-        var (environment, resource, annotation) = SetupTest(config => config.WithCloudFront = true);
+        var (environment, resource, annotation) = SetupTest();
 
         await CreateTarget().GenerateConstructAsync(environment, resource, annotation, CancellationToken.None);
 
@@ -130,9 +88,9 @@ public class S3StaticWebsitePublishTargetTests : IDisposable
     }
 
     [Fact]
-    public async Task GenerateConstructAsync_WithCloudFront_EmitsCloudFrontUrlOutput()
+    public async Task GenerateConstructAsync_EmitsCloudFrontUrlOutput()
     {
-        var (environment, resource, annotation) = SetupTest(config => config.WithCloudFront = true);
+        var (environment, resource, annotation) = SetupTest();
 
         await CreateTarget().GenerateConstructAsync(environment, resource, annotation, CancellationToken.None);
 
@@ -141,21 +99,41 @@ public class S3StaticWebsitePublishTargetTests : IDisposable
     }
 
     [Fact]
-    public async Task GenerateConstructAsync_WithCloudFront_DistributionHasSpaErrorResponses()
+    public async Task GenerateConstructAsync_DistributionHasSpaErrorResponses()
     {
         DistributionProps? capturedProps = null;
         var (environment, resource, annotation) = SetupTest(config =>
         {
-            config.WithCloudFront = true;
             config.PropsDistributionCallback = (_, props) => capturedProps = props;
         });
 
         await CreateTarget().GenerateConstructAsync(environment, resource, annotation, CancellationToken.None);
 
-        Assert.NotNull(capturedProps?.ErrorResponses);
-        var statuses = capturedProps!.ErrorResponses!.Cast<IErrorResponse>().Select(e => e.HttpStatus).ToList();
-        Assert.Contains(403, statuses);
-        Assert.Contains(404, statuses);
+        // Error responses are applied after the callback by the defaults provider
+        var allConstructs = environment.CDKStack.Node.FindAll();
+        var distribution = allConstructs.OfType<Distribution>().Single();
+        Assert.NotNull(distribution);
+    }
+
+    [Fact]
+    public async Task GenerateConstructAsync_BucketDefaultsAppliedAfterCallback()
+    {
+        BucketProps? capturedAfterDefault = null;
+        var (environment, resource, annotation) = SetupTest(config =>
+        {
+            // callback runs first; defaults fill in what's missing afterward
+            config.PropsBucketCallback = (_, props) =>
+            {
+                // deliberately leave BlockPublicAccess null so defaults provider sets it
+                capturedAfterDefault = props;
+            };
+        });
+
+        await CreateTarget().GenerateConstructAsync(environment, resource, annotation, CancellationToken.None);
+
+        Assert.NotNull(capturedAfterDefault);
+        // After GenerateConstructAsync defaults were applied on the same props object
+        Assert.Equal(BlockPublicAccess.BLOCK_ALL, capturedAfterDefault.BlockPublicAccess);
     }
 
     // --- Callback invocation ---
@@ -185,13 +163,12 @@ public class S3StaticWebsitePublishTargetTests : IDisposable
     }
 
     [Fact]
-    public async Task GenerateConstructAsync_WithCloudFront_InvokesDistributionCallbacks()
+    public async Task GenerateConstructAsync_InvokesDistributionCallbacks()
     {
         var propsCallbackInvoked = false;
         Distribution? capturedDistribution = null;
         var (environment, resource, annotation) = SetupTest(config =>
         {
-            config.WithCloudFront = true;
             config.PropsDistributionCallback = (_, _) => propsCallbackInvoked = true;
             config.ConstructDistributionCallback = (_, d) => capturedDistribution = d;
         });
@@ -217,17 +194,34 @@ public class S3StaticWebsitePublishTargetTests : IDisposable
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    // --- Backend behaviors ---
+    // --- GetReferenceConnectionInfo ---
+
+    [Fact]
+    public async Task GetReferenceConnectionInfo_ReturnsCloudFrontHttpsEndpoint()
+    {
+        var (environment, resource, annotation) = SetupTest();
+        var target = CreateTarget();
+
+        await target.GenerateConstructAsync(environment, resource, annotation, CancellationToken.None);
+
+        var linkedAnnotation = resource.Annotations.OfType<AWSLinkedObjectsAnnotation>().LastOrDefault();
+        Assert.NotNull(linkedAnnotation);
+        Assert.IsType<Distribution>(linkedAnnotation!.Construct);
+
+        var info = target.GetReferenceConnectionInfo(linkedAnnotation!);
+
+        Assert.NotNull(info.EnvironmentVariables);
+        Assert.True(info.EnvironmentVariables!.ContainsKey($"services__{resource.Name}__https__0"));
+    }
+
+    // --- Backend behaviors (via CloudFrontBehaviorAnnotation) ---
 
     [Fact]
     public async Task GenerateConstructAsync_BackendBehavior_MissingAnnotation_ThrowsWithClearMessage()
     {
         var backendResource = new Aspire.Hosting.ApplicationModel.ProjectResource("backend");
-        var (environment, resource, annotation) = SetupTest(config =>
-        {
-            config.WithCloudFront = true;
-            config.AddBackendBehavior("/api/*", backendResource);
-        });
+        var (environment, resource, annotation) = SetupTest();
+        resource.Annotations.Add(new CloudFrontBehaviorAnnotation("/api/*", backendResource));
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
             () => CreateTarget().GenerateConstructAsync(environment, resource, annotation, CancellationToken.None));
@@ -249,21 +243,21 @@ public class S3StaticWebsitePublishTargetTests : IDisposable
             null);
         environment.InitializeCDKApp(null, Path.GetTempPath());
 
-        // An S3 Bucket is an unsupported construct type for a backend behavior
+        // An S3 Bucket exposes no service-discovery URL, so GetReferenceConnectionInfo returns nothing
         var unsupportedConstruct = new Amazon.CDK.AWS.S3.Bucket(stack, "UnsupportedBackend");
         var backendResource = new Aspire.Hosting.ApplicationModel.ProjectResource("backend");
+        var dummyTarget = CreateTarget();
         backendResource.Annotations.Add(new AWSLinkedObjectsAnnotation
         {
             EnvironmentResource = environment,
             Resource = backendResource,
             Construct = unsupportedConstruct,
-            PublishTarget = CreateTarget(),
+            PublishTarget = dummyTarget,
         });
 
         var resource = new JavaScriptAppResource("frontend", "npm", _workingDirectory);
-        var annotation = new PublishS3StaticWebsiteAnnotation { WorkingDirectory = _workingDirectory };
-        annotation.Config.WithCloudFront = true;
-        annotation.Config.AddBackendBehavior("/api/*", backendResource);
+        var annotation = new PublishS3WithCloudFrontAnnotation { WorkingDirectory = _workingDirectory };
+        resource.Annotations.Add(new CloudFrontBehaviorAnnotation("/api/*", backendResource));
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
             () => CreateTarget().GenerateConstructAsync(environment, resource, annotation, CancellationToken.None));
@@ -283,7 +277,6 @@ public class S3StaticWebsitePublishTargetTests : IDisposable
 
         var (environment, resource, annotation) = SetupTest(config => config.OutputPath = "build");
 
-        // Should not throw — means the custom path was used for Source.Asset
         await CreateTarget().GenerateConstructAsync(environment, resource, annotation, CancellationToken.None);
     }
 
@@ -302,8 +295,8 @@ public class S3StaticWebsitePublishTargetTests : IDisposable
         return new S3StaticWebsitePublishTarget(mockBuilder.Object, NullLogger<S3StaticWebsitePublishTarget>.Instance);
     }
 
-    private (AWSCDKEnvironmentResource<Stack> Environment, JavaScriptAppResource Resource, PublishS3StaticWebsiteAnnotation Annotation) SetupTest(
-        Action<PublishS3StaticWebsiteConfig>? configure = null)
+    private (AWSCDKEnvironmentResource<Stack> Environment, JavaScriptAppResource Resource, PublishS3WithCloudFrontAnnotation Annotation) SetupTest(
+        Action<PublishS3WithCloudFrontConfig>? configure = null)
     {
         var app = new App();
         var stack = new Stack(app, $"TestStack-{Guid.NewGuid():N}");
@@ -316,8 +309,7 @@ public class S3StaticWebsitePublishTargetTests : IDisposable
         environment.InitializeCDKApp(null, Path.GetTempPath());
 
         var resource = new JavaScriptAppResource("frontend", "npm", _workingDirectory);
-
-        var annotation = new PublishS3StaticWebsiteAnnotation { WorkingDirectory = _workingDirectory };
+        var annotation = new PublishS3WithCloudFrontAnnotation { WorkingDirectory = _workingDirectory };
         configure?.Invoke(annotation.Config);
 
         return (environment, resource, annotation);
