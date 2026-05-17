@@ -6,6 +6,7 @@
 using Amazon.CDK;
 using Amazon.CDK.AWS.CloudFront;
 using Amazon.CDK.AWS.S3;
+using Amazon.CDK.AWS.S3.Deployment;
 using Aspire.Hosting.AWS.Deployment;
 using Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
 using Aspire.Hosting.AWS.Deployment.Services;
@@ -109,10 +110,16 @@ public class S3StaticWebsitePublishTargetTests : IDisposable
 
         await CreateTarget().GenerateConstructAsync(environment, resource, annotation, CancellationToken.None);
 
-        // Error responses are applied after the callback by the defaults provider
-        var allConstructs = environment.CDKStack.Node.FindAll();
-        var distribution = allConstructs.OfType<Distribution>().Single();
-        Assert.NotNull(distribution);
+        // Error responses are applied after the callback by the defaults provider on the same props object
+        Assert.NotNull(capturedProps?.ErrorResponses);
+        var statuses = capturedProps!.ErrorResponses!.Select(e => (int)e.HttpStatus).ToHashSet();
+        Assert.Contains(403, statuses);
+        Assert.Contains(404, statuses);
+        Assert.All(capturedProps.ErrorResponses!, e =>
+        {
+            Assert.Equal(200, (int)e.ResponseHttpStatus!);
+            Assert.Equal("/index.html", e.ResponsePagePath);
+        });
     }
 
     [Fact]
@@ -271,13 +278,32 @@ public class S3StaticWebsitePublishTargetTests : IDisposable
     [Fact]
     public async Task GenerateConstructAsync_UsesCustomOutputPath()
     {
-        var customOutputDir = Path.Combine(_workingDirectory, "build");
+        // Use an isolated working directory that only contains "build/" — no "dist/".
+        // If the code ignores OutputPath and falls back to the default "dist", CDK's
+        // Source.Asset will throw because "dist/" doesn't exist, proving the path is used.
+        var isolatedDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var customOutputDir = Path.Combine(isolatedDir, "build");
         Directory.CreateDirectory(customOutputDir);
         File.WriteAllText(Path.Combine(customOutputDir, "index.html"), "<html/>");
 
-        var (environment, resource, annotation) = SetupTest(config => config.OutputPath = "build");
+        try
+        {
+            BucketDeploymentProps? capturedDeploymentProps = null;
+            var (environment, resource, annotation) = SetupTest(isolatedDir, config =>
+            {
+                config.OutputPath = "build";
+                config.PropsBucketDeploymentCallback = (_, props) => capturedDeploymentProps = props;
+            });
 
-        await CreateTarget().GenerateConstructAsync(environment, resource, annotation, CancellationToken.None);
+            await CreateTarget().GenerateConstructAsync(environment, resource, annotation, CancellationToken.None);
+
+            Assert.NotNull(capturedDeploymentProps);
+            Assert.Single(capturedDeploymentProps!.Sources);
+        }
+        finally
+        {
+            Directory.Delete(isolatedDir, recursive: true);
+        }
     }
 
     // --- Helpers ---
@@ -297,6 +323,11 @@ public class S3StaticWebsitePublishTargetTests : IDisposable
 
     private (AWSCDKEnvironmentResource<Stack> Environment, JavaScriptAppResource Resource, PublishS3WithCloudFrontAnnotation Annotation) SetupTest(
         Action<PublishS3WithCloudFrontConfig>? configure = null)
+        => SetupTest(_workingDirectory, configure);
+
+    private (AWSCDKEnvironmentResource<Stack> Environment, JavaScriptAppResource Resource, PublishS3WithCloudFrontAnnotation Annotation) SetupTest(
+        string workingDirectory,
+        Action<PublishS3WithCloudFrontConfig>? configure = null)
     {
         var app = new App();
         var stack = new Stack(app, $"TestStack-{Guid.NewGuid():N}");
@@ -308,8 +339,8 @@ public class S3StaticWebsitePublishTargetTests : IDisposable
             null);
         environment.InitializeCDKApp(null, Path.GetTempPath());
 
-        var resource = new JavaScriptAppResource("frontend", "npm", _workingDirectory);
-        var annotation = new PublishS3WithCloudFrontAnnotation { WorkingDirectory = _workingDirectory };
+        var resource = new JavaScriptAppResource("frontend", "npm", workingDirectory);
+        var annotation = new PublishS3WithCloudFrontAnnotation { WorkingDirectory = workingDirectory };
         configure?.Invoke(annotation.Config);
 
         return (environment, resource, annotation);

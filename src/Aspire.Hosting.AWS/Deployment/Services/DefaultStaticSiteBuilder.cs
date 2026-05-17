@@ -9,8 +9,9 @@ namespace Aspire.Hosting.AWS.Deployment.Services;
 
 internal class DefaultStaticSiteBuilder(IProcessCommandService processCommandService, ILogger<DefaultStaticSiteBuilder> logger) : IStaticSiteBuilder
 {
-    public async Task BuildAsync(IResource resource, string workingDirectory, IDictionary<string, string> environmentVariables, CancellationToken cancellationToken)
+    public Task BuildAsync(IResource resource, string workingDirectory, IDictionary<string, string> environmentVariables, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var executableName = "npm";
         var scriptCommand = "run";
         if (resource.TryGetLastAnnotation<JavaScriptPackageManagerAnnotation>(out var pkgManager))
@@ -42,6 +43,6 @@ internal class DefaultStaticSiteBuilder(IProcessCommandService processCommandSer
                 $"Command: {executableName} {arguments} in '{workingDirectory}'");
         }
 
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 }

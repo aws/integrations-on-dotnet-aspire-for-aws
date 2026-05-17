@@ -40,7 +40,7 @@ import { TodoService, Todo } from './todo.service';
               (change)="toggleComplete(todo)"
             />
             <span (dblclick)="startEdit(todo)">{{ todo.title }}</span>
-            <button class="delete" (click)="deleteTodo(todo.id)">✕</button>
+            <button class="delete" aria-label="Delete todo" (click)="deleteTodo(todo.id)">✕</button>
           }
         </li>
       }

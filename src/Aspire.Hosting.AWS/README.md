@@ -423,7 +423,7 @@ var frontend = builder.AddViteApp("frontend", "../frontend")
 builder.Build().Run();
 ```
 
-Before synthesizing CDK constructs, the publish target runs the application's build script (e.g. `npm run build`) and injects any environment variables from Aspire `WithReference()` connections (such as `VITE_*` variables) into the build process. No extra configuration is needed to pass backend URLs into your frontend build.
+Before synthesizing CDK constructs, the publish target runs the application's build script (e.g. `npm run build`) and injects any environment variables from Aspire `WithReference()` connections into the build process. Note that for AWS-published backends (e.g. ECS Fargate), the injected values are CloudFormation tokens resolved only at deploy time and are **not** usable as concrete URLs in a static build. For frontend-to-backend API calls, use relative paths (e.g. `/api/todos`) and route them through CloudFront with `WithCloudFrontBackendBehavior` instead.
 
 ##### Routing backend API paths through CloudFront
 

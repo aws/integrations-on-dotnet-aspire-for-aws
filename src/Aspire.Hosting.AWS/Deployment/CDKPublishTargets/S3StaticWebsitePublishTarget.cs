@@ -48,7 +48,16 @@ internal class S3StaticWebsitePublishTarget(
 
         await siteBuilder.BuildAsync(resource, workingDirectory, buildEnvVars, cancellationToken);
 
+        if (Path.IsPathRooted(config.OutputPath))
+            throw new InvalidOperationException(
+                $"OutputPath must be a relative path, but got: '{config.OutputPath}'.");
+
         var buildOutputPath = Path.GetFullPath(Path.Combine(workingDirectory, config.OutputPath));
+
+        var expectedRoot = workingDirectory.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        if (!buildOutputPath.StartsWith(expectedRoot, StringComparison.Ordinal))
+            throw new InvalidOperationException(
+                $"OutputPath '{config.OutputPath}' resolves to '{buildOutputPath}', which is outside the working directory '{workingDirectory}'.");
         var context = CreatePublishTargetContext(environment);
 
         // --- S3 Bucket ---
@@ -82,13 +91,13 @@ internal class S3StaticWebsitePublishTarget(
                         $"Backend resource '{behaviorAnnotation.BackendResource.Name}' has not been published yet. " +
                         $"Ensure it is defined before the static website resource in your AppHost.");
 
-                var originHostname = ResolveBackendHostname(linkedAnnotation, behaviorAnnotation.BackendResource.Name);
+                var (originHostname, protocolPolicy) = ResolveBackendHostname(linkedAnnotation, behaviorAnnotation.BackendResource.Name);
 
                 var behavior = new BehaviorOptions
                 {
                     Origin = new HttpOrigin(originHostname, new HttpOriginProps
                     {
-                        ProtocolPolicy = OriginProtocolPolicy.HTTP_ONLY,
+                        ProtocolPolicy = protocolPolicy,
                     }),
                 };
                 environment.DefaultsProvider.ApplyS3WithCloudFrontBackendBehaviorDefaults(behavior);
@@ -161,11 +170,20 @@ internal class S3StaticWebsitePublishTarget(
     }
 
     /// <summary>
-    /// Resolves the backend origin hostname by calling <see cref="IAWSPublishTarget.GetReferenceConnectionInfo"/>
+    /// Resolves the backend origin hostname and protocol by calling <see cref="IAWSPublishTarget.GetReferenceConnectionInfo"/>
     /// on the linked resource and extracting the host from the returned service-discovery URL. Supports any
     /// publish target that exposes <c>services__{name}__https__0</c> or <c>services__{name}__http__0</c>.
+    /// The protocol policy mirrors the scheme of the discovered URL.
     /// </summary>
-    private static string ResolveBackendHostname(AWSLinkedObjectsAnnotation linkedAnnotation, string resourceName)
+    /// <remarks>
+    /// Port handling: this method assumes the backend listens on the standard port for its scheme
+    /// (80 for HTTP, 443 for HTTPS). Any port embedded in the service-discovery URL is stripped
+    /// because the service-discovery values are CDK token strings at synthesis time — the port
+    /// cannot be extracted and converted to the numeric <see cref="HttpOriginProps.HttpPort"/> /
+    /// <see cref="HttpOriginProps.HttpsPort"/> CDK properties. If your backend uses a non-standard
+    /// port, customize the origin via <see cref="PublishS3WithCloudFrontConfig.PropsDistributionCallback"/>.
+    /// </remarks>
+    private static (string Hostname, OriginProtocolPolicy Protocol) ResolveBackendHostname(AWSLinkedObjectsAnnotation linkedAnnotation, string resourceName)
     {
         var connectionInfo = linkedAnnotation.PublishTarget.GetReferenceConnectionInfo(linkedAnnotation);
         var envVars = connectionInfo.EnvironmentVariables ?? new Dictionary<string, string>();
@@ -180,14 +198,18 @@ internal class S3StaticWebsitePublishTarget(
                 $"is not supported as a CloudFront backend behavior origin. The publish target must expose " +
                 $"'services__{resourceName}__https__0' or 'services__{resourceName}__http__0' via GetReferenceConnectionInfo.");
 
+        var protocolPolicy = httpsUrl != null ? OriginProtocolPolicy.HTTPS_ONLY : OriginProtocolPolicy.HTTP_ONLY;
+
         // The URL is a CDK token string such as "https://HOST/" or "http://HOST:PORT/".
         // Use CloudFormation intrinsic functions to extract just the hostname at deploy time.
         // Step 1: strip scheme   → "HOST/" or "HOST:PORT/"
         var withoutScheme = Fn.Select(1, Fn.Split("//", originUrl));
         // Step 2: strip port     → "HOST/" (handles both with-port and without-port)
+        // Note: the port value is intentionally discarded — see remarks on this method.
         var withoutPort = Fn.Select(0, Fn.Split(":", withoutScheme));
         // Step 3: strip trailing slash
-        return Fn.Select(0, Fn.Split("/", withoutPort));
+        var hostname = Fn.Select(0, Fn.Split("/", withoutPort));
+        return (hostname, protocolPolicy);
     }
 }
 
