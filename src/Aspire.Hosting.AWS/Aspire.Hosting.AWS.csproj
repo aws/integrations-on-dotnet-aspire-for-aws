@@ -18,6 +18,7 @@
     <PackageReference Include="AWSSDK.Core" />
     <PackageReference Include="AWSSDK.CloudFormation" />
     <PackageReference Include="AWSSDK.Lambda" />
+    <PackageReference Include="AWSSDK.S3" />
     <PackageReference Include="AWSSDK.SecurityToken" />	  
     <PackageReference Include="AWSSDK.SSO" />	  
     <PackageReference Include="AWSSDK.SSOOIDC" />	  
