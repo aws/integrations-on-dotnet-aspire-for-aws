@@ -49,6 +49,12 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
             ServiceName = projectResource.Name
         };
         publishAnnotation.Config.PropsCfnExpressGatewayServicePropsCallback?.Invoke(CreatePublishTargetContext(environment), fargateServiceProps);
+
+        // Track whether we will auto-configure the network (i.e. the caller hasn't supplied
+        // custom subnets). If so, we must add an explicit DependsOn on the VPC's internet
+        // connectivity after the service construct is created (see below).
+        var networkConfigWasNull = fargateServiceProps.NetworkConfiguration == null;
+
         environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(fargateServiceProps, publishAnnotation.Config);
 
         var referencePoints = new CfnExpressGatewayServicePropsConnectionPoints(
@@ -57,6 +63,19 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
         ProcessRelationShips(referencePoints, projectResource, environment);
 
         var fargateService = new CfnExpressGatewayService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
+
+        if (networkConfigWasNull)
+        {
+            // CloudFormation creates resources in parallel by default. Subnet IDs are passed
+            // to ECS Express as string tokens, which only creates an implicit dependency on
+            // the subnet *resources* — not on the IGW route entries that make those subnets
+            // "public". Without an explicit dependency, ECS Express may validate subnets
+            // before the IGW routes are ready, causing a "mixed subnet type" error.
+            // Adding a dependency on InternetConnectivityEstablished ensures all IGW routes
+            // exist before the ECS Express service is created.
+            fargateService.Node.AddDependency(environment.DefaultsProvider.GetDefaultVpc().InternetConnectivityEstablished);
+        }
+
         publishAnnotation.Config.ConstructCfnExpressGatewayServiceCallback?.Invoke(CreatePublishTargetContext(environment), fargateService);
         ApplyAWSLinkedObjectsAnnotation(environment, projectResource, fargateService, this);
 
