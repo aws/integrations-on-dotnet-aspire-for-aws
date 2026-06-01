@@ -3,6 +3,7 @@
 ### Aspire.Hosting.AWS (13.2.0)
 * Apply Aspire parameters to CloudFormation template parameters as part of deployment
 * Fix issue with CloudFormation template include Aspire value expressions
+* Add support for S3 assets when provisioning AWS app resources
 
 ## Release 2026-05-12
 
