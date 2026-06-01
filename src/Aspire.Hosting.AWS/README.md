@@ -362,6 +362,9 @@ var function = builder.AddAWSLambdaFunction<Projects.MyFunction>("function", "<l
 // Redis automatically deploys to ElastiCache
 var cache = builder.AddRedis("cache");
 
+// JavaScript apps (Vite, Node) automatically deploy as S3 static websites
+var frontend = builder.AddViteApp("frontend", "../frontend");
+
 builder.Build().Run();
 ```
 
@@ -390,6 +393,57 @@ builder.Build().Run();
 ```
 
 Each Publish method allows you to customize the AWS service configuration through callbacks that modify CDK construct properties. See the [Deployment Design Document](../../docs/deployment-design.md) for details on available Publish methods and customization options.
+
+#### Deploying JavaScript Apps as S3 + CloudFront
+
+JavaScript applications added with `AddViteApp`, `AddNpmApp`, or similar methods are deployed as a private S3 bucket behind a CloudFront distribution. Use `PublishAsS3WithCloudFront` to customize the deployment:
+
+```csharp
+// Add to opt-in to using the preview publish/deployment APIs.
+#pragma warning disable ASPIREAWSPUBLISHERS001
+#pragma warning disable ASPIREJAVASCRIPT001
+
+var builder = DistributedApplication.CreateBuilder(args);
+
+builder.AddAWSCDKEnvironment(
+    name: "MyApp",
+    cdkDefaultsProviderFactory: CDKDefaultsProviderFactory.Preview_V1
+);
+
+var backend = builder.AddProject<Projects.Backend>("backend")
+    .PublishAsECSFargateServiceWithALB();
+
+var frontend = builder.AddViteApp("frontend", "../frontend")
+    .WithReference(backend)
+    .PublishAsS3WithCloudFront(config =>
+    {
+        config.OutputPath = "dist/browser"; // Angular default; Vite default is "dist"
+    });
+
+builder.Build().Run();
+```
+
+Before synthesizing CDK constructs, the publish target runs the application's build script (e.g. `npm run build`) and injects any environment variables from Aspire `WithReference()` connections into the build process. Note that for AWS-published backends (e.g. ECS Fargate), the injected values are CloudFormation tokens resolved only at deploy time and are **not** usable as concrete URLs in a static build. For frontend-to-backend API calls, use relative paths (e.g. `/api/todos`) and route them through CloudFront with `WithCloudFrontBackendBehavior` instead.
+
+##### Routing backend API paths through CloudFront
+
+Requests that don't match any file in S3 fall back to `index.html` for SPA routing. This means any path your frontend app uses as an API prefix (e.g. `/api`, `/todos`) would also return `index.html` instead of reaching the backend.
+
+Use `WithCloudFrontBackendBehavior` to add a CloudFront path behavior that routes a path pattern directly to a backend origin, bypassing the S3 bucket and SPA fallback entirely:
+
+```csharp
+var backend = builder.AddProject<Projects.Backend>("backend")
+    .PublishAsECSFargateServiceWithALB();
+
+var frontend = builder.AddViteApp("frontend", "../frontend")
+    .WithReference(backend)                              // service discovery + env vars
+    .WithCloudFrontBackendBehavior("/todos/*", backend)  // CloudFront → backend
+    .PublishAsS3WithCloudFront();
+```
+
+CloudFront evaluates behaviors in order of specificity. Requests matching `/todos/*` are forwarded to the backend with all methods allowed and caching disabled; everything else is served from S3 with the normal SPA index-fallback. The bare path `/todos` (without a trailing slash) is automatically registered as a second exact-match behavior so it also reaches the backend rather than falling through to the SPA fallback.
+
+> **See it in action**: The [SPA & API playground](../../playground/SpaAndApi/README.md) demonstrates a full-stack Angular + .NET minimal API app deployed to S3 + CloudFront + ECS Fargate using this pattern.
 
 #### Connecting Resources
 

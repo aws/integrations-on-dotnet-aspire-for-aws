@@ -8,6 +8,7 @@ using Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
 using Aspire.Hosting.AWS.Deployment.Services;
 using Aspire.Hosting.AWS.Lambda;
 using Aspire.Hosting.AWS.Utils.Internal;
+using Aspire.Hosting.JavaScript;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Diagnostics.CodeAnalysis;
@@ -31,6 +32,7 @@ public static class AWSCDKEnvironmentExtensions
         builder.Services.TryAddSingleton<ITarballContainerImageBuilder, DefaultTarballContainerImageBuilder>();
         builder.Services.TryAddSingleton<IProcessCommandService, ProcessCommandService>();
         builder.Services.TryAddSingleton<ILambdaDeploymentPackager, DefaultLambdaDeploymentPackager>();
+        builder.Services.TryAddSingleton<IStaticSiteBuilder, DefaultStaticSiteBuilder>();
 
         builder.Services.AddTransient<IAWSPublishTarget, ECSFargateExpressServicePublishTarget>();
         builder.Services.AddTransient<IAWSPublishTarget, ECSFargateServicePublishTarget>();
@@ -38,6 +40,7 @@ public static class AWSCDKEnvironmentExtensions
         builder.Services.AddTransient<IAWSPublishTarget, ElastiCacheProvisionClusterPublishTarget>();
         builder.Services.AddTransient<IAWSPublishTarget, ElastiCacheServerlessClusterPublishTarget>();
         builder.Services.AddTransient<IAWSPublishTarget, LambdaFunctionPublishTarget>();
+        builder.Services.AddTransient<IAWSPublishTarget, S3StaticWebsitePublishTarget>();
     }
 
     /// <summary>
@@ -332,5 +335,88 @@ public static class AWSCDKEnvironmentExtensions
         builder.Resource.Annotations.Add(annotation);
 
         return builder;
-    }    
+    }
+
+    /// <summary>
+    /// Deploys the JavaScript application as a private S3 bucket fronted by a CloudFront distribution
+    /// for HTTPS and global CDN delivery.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The S3 bucket is kept private and accessed by CloudFront via Origin Access Control (OAC).
+    /// The CloudFront domain name is emitted as a CloudFormation output. SPA client-side routing is
+    /// supported: 403 and 404 responses from S3 are rewritten to <c>index.html</c> with HTTP 200.
+    /// </para>
+    /// <para>
+    /// Before synthesising CDK constructs, the publish target runs the application's build script (e.g.
+    /// <c>npm run build</c>) and passes any environment variables injected by Aspire references (such as
+    /// <c>VITE_*</c> variables) into the build process.
+    /// </para>
+    /// <para>
+    /// To route specific URL path patterns to backend services through CloudFront, call
+    /// <see cref="WithCloudFrontBackendBehavior{T,TBackend}"/> on the resource builder.
+    /// </para>
+    /// </remarks>
+    /// <typeparam name="T">The JavaScript resource type.</typeparam>
+    /// <param name="builder">The resource builder for the JavaScript application to configure.</param>
+    /// <param name="configure">Optional callback to configure <see cref="PublishS3WithCloudFrontConfig"/>.</param>
+    /// <returns>The same resource builder instance for chaining additional configuration.</returns>
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+    public static IResourceBuilder<T> PublishAsS3WithCloudFront<T>(
+        this IResourceBuilder<T> builder,
+        Action<PublishS3WithCloudFrontConfig>? configure = null)
+        where T : JavaScriptAppResource
+    {
+        var annotation = new PublishS3WithCloudFrontAnnotation
+        {
+            WorkingDirectory = builder.Resource.WorkingDirectory,
+        };
+        configure?.Invoke(annotation.Config);
+        builder.Resource.Annotations.Add(annotation);
+
+        // Aspire's pipeline validates that every "build-only container" (a Dockerfile-based resource
+        // with HasEntrypoint=false) is consumed by another resource. The AWS CDK publish target owns
+        // this resource at deploy time, so we mark it as having an entrypoint to satisfy the check —
+        // the same technique used by Aspire's own PublishAsStaticWebsite.
+        if (builder.Resource.TryGetLastAnnotation<DockerfileBuildAnnotation>(out var dockerAnnotation))
+            dockerAnnotation.HasEntrypoint = true;
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Records a CloudFront path-pattern routing rule that sends requests matching
+    /// <paramref name="pathPattern"/> to <paramref name="backendBuilder"/> instead of serving
+    /// them from S3.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Call <c>WithReference(backend)</c> in addition to this method if you also want Aspire
+    /// service-discovery to inject the backend URL into the JavaScript build as an environment
+    /// variable (e.g. <c>VITE_API_URL</c>).
+    /// </para>
+    /// <para>Requires <see cref="PublishAsS3WithCloudFront{T}"/> to be configured on this resource.</para>
+    /// </remarks>
+    /// <typeparam name="T">The JavaScript resource type.</typeparam>
+    /// <typeparam name="TBackend">The backend resource type.</typeparam>
+    /// <param name="builder">The resource builder for the JavaScript application.</param>
+    /// <param name="pathPattern">
+    /// The CloudFront path pattern, e.g. <c>/api/*</c>. A trailing <c>/*</c> automatically
+    /// registers the bare path (e.g. <c>/api</c>) as an additional exact-match behavior.
+    /// </param>
+    /// <param name="backendBuilder">
+    /// The backend Aspire resource. Must be published before this resource in your AppHost.
+    /// </param>
+    /// <returns>The same resource builder instance for chaining additional configuration.</returns>
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+    public static IResourceBuilder<T> WithCloudFrontBackendBehavior<T, TBackend>(
+        this IResourceBuilder<T> builder,
+        string pathPattern,
+        IResourceBuilder<TBackend> backendBuilder)
+        where T : JavaScriptAppResource
+        where TBackend : ApplicationModel.IResource
+    {
+        builder.Resource.Annotations.Add(new CloudFrontBehaviorAnnotation(pathPattern, backendBuilder.Resource));
+        return builder;
+    }
 }
