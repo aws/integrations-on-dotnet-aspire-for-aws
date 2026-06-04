@@ -114,3 +114,13 @@ public class DefaultECSExpressS3EndpointAttribute : Attribute
 {
 
 }
+
+/// <summary>
+/// Attribute applied on a property or field in the CDK deployment stack of type <see cref="Amazon.CDK.AWS.EC2.InterfaceVpcEndpoint"/>.
+/// This will be used as the default CloudWatch Logs interface VPC endpoint for ECS Express services, allowing the awslogs log driver to reach CloudWatch Logs via PrivateLink.
+/// </summary>
+[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
+public class DefaultECSExpressLogsEndpointAttribute : Attribute
+{
+
+}

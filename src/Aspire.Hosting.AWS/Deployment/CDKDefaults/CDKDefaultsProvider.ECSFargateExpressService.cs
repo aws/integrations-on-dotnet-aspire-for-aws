@@ -85,8 +85,8 @@ public partial class CDKDefaultsProvider
     }
 
     /// <summary>
-    /// Ensures VPC Interface Endpoints for ECR and a Gateway Endpoint for S3 exist so that ECS Express
-    /// tasks running in public subnets without a public IP can pull images via AWS PrivateLink.
+    /// Ensures VPC Interface Endpoints for ECR and CloudWatch Logs and a Gateway Endpoint for S3 exist so that ECS Express
+    /// tasks running in public subnets without a public IP can pull images and ship logs via AWS PrivateLink.
     /// </summary>
     /// <remarks>
     /// Only called when the defaults provider is also responsible for setting NetworkConfiguration,
@@ -98,5 +98,6 @@ public partial class CDKDefaultsProvider
         GetDefaultECSExpressEcrApiEndpoint();
         GetDefaultECSExpressEcrDkrEndpoint();
         GetDefaultECSExpressS3Endpoint();
+        GetDefaultECSExpressLogsEndpoint();
     }
 }

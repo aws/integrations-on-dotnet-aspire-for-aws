@@ -71,9 +71,14 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
             // the subnet *resources* — not on the IGW route entries that make those subnets
             // "public". Without an explicit dependency, ECS Express may validate subnets
             // before the IGW routes are ready, causing a "mixed subnet type" error.
-            // Adding a dependency on InternetConnectivityEstablished ensures all IGW routes
-            // exist before the ECS Express service is created.
-            fargateService.Node.AddDependency(environment.DefaultsProvider.GetDefaultVpc().InternetConnectivityEstablished);
+            // The VPC-level InternetConnectivityEstablished only resolves to the IGW attachment,
+            // not the per-subnet default routes, so depend on each public subnet's own
+            // InternetConnectivityEstablished — which represents its 0.0.0.0/0 -> IGW route —
+            // ensuring every public subnet's route exists before the ECS Express service is created.
+            foreach (var subnet in environment.DefaultsProvider.GetDefaultVpc().PublicSubnets)
+            {
+                fargateService.Node.AddDependency(subnet.InternetConnectivityEstablished);
+            }
         }
 
         publishAnnotation.Config.ConstructCfnExpressGatewayServiceCallback?.Invoke(CreatePublishTargetContext(environment), fargateService);

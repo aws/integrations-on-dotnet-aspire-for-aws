@@ -339,6 +339,39 @@ public partial class CDKDefaultsProvider
         });
     }
 
+    private InterfaceVpcEndpoint? _defaultECSExpressLogsEndpoint;
+    public InterfaceVpcEndpoint GetDefaultECSExpressLogsEndpoint()
+    {
+        if (_defaultECSExpressLogsEndpoint == null)
+        {
+            var definedDefault = FindDefaultConstructByAttribute<DefaultECSExpressLogsEndpointAttribute, InterfaceVpcEndpoint>();
+            if (definedDefault != null)
+            {
+                _defaultECSExpressLogsEndpoint = definedDefault;
+            }
+            else
+            {
+                _defaultECSExpressLogsEndpoint = CreateDefaultECSExpressLogsEndpoint();
+            }
+        }
+        return _defaultECSExpressLogsEndpoint;
+    }
+
+    protected virtual InterfaceVpcEndpoint CreateDefaultECSExpressLogsEndpoint()
+    {
+        var vpc = GetDefaultVpc();
+        var endpoint = new InterfaceVpcEndpoint(EnvironmentResource.CDKStack, "ECSExpressLogsEndpoint", new InterfaceVpcEndpointProps
+        {
+            Vpc = vpc,
+            Service = InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
+            PrivateDnsEnabled = true,
+            Subnets = GetECSExpressEndpointSubnetSelection(vpc),
+            Open = false
+        });
+        endpoint.Connections.AllowDefaultPortFrom(GetDefaultECSClusterSecurityGroup());
+        return endpoint;
+    }
+
     private static SubnetSelection GetECSExpressEndpointSubnetSelection(IVpc vpc)
     {
         if (vpc.PrivateSubnets.Length > 0)
