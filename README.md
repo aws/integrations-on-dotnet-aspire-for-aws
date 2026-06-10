@@ -19,6 +19,7 @@ The hosting package to include in Aspire AppHost projects for provisioning and c
 * Provisioning AWS resources with AWS Cloud Development Kit (CDK)
 * Local development with DynamoDB
 * Local development with AWS Lambda and API Gateway
+* Local development with AWS.AgentCore.Hosting and AWS.AgentCore.Testing (Experimental)
 * Aspire publish and deploy to AWS with CDK (Preview)
 
 Check out the package's [README](./src/Aspire.Hosting.AWS/README.md) for a deeper explanation of these features.
@@ -169,6 +170,67 @@ For advanced deployment scenarios and comprehensive implementation details, see 
 - **[Adding New Publish Targets](./docs/deployment-design.md#adding-new-publish-targets)**: Extend the deployment system to support additional AWS services or alternative deployment options
 
 The design document provides detailed examples and implementation guidance for these advanced use cases, enabling you to customize deployments for production workloads.
+
+## Local Development with AgentCore (Experimental)
+
+> **Note**: This feature requires `net10.0` and is behind the `ASPIREAWSAGENTCORE001` experimental flag.
+
+The AgentCore integration provides a local development experience for agents built with the `AWS.AgentCore.Hosting` package. All emulators run as embedded in-process Kestrel servers — no Docker or separate processes required.
+
+### Getting Started
+
+Add the `AWS.AgentCore.Hosting` package to your agent project and use the annotations or extension methods to define your agent. Then in your Aspire AppHost:
+
+```csharp
+#pragma warning disable ASPIREAWSAGENTCORE001
+
+var builder = DistributedApplication.CreateBuilder(args);
+
+// Register a non-streaming agent with short-term memory
+var agent = builder.AddAgentCoreRuntime<Projects.MyAgent>()
+    .WithInMemory();
+
+// Register a streaming agent
+builder.AddAgentCoreRuntime<Projects.MyStreamingAgent>()
+    .WithStreaming()
+    .WithInMemory();
+
+// Wire a consumer project — AWS_ENDPOINT_URL_BEDROCK_AGENTCORE is injected automatically
+builder.AddProject<Projects.MyChatUI>("ChatUI")
+    .WithReference(agent);
+
+builder.Build().Run();
+```
+
+### Features
+
+| Method | Description |
+|--------|-------------|
+| `AddAgentCoreRuntime<TProject>()` | Registers an agent with embedded runtime and chat emulators |
+| `.WithStreaming()` | Enables SSE streaming mode for the chat app |
+| `.WithInMemory()` | Adds a short-term memory emulator |
+| `.WithReference(agent)` | Injects the runtime emulator endpoint into a consumer project via `AWS_ENDPOINT_URL_BEDROCK_AGENTCORE` |
+
+### Options
+
+```csharp
+builder.AddAgentCoreRuntime<Projects.MyAgent>(
+    options: new AgentCoreLocalOptions
+    {
+        IncludeEmulatorLogs = true // Route emulator logs to the Aspire dashboard
+    });
+```
+
+### How It Works
+
+When the Aspire AppHost starts, each `AddAgentCoreRuntime` call:
+1. Starts an embedded **Runtime Emulator** that proxies invocations to your agent
+2. Starts an embedded **Chat App** for interactive testing from the Aspire dashboard
+3. Optionally starts a **Memory Emulator** for short-term memory
+
+The Aspire dashboard shows clickable URLs for each emulator alongside your agent resource.
+
+See the [playground/AgentCore](./playground/AgentCore) folder for a complete working example.
 
 ## Getting Help
 

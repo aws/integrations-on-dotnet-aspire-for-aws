@@ -2,6 +2,7 @@
   
   <PropertyGroup>
     <DefaultTargetFramework>net8.0</DefaultTargetFramework>
+    <AgentCoreTargetFramework>net10.0</AgentCoreTargetFramework>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>

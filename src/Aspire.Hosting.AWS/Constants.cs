@@ -55,4 +55,9 @@ internal static class Constants
     /// Diagnostic ID for Aspire publishing with AWS indicating the feature is experimental.
     /// </summary>
     internal const string ASPIREAWSPUBLISHERS001 = "ASPIREAWSPUBLISHERS001";
+
+    /// <summary>
+    /// Diagnostic ID for AgentCore local development extensions indicating the feature is experimental.
+    /// </summary>
+    internal const string ASPIREAWSAGENTCORE001 = "ASPIREAWSAGENTCORE001";
 }
