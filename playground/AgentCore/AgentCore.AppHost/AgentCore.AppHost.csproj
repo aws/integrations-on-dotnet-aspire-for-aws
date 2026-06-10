@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Sdk Name="Aspire.AppHost.Sdk" Version="$(AspireSdkVersion)"/>
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>$(AgentCoreTargetFramework)</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <IsAspireHost>true</IsAspireHost>
+        <NoWarn>$(NoWarn);ASPIREAWSAGENTCORE001</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Aspire.Hosting.AppHost" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" IsAspireProjectResource="false" />
+        <ProjectReference Include="..\AgentCore.Agent\AgentCore.Agent.csproj" />
+        <ProjectReference Include="..\AgentCore.StreamingAgent\AgentCore.StreamingAgent.csproj" />
+        <ProjectReference Include="..\AgentCore.ChatUI\AgentCore.ChatUI.csproj" />
+    </ItemGroup>
+
+</Project>

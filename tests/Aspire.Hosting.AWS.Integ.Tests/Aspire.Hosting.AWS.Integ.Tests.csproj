@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+		<TargetFrameworks>$(DefaultTargetFramework);$(AgentCoreTargetFramework)</TargetFrameworks>
 		<IsTestProject>true</IsTestProject>
-		<NoWarn>$(NoWarn);CS8002</NoWarn>
+		<NoWarn>$(NoWarn);CS8002;ASPIREAWSAGENTCORE001</NoWarn>
 		<OutputType>Exe</OutputType>
 		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 		<!-- AWS CDK packages are not signed -->
@@ -14,6 +14,7 @@
 		<ProjectReference Include="..\..\playground\CloudFormationProvisioning\AWS.AppHost\AWS.AppHost.csproj" />
 		<ProjectReference Include="..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" />
 		<ProjectReference Include="..\..\testapps\DeploymentTestApps\DeploymentTestApp.AppHost\DeploymentTestApp.AppHost.csproj" />
+		<ProjectReference Include="..\..\testapps\AgentCoreTestApps\AgentCoreTestApp.AppHost\AgentCoreTestApp.AppHost.csproj" Condition="'$(TargetFramework)' == '$(AgentCoreTargetFramework)'" />
 	</ItemGroup>
 
 	<ItemGroup>
