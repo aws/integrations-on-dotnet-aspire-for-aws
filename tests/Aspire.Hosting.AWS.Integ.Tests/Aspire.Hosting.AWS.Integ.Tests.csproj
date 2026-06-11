@@ -10,11 +10,19 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\playground\Lambda\Lambda.AppHost\Lambda.AppHost.csproj" />
-		<ProjectReference Include="..\..\playground\CloudFormationProvisioning\AWS.AppHost\AWS.AppHost.csproj" />
+		<ProjectReference Include="..\..\playground\Lambda\Lambda.AppHost\Lambda.AppHost.csproj" Condition="'$(TargetFramework)' == '$(DefaultTargetFramework)'" />
+		<ProjectReference Include="..\..\playground\CloudFormationProvisioning\AWS.AppHost\AWS.AppHost.csproj" Condition="'$(TargetFramework)' == '$(DefaultTargetFramework)'" />
 		<ProjectReference Include="..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" />
-		<ProjectReference Include="..\..\testapps\DeploymentTestApps\DeploymentTestApp.AppHost\DeploymentTestApp.AppHost.csproj" />
+		<ProjectReference Include="..\..\testapps\DeploymentTestApps\DeploymentTestApp.AppHost\DeploymentTestApp.AppHost.csproj" Condition="'$(TargetFramework)' == '$(DefaultTargetFramework)'" />
 		<ProjectReference Include="..\..\testapps\AgentCoreTestApps\AgentCoreTestApp.AppHost\AgentCoreTestApp.AppHost.csproj" Condition="'$(TargetFramework)' == '$(AgentCoreTargetFramework)'" />
+	</ItemGroup>
+
+	<!-- Exclude non-AgentCore tests from net10.0 build (CDK/JSII not compatible with net10.0) -->
+	<ItemGroup Condition="'$(TargetFramework)' == '$(AgentCoreTargetFramework)'">
+		<Compile Remove="Deployment\**" />
+		<Compile Remove="Lambda\**" />
+		<Compile Remove="PlaygroundE2ETests.cs" />
+		<Compile Remove="TestOutputLoggerProvider.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
