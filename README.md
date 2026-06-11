@@ -179,7 +179,13 @@ The AgentCore integration provides a local development experience for agents bui
 
 ### Getting Started
 
-Add the `AWS.AgentCore.Hosting` package to your agent project and use the annotations or extension methods to define your agent. Then in your Aspire AppHost:
+Add the `AWS.AgentCore.Hosting` package to your agent project:
+
+```bash
+dotnet add package AWS.AgentCore.Hosting
+```
+
+Use the annotations or extension methods to define your agent. Then in your Aspire AppHost, add a reference to `Aspire.Hosting.AWS` and configure your agents:
 
 ```csharp
 #pragma warning disable ASPIREAWSAGENTCORE001
