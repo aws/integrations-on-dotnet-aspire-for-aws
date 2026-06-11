@@ -1,11 +1,11 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
 // Non-streaming agent with memory
-var agent = builder.AddAgentCoreRuntime<Projects.AgentCoreTestApp_Agent>()
+var agent = builder.AddAgentCoreRuntime<Projects.AgentCoreTestApp_Agent>("AgentCoreTestApp-Agent")
     .WithInMemory();
 
 // Streaming agent
-builder.AddAgentCoreRuntime<Projects.AgentCoreTestApp_StreamingAgent>()
+builder.AddAgentCoreRuntime<Projects.AgentCoreTestApp_StreamingAgent>("AgentCoreTestApp-StreamingAgent")
     .WithStreaming()
     .WithInMemory();
 

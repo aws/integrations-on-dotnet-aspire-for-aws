@@ -30,12 +30,15 @@ internal class AgentCoreRuntimeAnnotation : IResourceAnnotation
             try
             {
                 await server.StopAsync();
+                await server.DisposeAsync();
             }
             catch
             {
                 // Best-effort shutdown
             }
         }
+
+        EmulatorServers.Clear();
     }
 }
 

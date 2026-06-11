@@ -37,16 +37,6 @@ public class AgentCoreResourceBuilderExtensionsTests
     }
 
     [Fact]
-    public void AddAgentCoreRuntime_UsesProjectTypeName_WhenNameIsNull()
-    {
-        var builder = DistributedApplication.CreateBuilder();
-
-        var agent = builder.AddAgentCoreRuntime<FakeAgent>();
-
-        Assert.Equal("FakeAgent", agent.Resource.Name);
-    }
-
-    [Fact]
     public void AddAgentCoreRuntime_UsesExplicitName()
     {
         var builder = DistributedApplication.CreateBuilder();
@@ -54,16 +44,6 @@ public class AgentCoreResourceBuilderExtensionsTests
         var agent = builder.AddAgentCoreRuntime<FakeAgent>("custom-name");
 
         Assert.Equal("custom-name", agent.Resource.Name);
-    }
-
-    [Fact]
-    public void AddAgentCoreRuntime_ReplacesUnderscoresWithDashes_InDefaultName()
-    {
-        var builder = DistributedApplication.CreateBuilder();
-
-        var agent = builder.AddAgentCoreRuntime<Fake_Agent_Name>();
-
-        Assert.Equal("Fake-Agent-Name", agent.Resource.Name);
     }
 
     [Fact]
@@ -112,16 +92,6 @@ public class AgentCoreResourceBuilderExtensionsTests
     }
 
     [Fact]
-    public void WithStreaming_ThrowsOnNonAgentCoreResource()
-    {
-        var builder = DistributedApplication.CreateBuilder();
-
-        var project = builder.AddProject<FakeAgent>("plain-project", o => o.ExcludeLaunchProfile = true);
-
-        Assert.Throws<InvalidOperationException>(() => project.WithStreaming());
-    }
-
-    [Fact]
     public void WithInMemory_SetsMemoryFlag()
     {
         var builder = DistributedApplication.CreateBuilder();
@@ -134,33 +104,6 @@ public class AgentCoreResourceBuilderExtensionsTests
             .Single();
 
         Assert.True(annotation.HasMemory);
-    }
-
-    [Fact]
-    public void WithInMemory_ThrowsOnNonAgentCoreResource()
-    {
-        var builder = DistributedApplication.CreateBuilder();
-
-        var project = builder.AddProject<FakeAgent>("plain-project", o => o.ExcludeLaunchProfile = true);
-
-        Assert.Throws<InvalidOperationException>(() => project.WithInMemory());
-    }
-
-    [Fact]
-    public void WithReference_FallsThroughToNativeServiceDiscovery_WhenNotAgentCore()
-    {
-        var builder = DistributedApplication.CreateBuilder();
-
-        var plainProject = builder.AddProject<FakeAgent>("plain-project", o => o.ExcludeLaunchProfile = true);
-        var consumer = builder.AddProject<FakeConsumer>("consumer", o => o.ExcludeLaunchProfile = true);
-
-        var result = consumer.WithReference(plainProject);
-
-        Assert.Same(consumer, result);
-        var refAnnotation = consumer.Resource.Annotations
-            .OfType<AgentCoreReferenceAnnotation>()
-            .SingleOrDefault();
-        Assert.Null(refAnnotation);
     }
 
     [Fact]

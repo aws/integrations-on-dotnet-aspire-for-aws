@@ -7,13 +7,13 @@ var builder = DistributedApplication.CreateBuilder(args);
 // Register a non-streaming agent with in-memory short-term memory.
 // AddAgentCoreRuntime starts embedded runtime + chat emulators — no Docker needed.
 var agent = builder.AddAgentCoreRuntime<Projects.AgentCore_Agent>(
-    options: new() { IncludeEmulatorLogs = true })
+    "AgentCore-Agent", new() { IncludeEmulatorLogs = true })
     .WithInMemory();
 
 // Register a streaming agent.
 // WithStreaming tells the chat app to use SSE streaming mode.
 builder.AddAgentCoreRuntime<Projects.AgentCore_StreamingAgent>(
-    options: new() { IncludeEmulatorLogs = true })
+    "AgentCore-StreamingAgent", new() { IncludeEmulatorLogs = true })
     .WithStreaming()
     .WithInMemory();
 
