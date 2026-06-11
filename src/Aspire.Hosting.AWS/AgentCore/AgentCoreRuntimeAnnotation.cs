@@ -27,15 +27,8 @@ internal class AgentCoreRuntimeAnnotation : IResourceAnnotation
     {
         foreach (var server in EmulatorServers)
         {
-            try
-            {
-                await server.StopAsync();
-                await server.DisposeAsync();
-            }
-            catch
-            {
-                // Best-effort shutdown
-            }
+            try { await server.StopAsync(); } catch { /* Best-effort shutdown */ }
+            try { await server.DisposeAsync(); } catch { /* Best-effort shutdown */ }
         }
 
         EmulatorServers.Clear();
