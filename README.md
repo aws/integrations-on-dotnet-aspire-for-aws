@@ -187,11 +187,11 @@ Add the `AWS.AgentCore.Hosting` package to your agent project and use the annota
 var builder = DistributedApplication.CreateBuilder(args);
 
 // Register a non-streaming agent with short-term memory
-var agent = builder.AddAgentCoreRuntime<Projects.MyAgent>()
+var agent = builder.AddAgentCoreRuntime<Projects.MyAgent>("my-agent")
     .WithInMemory();
 
 // Register a streaming agent
-builder.AddAgentCoreRuntime<Projects.MyStreamingAgent>()
+builder.AddAgentCoreRuntime<Projects.MyStreamingAgent>("my-streaming-agent")
     .WithStreaming()
     .WithInMemory();
 

@@ -17,5 +17,23 @@ public class AgentCoreLocalOptions
     /// Defaults to <c>false</c>.
     /// </summary>
     public bool IncludeEmulatorLogs { get; set; }
+
+    /// <summary>
+    /// Optional port for the Runtime Emulator endpoint.
+    /// When <c>null</c>, a port is dynamically assigned.
+    /// </summary>
+    public int? RuntimeEmulatorPort { get; set; }
+
+    /// <summary>
+    /// Optional port for the Chat App endpoint.
+    /// When <c>null</c>, a port is dynamically assigned.
+    /// </summary>
+    public int? ChatAppPort { get; set; }
+
+    /// <summary>
+    /// Optional port for the Memory Emulator endpoint.
+    /// When <c>null</c>, a port is dynamically assigned.
+    /// </summary>
+    public int? MemoryEmulatorPort { get; set; }
 }
 #endif
