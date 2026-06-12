@@ -485,7 +485,7 @@ public class ApplyDefaultsTests
 
         // Verify defaults match expected values
         Assert.Equal(512, props.MemorySize);
-        Assert.Equal(Runtime.DOTNET_8, props.Runtime);
+        Assert.Equal(Runtime.DOTNET_10, props.Runtime);
     }
 
     [Fact]
