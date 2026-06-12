@@ -12,6 +12,7 @@
 *.DS_Store
 
 playground/**/launchSettings.json
+!playground/AgentCore/AgentCore.AppHost/Properties/launchSettings.json
 **/.aspire/**
 
 # User-specific files (MonoDevelop/Xamarin Studio)

@@ -1,8 +1,7 @@
 <Project>
   
   <PropertyGroup>
-    <DefaultTargetFramework>net8.0</DefaultTargetFramework>
-    <AgentCoreTargetFramework>net10.0</AgentCoreTargetFramework>
+    <DefaultTargetFramework>net10.0</DefaultTargetFramework>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>

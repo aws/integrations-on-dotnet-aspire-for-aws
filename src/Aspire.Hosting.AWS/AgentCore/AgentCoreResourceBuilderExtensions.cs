@@ -21,7 +21,7 @@ public static class AgentCoreResourceBuilderExtensions
 {
     /// <summary>
     /// Registers an AgentCore agent with a dedicated runtime emulator and chat app.
-    /// Returns the agent's <see cref="IResourceBuilder{AgentCoreRuntimeResource}"/>.
+    /// Returns the agent's <see cref="IResourceBuilder{ProjectResource}"/>.
     /// Use <c>.WithReference(agent)</c> from another project to inject the runtime
     /// emulator endpoint as the <c>AWS_ENDPOINT_URL_BEDROCK_AGENTCORE</c> environment variable.
     /// </summary>
@@ -30,7 +30,7 @@ public static class AgentCoreResourceBuilderExtensions
     /// <param name="name">The name of the resource.</param>
     /// <param name="options">Optional configuration for the local development experience.</param>
     /// <returns>The agent's resource builder for further configuration.</returns>
-    public static IResourceBuilder<AgentCoreRuntimeResource> AddAgentCoreRuntime<TProject>(
+    public static IResourceBuilder<ProjectResource> AddAgentCoreRuntime<TProject>(
         this IDistributedApplicationBuilder builder,
         [ResourceName] string name,
         AgentCoreLocalOptions? options = null)
@@ -43,22 +43,9 @@ public static class AgentCoreResourceBuilderExtensions
 
         var projectName = name;
 
-        var project = new AgentCoreRuntimeResource(projectName);
-        var agentApp = builder.AddResource(project)
-            .WithAnnotation(new TProject())
+        var agentApp = builder.AddProject<TProject>(projectName, o => o.ExcludeLaunchProfile = true)
             .WithHttpEndpoint(name: "http")
-            .WithEnvironment("AWS_AGENTCORE_ASPIRE_MANAGED", "true")
-            .WithEnvironment(context =>
-            {
-                if (context.EnvironmentVariables.ContainsKey("ASPNETCORE_URLS"))
-                {
-                    return;
-                }
-
-                var httpEndpoint = project.GetEndpoint("http");
-                context.EnvironmentVariables["ASPNETCORE_URLS"] = ReferenceExpression.Create(
-                    $"http://localhost:{httpEndpoint.Property(EndpointProperty.TargetPort)}");
-            });
+            .WithEnvironment("AWS_AGENTCORE_ASPIRE_MANAGED", "true");
 
         // Suppress default endpoint URLs — we add our own with display names
         agentApp.WithUrls(context =>
@@ -72,12 +59,12 @@ public static class AgentCoreResourceBuilderExtensions
 
         var annotation = new AgentCoreRuntimeAnnotation
         {
-            IncludeEmulatorLogs = options.IncludeEmulatorLogs
+            IncludeEmulatorLogs = options.IncludeEmulatorLogs,
+            RuntimeEmulatorPort = options.RuntimeEmulatorPort ?? 0,
+            ChatAppPort = options.ChatAppPort ?? 0,
+            MemoryEmulatorPort = options.MemoryEmulatorPort ?? 0
         };
         agentApp.Resource.Annotations.Add(annotation);
-
-        var runtimeEmulatorPort = options.RuntimeEmulatorPort ?? 0;
-        var chatAppPort = options.ChatAppPort ?? 0;
 
         // Start emulators before the agent resource starts.
         // This guarantees ports are known before env var callbacks fire.
@@ -105,15 +92,15 @@ public static class AgentCoreResourceBuilderExtensions
                     }
 
                     // Start runtime emulator (port 0 = OS-assigned)
-                    var runtimeApp = RuntimeEmulatorServer.Create(agentEndpointUrl, port: runtimeEmulatorPort, loggerProvider: loggerProvider);
+                    var runtimeApp = RuntimeEmulatorServer.Create(agentEndpointUrl, port: annotation.RuntimeEmulatorPort, loggerProvider: loggerProvider);
                     await runtimeApp.StartAsync(ct);
                     annotation.EmulatorServers.Add(runtimeApp);
-                    annotation.RuntimePort = GetBoundPort(runtimeApp);
+                    annotation.RuntimeEmulatorPort = GetBoundPort(runtimeApp);
 
-                    var runtimeUrl = $"http://localhost:{annotation.RuntimePort}";
+                    var runtimeUrl = $"http://localhost:{annotation.RuntimeEmulatorPort}";
 
                     // Start chat app (port 0 = OS-assigned)
-                    var chatApp = ChatAppServer.Create(runtimeUrl, port: chatAppPort, streaming: annotation.IsStreaming, agentName: projectName, loggerProvider: loggerProvider);
+                    var chatApp = ChatAppServer.Create(runtimeUrl, port: annotation.ChatAppPort, streaming: annotation.IsStreaming, agentName: projectName, loggerProvider: loggerProvider);
                     await chatApp.StartAsync(ct);
                     annotation.EmulatorServers.Add(chatApp);
                     annotation.ChatAppPort = GetBoundPort(chatApp);
@@ -121,10 +108,10 @@ public static class AgentCoreResourceBuilderExtensions
                     // Start memory emulator if configured
                     if (annotation.HasMemory)
                     {
-                        var memoryApp = MemoryEmulatorServer.Create(port: options.MemoryEmulatorPort ?? 0, loggerProvider: loggerProvider);
+                        var memoryApp = MemoryEmulatorServer.Create(port: annotation.MemoryEmulatorPort, loggerProvider: loggerProvider);
                         await memoryApp.StartAsync(ct);
                         annotation.EmulatorServers.Add(memoryApp);
-                        annotation.MemoryPort = GetBoundPort(memoryApp);
+                        annotation.MemoryEmulatorPort = GetBoundPort(memoryApp);
                     }
 
                     // Add URLs (order: Chat, Runtime Emulator, Agent Instance)
@@ -179,15 +166,17 @@ public static class AgentCoreResourceBuilderExtensions
     /// </exception>
     public static IResourceBuilder<TDestination> WithReference<TDestination>(
         this IResourceBuilder<TDestination> builder,
-        IResourceBuilder<AgentCoreRuntimeResource> agent)
+        IResourceBuilder<ProjectResource> agent)
         where TDestination : IResourceWithEnvironment
     {
         var annotation = agent.Resource.Annotations
             .OfType<AgentCoreRuntimeAnnotation>()
-            .FirstOrDefault()
-            ?? throw new InvalidOperationException(
-                "The referenced resource is not a properly initialized AgentCore runtime. " +
-                "Use AddAgentCoreRuntime<T>() to create it.");
+            .FirstOrDefault();
+
+        if (annotation is null)
+        {
+            return builder.WithReference(agent as IResourceBuilder<IResourceWithServiceDiscovery>);
+        }
 
         var hasExistingReference = builder.Resource.Annotations
             .OfType<AgentCoreReferenceAnnotation>()
@@ -212,7 +201,7 @@ public static class AgentCoreResourceBuilderExtensions
 
             await annotation.EmulatorStarted.Task;
             context.EnvironmentVariables["AWS_ENDPOINT_URL_BEDROCK_AGENTCORE"] =
-                $"http://localhost:{annotation.RuntimePort}";
+                $"http://localhost:{annotation.RuntimeEmulatorPort}";
         });
 
         return builder;
@@ -223,12 +212,15 @@ public static class AgentCoreResourceBuilderExtensions
     /// </summary>
     /// <param name="agentApp">The agent resource builder.</param>
     /// <returns>The resource builder for further chaining.</returns>
-    public static IResourceBuilder<AgentCoreRuntimeResource> WithStreaming(
-        this IResourceBuilder<AgentCoreRuntimeResource> agentApp)
+    public static IResourceBuilder<ProjectResource> WithStreaming(
+        this IResourceBuilder<ProjectResource> agentApp)
     {
         var annotation = agentApp.Resource.Annotations
             .OfType<AgentCoreRuntimeAnnotation>()
-            .Single();
+            .FirstOrDefault()
+            ?? throw new InvalidOperationException(
+                "WithStreaming can only be called on an AgentCore runtime resource. " +
+                "Use AddAgentCoreRuntime<T>() to create it.");
 
         annotation.IsStreaming = true;
 
@@ -242,12 +234,15 @@ public static class AgentCoreResourceBuilderExtensions
     /// </summary>
     /// <param name="agentApp">The agent resource builder.</param>
     /// <returns>The resource builder for further chaining.</returns>
-    public static IResourceBuilder<AgentCoreRuntimeResource> WithInMemory(
-        this IResourceBuilder<AgentCoreRuntimeResource> agentApp)
+    public static IResourceBuilder<ProjectResource> WithInMemory(
+        this IResourceBuilder<ProjectResource> agentApp)
     {
         var annotation = agentApp.Resource.Annotations
             .OfType<AgentCoreRuntimeAnnotation>()
-            .Single();
+            .FirstOrDefault()
+            ?? throw new InvalidOperationException(
+                "WithInMemory can only be called on an AgentCore runtime resource. " +
+                "Use AddAgentCoreRuntime<T>() to create it.");
 
         annotation.HasMemory = true;
 
@@ -262,7 +257,7 @@ public static class AgentCoreResourceBuilderExtensions
 
             await annotation.EmulatorStarted.Task;
             context.EnvironmentVariables["AWS_AGENTCORE_SERVICE_ENDPOINT"] =
-                $"http://localhost:{annotation.MemoryPort}";
+                $"http://localhost:{annotation.MemoryEmulatorPort}";
         });
 
         return agentApp;

@@ -92,6 +92,16 @@ public class AgentCoreResourceBuilderExtensionsTests
     }
 
     [Fact]
+    public void WithStreaming_ThrowsOnNonAgentCoreResource()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+
+        var project = builder.AddProject<FakeAgent>("plain-project", o => o.ExcludeLaunchProfile = true);
+
+        Assert.Throws<InvalidOperationException>(() => project.WithStreaming());
+    }
+
+    [Fact]
     public void WithInMemory_SetsMemoryFlag()
     {
         var builder = DistributedApplication.CreateBuilder();
@@ -104,6 +114,16 @@ public class AgentCoreResourceBuilderExtensionsTests
             .Single();
 
         Assert.True(annotation.HasMemory);
+    }
+
+    [Fact]
+    public void WithInMemory_ThrowsOnNonAgentCoreResource()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+
+        var project = builder.AddProject<FakeAgent>("plain-project", o => o.ExcludeLaunchProfile = true);
+
+        Assert.Throws<InvalidOperationException>(() => project.WithInMemory());
     }
 
     [Fact]
