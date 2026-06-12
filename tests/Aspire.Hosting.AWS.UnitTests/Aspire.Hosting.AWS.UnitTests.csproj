@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>$(DefaultTargetFramework);$(AgentCoreTargetFramework)</TargetFrameworks>
+    <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
     <NoWarn>$(NoWarn);CS8002;ASPIREAWSAGENTCORE001</NoWarn> <!-- AWS CDK packages are not signed -->
 	<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 

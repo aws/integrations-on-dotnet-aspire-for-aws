@@ -13,9 +13,9 @@ namespace Aspire.Hosting.AWS.AgentCore;
 /// </summary>
 internal class AgentCoreRuntimeAnnotation : IResourceAnnotation
 {
-    public int RuntimePort { get; set; }
+    public int RuntimeEmulatorPort { get; set; }
     public int ChatAppPort { get; set; }
-    public int MemoryPort { get; set; }
+    public int MemoryEmulatorPort { get; set; }
     public bool IsStreaming { get; set; }
     public bool HasMemory { get; set; }
     public bool IncludeEmulatorLogs { get; set; }

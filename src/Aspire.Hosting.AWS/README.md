@@ -9,7 +9,8 @@ Provides extension methods and resources definition for a .NET Aspire AppHost to
 * [Provisioning application resources with AWS CDK](#provisioning-application-resources-with-aws-cdk)
 * [Integrating AWS Lambda Local Development](#integrating-aws-lambda-local-development)
 * [Deployment to AWS (Preview)](#deployment-to-aws-preview)
-* [Integrating Amazon DynamoDB Local](#integrating-amazon-dynamodb-local) 
+* [Integrating Amazon DynamoDB Local](#integrating-amazon-dynamodb-local)
+* [Local Development with AgentCore (Experimental)](#local-development-with-agentcore-experimental)
 
 ## Prerequisites
 
@@ -463,6 +464,74 @@ The `AWS_ENDPOINT_URL_DYNAMODB` environment variable overrides other config se
 When the `AddAWSDynamoDBLocal` method is called, any data and table definitions are stored in memory by default. This means that every time the .NET Aspire application is started, DynamoDB local is initiated with a fresh instance with no tables or data. The `AddAWSDynamoDBLocal` method takes in an optional `DynamoDBLocalOptions` object that exposes the [options](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.UsageNotes.html) that are available for DynamoDB local.
 
 If you want the tables and data to persist between .NET Aspire debug sessions, set the `LocalStorageDirectory` property on the `DynamoDBLocalOptions` object to a local folder where the data will be persisted. The `AddAWSDynamoDBLocal` method will take care of mounting the local directory to the container and configuring the DynamoDB local process to use the mount point.
+
+## Local Development with AgentCore (Experimental)
+
+> **Note**: This feature requires `net10.0` and is behind the `ASPIREAWSAGENTCORE001` experimental flag.
+
+The AgentCore integration provides a local development experience for agents built with the `AWS.AgentCore.Hosting` package. All emulators run as embedded in-process Kestrel servers &mdash; no Docker or separate processes required.
+
+### Getting Started
+
+Add the `AWS.AgentCore.Hosting` package to your agent project:
+
+```bash
+dotnet add package AWS.AgentCore.Hosting
+```
+
+Use the annotations or extension methods to define your agent. Then in your Aspire AppHost, add a reference to `Aspire.Hosting.AWS` and configure your agents:
+
+```csharp
+#pragma warning disable ASPIREAWSAGENTCORE001
+
+var builder = DistributedApplication.CreateBuilder(args);
+
+// Register a non-streaming agent with short-term memory
+var agent = builder.AddAgentCoreRuntime<Projects.MyAgent>("my-agent")
+    .WithInMemory();
+
+// Register a streaming agent
+builder.AddAgentCoreRuntime<Projects.MyStreamingAgent>("my-streaming-agent")
+    .WithStreaming()
+    .WithInMemory();
+
+// Wire a consumer project — AWS_ENDPOINT_URL_BEDROCK_AGENTCORE is injected automatically
+builder.AddProject<Projects.MyChatUI>("ChatUI")
+    .WithReference(agent);
+
+builder.Build().Run();
+```
+
+### Features
+
+| Method | Description |
+|--------|-------------|
+| `AddAgentCoreRuntime<TProject>()` | Registers an agent with embedded runtime and chat emulators |
+| `.WithStreaming()` | Enables SSE streaming mode for the chat app |
+| `.WithInMemory()` | Adds a short-term memory emulator |
+| `.WithReference(agent)` | Injects the runtime emulator endpoint into a consumer project via `AWS_ENDPOINT_URL_BEDROCK_AGENTCORE` |
+
+### Options
+
+```csharp
+builder.AddAgentCoreRuntime<Projects.MyAgent>("my-agent",
+    new AgentCoreLocalOptions
+    {
+        IncludeEmulatorLogs = true,    // Route emulator logs to the Aspire dashboard
+        RuntimeEmulatorPort = 9000,    // Pin the runtime emulator port (default: OS-assigned)
+        ChatAppPort = 9001,            // Pin the chat app port (default: OS-assigned)
+        MemoryEmulatorPort = 9002      // Pin the memory emulator port (default: OS-assigned)
+    });
+```
+
+### How It Works
+
+When the Aspire AppHost starts, each `AddAgentCoreRuntime` call:
+1. Starts an embedded **Runtime Emulator** that proxies invocations to your agent
+2. Starts an embedded **Chat App** for interactive testing from the Aspire dashboard
+3. Optionally starts a **Memory Emulator** for short-term memory
+
+The Aspire dashboard shows clickable URLs for each emulator alongside your agent resource.
 
 ## Feedback & contributing
 

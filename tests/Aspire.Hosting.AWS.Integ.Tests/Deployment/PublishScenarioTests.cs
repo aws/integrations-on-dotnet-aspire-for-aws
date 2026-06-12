@@ -606,7 +606,7 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
 
             // Validate Lambda runtime
             var runtime = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Runtime");
-            Assert.Equal("dotnet8", runtime.GetString());
+            Assert.Equal("dotnet10", runtime.GetString());
 
             // Validate Lambda memory
             var memorySize = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/MemorySize");
@@ -695,7 +695,7 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
 
             // Validate Lambda runtime
             var runtime = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/Runtime");
-            Assert.Equal("dotnet8", runtime.GetString());
+            Assert.Equal("dotnet10", runtime.GetString());
 
             // Validate Lambda CUSTOMIZED memory (2048 instead of default 512)
             var memorySize = AssertElementExistsAtPath(lambdaFunction.Resource, "Properties/MemorySize");

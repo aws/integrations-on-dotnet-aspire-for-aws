@@ -2,17 +2,17 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <AspireSdkVersion>13.3.0</AspireSdkVersion>
+    <AspireSdkVersion>13.3.5</AspireSdkVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Aspire.Hosting" Version="13.3.0" />
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.3.0" />
-    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.3.0" />
-    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.3.0" />
-    <PackageVersion Include="Aspire.Hosting.Valkey" Version="13.3.0" />
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.3.0" />
-    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.3.0" />
-    <PackageVersion Include="Aspire.StackExchange.Redis.OutputCaching" Version="13.3.0" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.3.5" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.3.5" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.3.5" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.3.5" />
+    <PackageVersion Include="Aspire.Hosting.Valkey" Version="13.3.5" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.3.5" />
+    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.3.5" />
+    <PackageVersion Include="Aspire.StackExchange.Redis.OutputCaching" Version="13.3.5" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.5.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery.Dns" Version="10.5.0" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.7" />	  
@@ -33,6 +33,7 @@
     <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.6.3" />
     <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.0.2.30" />
     <PackageVersion Include="AWSSDK.SQS" Version="4.0.2.28" />
+    <PackageVersion Include="AWSSDK.Signin" Version="4.0.2" />
     <PackageVersion Include="AWSSDK.SSO" Version="4.0.2.27" />
     <PackageVersion Include="AWSSDK.SSOOIDC" Version="4.0.3.28" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.40" />
@@ -60,5 +61,7 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="JsonSchema.Net" Version="7.4.0" />
     <PackageVersion Include="Moq" Version="4.20.72" />
+    <!-- Added explicity MessagePack reference to address NU1109 -->
+    <PackageVersion Include="MessagePack" Version="2.5.301" />
   </ItemGroup>
 </Project>
