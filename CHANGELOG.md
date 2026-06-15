@@ -1,3 +1,8 @@
+## Release 2026-06-15
+
+### Aspire.Hosting.AWS (13.3.0)
+* Added experimental support for AWS.AgentCore.Hosting and AWS.AgentCore.Testing packages. Features include: AddAgentCoreRuntime for registering agents with embedded runtime and chat emulators, WithStreaming for SSE streaming mode, WithInMemory for short-term memory emulation, and WithReference for injecting the runtime emulator endpoint via the AWS SDK service endpoint override pattern. All APIs are behind the ASPIREAWSAGENTCORE001 experimental flag.
+
 ## Release 2026-05-14
 
 ### Aspire.Hosting.AWS (13.2.0)
