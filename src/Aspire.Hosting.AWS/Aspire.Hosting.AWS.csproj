@@ -5,7 +5,11 @@
     <IsPackable>true</IsPackable>
     <PackageTags>aspire integration hosting aws</PackageTags>
     <Description>Add support for provisioning AWS application resources and configuring the AWS SDK for .NET.</Description>
-    <NoWarn>$(NoWarn);CS8002</NoWarn> <!-- AWS CDK packages are not signed -->
+    <!-- AWS CDK packages are not signed (CS8002). -->
+    <!-- Stable package depends on prerelease
+         AWS.AgentCore.Testing because its Aspire extensions are marked [Experimental] and
+         consumers explicitly opt in (NU5104). -->
+    <NoWarn>$(NoWarn);CS8002;NU5104</NoWarn>
     <Version>13.3.0</Version>
     <PackageReadmeFile>docs\README.md</PackageReadmeFile>
   </PropertyGroup>
