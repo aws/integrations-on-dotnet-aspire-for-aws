@@ -16,7 +16,6 @@ namespace Aspire.Hosting;
 /// Extension methods for adding AgentCore local development resources.
 /// All emulators run as embedded in-process Kestrel servers — no Docker or separate processes required.
 /// </summary>
-[Experimental(Constants.ASPIREAWSAGENTCORE001)]
 public static class AgentCoreResourceBuilderExtensions
 {
     /// <summary>
@@ -30,6 +29,7 @@ public static class AgentCoreResourceBuilderExtensions
     /// <param name="name">The name of the resource.</param>
     /// <param name="options">Optional configuration for the local development experience.</param>
     /// <returns>The agent's resource builder for further configuration.</returns>
+    [Experimental(Constants.ASPIREAWSAGENTCORE001)]
     public static IResourceBuilder<ProjectResource> AddAgentCoreRuntime<TProject>(
         this IDistributedApplicationBuilder builder,
         [ResourceName] string name,
@@ -164,6 +164,7 @@ public static class AgentCoreResourceBuilderExtensions
     /// <exception cref="InvalidOperationException">
     /// Thrown when the project already has a reference to another AgentCore agent.
     /// </exception>
+    [Experimental(Constants.ASPIREAWSAGENTCORE001)]
     public static IResourceBuilder<TDestination> WithReference<TDestination>(
         this IResourceBuilder<TDestination> builder,
         IResourceBuilder<ProjectResource> agent)
@@ -212,6 +213,7 @@ public static class AgentCoreResourceBuilderExtensions
     /// </summary>
     /// <param name="agentApp">The agent resource builder.</param>
     /// <returns>The resource builder for further chaining.</returns>
+    [Experimental(Constants.ASPIREAWSAGENTCORE001)]
     public static IResourceBuilder<ProjectResource> WithStreaming(
         this IResourceBuilder<ProjectResource> agentApp)
     {
@@ -234,6 +236,7 @@ public static class AgentCoreResourceBuilderExtensions
     /// </summary>
     /// <param name="agentApp">The agent resource builder.</param>
     /// <returns>The resource builder for further chaining.</returns>
+    [Experimental(Constants.ASPIREAWSAGENTCORE001)]
     public static IResourceBuilder<ProjectResource> WithInMemory(
         this IResourceBuilder<ProjectResource> agentApp)
     {

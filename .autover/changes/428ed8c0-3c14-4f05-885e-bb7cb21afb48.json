@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Apply [Experimental(ASPIREAWSAGENTCORE001)] to AgentCore extension methods individually so warnings fire at consumer call sites (class-level attribute does not propagate to extension method invocations)."
+      ]
+    }
+  ]
+}
