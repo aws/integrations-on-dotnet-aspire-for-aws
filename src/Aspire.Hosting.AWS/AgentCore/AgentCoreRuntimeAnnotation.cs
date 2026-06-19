@@ -35,9 +35,4 @@ internal class AgentCoreRuntimeAnnotation : IResourceAnnotation
     }
 }
 
-/// <summary>
-/// Marker annotation to track that a project already has an AgentCore runtime reference.
-/// Used to enforce the single-reference constraint.
-/// </summary>
-internal class AgentCoreReferenceAnnotation : IResourceAnnotation;
 #endif

@@ -21,7 +21,7 @@ public static class AgentCoreResourceBuilderExtensions
     /// <summary>
     /// Registers an AgentCore agent with a dedicated runtime emulator and chat app.
     /// Returns the agent's <see cref="IResourceBuilder{ProjectResource}"/>.
-    /// Use <c>.WithReference(agent)</c> from another project to inject the runtime
+    /// Use Aspire's <c>.WithReference(agent)</c> from another project to inject the runtime
     /// emulator endpoint as the <c>AWS_ENDPOINT_URL_BEDROCK_AGENTCORE</c> environment variable.
     /// </summary>
     /// <typeparam name="TProject">The agent project type.</typeparam>
@@ -148,64 +148,12 @@ public static class AgentCoreResourceBuilderExtensions
                 await annotation.StopEmulatorsAsync();
             });
 
+        // Wire AWS_ENDPOINT_URL_BEDROCK_AGENTCORE on consumers that .WithReference(agent).
+        // Hooks Aspire's stock WithReference relationship instead of shadowing the overload,
+        // so users keep using the standard Aspire idiom without overload-resolution surprises.
+        EnsureReferenceHook(builder);
+
         return agentApp;
-    }
-
-    /// <summary>
-    /// Wires a project to an AgentCore agent by injecting the runtime emulator endpoint
-    /// as the <c>AWS_ENDPOINT_URL_BEDROCK_AGENTCORE</c> environment variable.
-    /// The AWS SDK picks this up automatically for endpoint routing — no manual
-    /// <c>ServiceURL</c> configuration is needed in the consuming project.
-    /// </summary>
-    /// <typeparam name="TDestination">The destination resource type.</typeparam>
-    /// <param name="builder">The project resource builder.</param>
-    /// <param name="agent">The AgentCore runtime resource builder returned by <see cref="AddAgentCoreRuntime{TProject}"/>.</param>
-    /// <returns>The destination resource builder for further chaining.</returns>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown when the project already has a reference to another AgentCore agent.
-    /// </exception>
-    [Experimental(Constants.ASPIREAWSAGENTCORE001)]
-    public static IResourceBuilder<TDestination> WithReference<TDestination>(
-        this IResourceBuilder<TDestination> builder,
-        IResourceBuilder<ProjectResource> agent)
-        where TDestination : IResourceWithEnvironment
-    {
-        var annotation = agent.Resource.Annotations
-            .OfType<AgentCoreRuntimeAnnotation>()
-            .FirstOrDefault();
-
-        if (annotation is null)
-        {
-            return builder.WithReference(agent as IResourceBuilder<IResourceWithServiceDiscovery>);
-        }
-
-        var hasExistingReference = builder.Resource.Annotations
-            .OfType<AgentCoreReferenceAnnotation>()
-            .Any();
-
-        if (hasExistingReference)
-        {
-            throw new InvalidOperationException(
-                $"Project '{builder.Resource.Name}' already has a WithReference to an AgentCore agent. " +
-                "Only one AgentCore runtime reference is supported per project because the " +
-                "AWS_ENDPOINT_URL_BEDROCK_AGENTCORE environment variable can only point to a single endpoint.");
-        }
-
-        builder.Resource.Annotations.Add(new AgentCoreReferenceAnnotation());
-
-        builder.WithEnvironment(async context =>
-        {
-            if (context.ExecutionContext.IsPublishMode)
-            {
-                return;
-            }
-
-            await annotation.EmulatorStarted.Task;
-            context.EnvironmentVariables["AWS_ENDPOINT_URL_BEDROCK_AGENTCORE"] =
-                $"http://localhost:{annotation.RuntimeEmulatorPort}";
-        });
-
-        return builder;
     }
 
     /// <summary>
@@ -277,6 +225,122 @@ public static class AgentCoreResourceBuilderExtensions
         }
 
         return uri.Port;
+    }
+
+    /// <summary>
+    /// DI marker singleton used to detect whether the reference hook has already been
+    /// subscribed for the current app builder. The instance is never resolved — only its
+    /// presence in <see cref="IServiceCollection"/> is checked.
+    /// </summary>
+    private sealed class AgentCoreReferenceHookMarker;
+
+    /// <summary>
+    /// Subscribes a one-time, app-wide <see cref="BeforeStartEvent"/> handler that wires
+    /// <c>AWS_ENDPOINT_URL_BEDROCK_AGENTCORE</c> onto any resource that calls Aspire's
+    /// stock <c>WithReference(agent)</c> against an AgentCore runtime.
+    ///
+    /// <para>How it works:</para>
+    /// <list type="number">
+    /// <item><description>
+    /// Aspire's <c>WithReference</c> writes a <see cref="ResourceRelationshipAnnotation"/>
+    /// with <c>Type == "Reference"</c> on the consumer, pointing at the source resource —
+    /// for every <c>WithReference</c> overload.
+    /// </description></item>
+    /// <item><description>
+    /// On <see cref="BeforeStartEvent"/> the handler walks every
+    /// <see cref="IResourceWithEnvironment"/> in the model and inspects its relationship
+    /// annotations. References whose target carries an <see cref="AgentCoreRuntimeAnnotation"/>
+    /// (i.e. were created by <c>AddAgentCoreRuntime</c>) are treated as AgentCore references.
+    /// Multiple annotations pointing at the same source are deduped.
+    /// </description></item>
+    /// <item><description>
+    /// If a consumer references two or more <i>distinct</i> AgentCore runtimes the handler
+    /// throws — <c>AWS_ENDPOINT_URL_BEDROCK_AGENTCORE</c> is a single-valued AWS SDK
+    /// endpoint override and cannot point to multiple runtimes simultaneously.
+    /// </description></item>
+    /// <item><description>
+    /// For the resolved single agent, an <see cref="EnvironmentCallbackAnnotation"/> is added
+    /// to the consumer. The callback awaits the agent's
+    /// <see cref="AgentCoreRuntimeAnnotation.EmulatorStarted"/> task — set when the agent's
+    /// <see cref="BeforeResourceStartedEvent"/> handler has bound the runtime emulator port —
+    /// and writes <c>AWS_ENDPOINT_URL_BEDROCK_AGENTCORE=http://localhost:{port}</c>. Publish
+    /// mode is skipped because the emulator only runs locally.
+    /// </description></item>
+    /// </list>
+    ///
+    /// <para>
+    /// Subscription is guarded by <see cref="AgentCoreReferenceHookMarker"/> in
+    /// <see cref="IServiceCollection"/>: every <c>AddAgentCoreRuntime</c> call invokes this
+    /// method, but the handler walks the entire model, so subscribing N times for N agents
+    /// would inject the env var N times per consumer.
+    /// </para>
+    /// </summary>
+    private static void EnsureReferenceHook(IDistributedApplicationBuilder builder)
+    {
+        if (builder.Services.Any(s => s.ServiceType == typeof(AgentCoreReferenceHookMarker)))
+        {
+            return;
+        }
+        builder.Services.AddSingleton<AgentCoreReferenceHookMarker>();
+
+        builder.Eventing.Subscribe<BeforeStartEvent>(static (@event, ct) =>
+        {
+            foreach (var consumer in @event.Model.Resources)
+            {
+                // Only resources that accept env vars can receive AWS_ENDPOINT_URL_BEDROCK_AGENTCORE.
+                if (consumer is not IResourceWithEnvironment)
+                {
+                    continue;
+                }
+
+                // Pick out relationship annotations whose target is an AgentCore runtime.
+                // Aspire writes a ResourceRelationshipAnnotation(Type = "Reference") for every
+                // WithReference call regardless of overload, so this catches all reference shapes.
+                // Dedupe by source resource: two WithReference(sameAgent) calls produce two
+                // relationship annotations, but they're the same logical reference.
+                var agentRefs = consumer.Annotations
+                    .OfType<ResourceRelationshipAnnotation>()
+                    .Where(r => r.Type == "Reference")
+                    .Select(r => (Source: r.Resource, Annotation: r.Resource.Annotations.OfType<AgentCoreRuntimeAnnotation>().FirstOrDefault()))
+                    .Where(x => x.Annotation is not null)
+                    .GroupBy(x => x.Source)
+                    .Select(g => g.First())
+                    .ToList();
+
+                if (agentRefs.Count == 0)
+                {
+                    continue;
+                }
+
+                // AWS_ENDPOINT_URL_BEDROCK_AGENTCORE is single-valued — referencing two
+                // distinct AgentCore runtimes from the same consumer is unsupported.
+                if (agentRefs.Count > 1)
+                {
+                    throw new InvalidOperationException(
+                        $"Resource '{consumer.Name}' has WithReference calls to multiple AgentCore runtimes " +
+                        $"({string.Join(", ", agentRefs.Select(r => r.Source.Name))}). " +
+                        "Only one AgentCore runtime reference is supported per resource because the " +
+                        "AWS_ENDPOINT_URL_BEDROCK_AGENTCORE environment variable can only point to a single endpoint.");
+                }
+
+                // Defer the env var value until the agent's emulator has actually bound a port.
+                // EmulatorStarted is completed by the agent's own BeforeResourceStartedEvent handler.
+                var ann = agentRefs[0].Annotation!;
+                consumer.Annotations.Add(new EnvironmentCallbackAnnotation(async ctx =>
+                {
+                    if (ctx.ExecutionContext.IsPublishMode)
+                    {
+                        return;
+                    }
+
+                    await ann.EmulatorStarted.Task;
+                    ctx.EnvironmentVariables["AWS_ENDPOINT_URL_BEDROCK_AGENTCORE"] =
+                        $"http://localhost:{ann.RuntimeEmulatorPort}";
+                }));
+            }
+
+            return Task.CompletedTask;
+        });
     }
 }
 #endif
