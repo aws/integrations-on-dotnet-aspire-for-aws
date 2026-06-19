@@ -1,3 +1,9 @@
+## Release 2026-06-19
+
+### Aspire.Hosting.AWS (13.3.1)
+* Apply [Experimental(ASPIREAWSAGENTCORE001)] to AgentCore extension methods individually so warnings fire at consumer call sites.
+* Inject AWS_ENDPOINT_URL_BEDROCK_AGENTCORE via a BeforeStartEvent hook instead of a custom WithReference overload, so consumers use Aspire's stock WithReference without overload-resolution conflicts.
+
 ## Release 2026-06-15
 
 ### Aspire.Hosting.AWS (13.3.0)
