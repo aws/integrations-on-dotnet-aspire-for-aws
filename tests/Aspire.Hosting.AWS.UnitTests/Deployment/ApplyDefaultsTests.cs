@@ -5,6 +5,7 @@
 #pragma warning disable ASPIREINTERACTION001
 
 using Amazon.CDK;
+using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.ECS.Patterns;
 using Amazon.CDK.AWS.ElastiCache;
@@ -51,6 +52,94 @@ public class ApplyDefaultsTests
 
         var expectedInfrastructureRoleArn = environment.DefaultsProvider.GetDefaultECSExpressInfrastructureRole().RoleArn;
         Assert.Equal(expectedInfrastructureRoleArn, props.InfrastructureRoleArn);
+    }
+
+    [Fact]
+    public void ApplyCfnExpressGatewayServiceDefaults_CreatesVpcEndpoints()
+    {
+        // Arrange
+        var environment = CreateProviderAndEnvironment();
+        var props = new CfnExpressGatewayServiceProps
+        {
+            PrimaryContainer = new ExpressGatewayContainerProperty()
+        };
+        var config = new PublishECSFargateExpressServiceConfig { EnableVpcEndpoints = true };
+
+        // Act
+        environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(props, config);
+
+        // Assert — three VPC endpoints must exist in the stack
+        var nodes = environment.CDKStack.Node.FindAll();
+        Assert.Contains(nodes, n => n is InterfaceVpcEndpoint && n.Node.Id == "ECSExpressEcrApiEndpoint");
+        Assert.Contains(nodes, n => n is InterfaceVpcEndpoint && n.Node.Id == "ECSExpressEcrDkrEndpoint");
+        Assert.Contains(nodes, n => n is GatewayVpcEndpoint && n.Node.Id == "ECSExpressS3Endpoint");
+    }
+
+    [Fact]
+    public void ApplyCfnExpressGatewayServiceDefaults_CreatesVpcEndpointsOnlyOnce()
+    {
+        // Arrange
+        var environment = CreateProviderAndEnvironment();
+        var props = new CfnExpressGatewayServiceProps
+        {
+            PrimaryContainer = new ExpressGatewayContainerProperty()
+        };
+        var config = new PublishECSFargateExpressServiceConfig { EnableVpcEndpoints = true };
+
+        // Act — call twice to simulate two ECS Express services in the same stack
+        environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(props, config);
+        environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(props, config);
+
+        // Assert — each endpoint appears exactly once
+        var nodes = environment.CDKStack.Node.FindAll();
+        Assert.Single(nodes, n => n is InterfaceVpcEndpoint && n.Node.Id == "ECSExpressEcrApiEndpoint");
+        Assert.Single(nodes, n => n is InterfaceVpcEndpoint && n.Node.Id == "ECSExpressEcrDkrEndpoint");
+        Assert.Single(nodes, n => n is GatewayVpcEndpoint && n.Node.Id == "ECSExpressS3Endpoint");
+    }
+
+    [Fact]
+    public void ApplyCfnExpressGatewayServiceDefaults_DoesNotCreateVpcEndpoints_ByDefault()
+    {
+        // Arrange
+        var environment = CreateProviderAndEnvironment();
+        var props = new CfnExpressGatewayServiceProps
+        {
+            PrimaryContainer = new ExpressGatewayContainerProperty()
+        };
+
+        // Act — no config passed; EnableVpcEndpoints defaults to false
+        environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(props);
+
+        // Assert — endpoints must NOT be created unless explicitly opted in
+        var nodes = environment.CDKStack.Node.FindAll();
+        Assert.DoesNotContain(nodes, n => n is InterfaceVpcEndpoint && n.Node.Id == "ECSExpressEcrApiEndpoint");
+        Assert.DoesNotContain(nodes, n => n is InterfaceVpcEndpoint && n.Node.Id == "ECSExpressEcrDkrEndpoint");
+        Assert.DoesNotContain(nodes, n => n is GatewayVpcEndpoint && n.Node.Id == "ECSExpressS3Endpoint");
+    }
+
+    [Fact]
+    public void ApplyCfnExpressGatewayServiceDefaults_DoesNotCreateVpcEndpoints_WhenCustomNetworkConfigurationProvided()
+    {
+        // Arrange
+        var environment = CreateProviderAndEnvironment();
+        var props = new CfnExpressGatewayServiceProps
+        {
+            PrimaryContainer = new ExpressGatewayContainerProperty(),
+            NetworkConfiguration = new CfnExpressGatewayService.ExpressGatewayServiceNetworkConfigurationProperty
+            {
+                SecurityGroups = new[] { "sg-custom123" },
+                Subnets = new[] { "subnet-custom1" }
+            }
+        };
+
+        // Act
+        environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(props);
+
+        // Assert — endpoints must NOT be created when the caller manages network configuration
+        var nodes = environment.CDKStack.Node.FindAll();
+        Assert.DoesNotContain(nodes, n => n is InterfaceVpcEndpoint && n.Node.Id == "ECSExpressEcrApiEndpoint");
+        Assert.DoesNotContain(nodes, n => n is InterfaceVpcEndpoint && n.Node.Id == "ECSExpressEcrDkrEndpoint");
+        Assert.DoesNotContain(nodes, n => n is GatewayVpcEndpoint && n.Node.Id == "ECSExpressS3Endpoint");
     }
 
     [Fact]

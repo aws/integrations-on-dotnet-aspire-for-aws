@@ -49,7 +49,13 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
             ServiceName = projectResource.Name
         };
         publishAnnotation.Config.PropsCfnExpressGatewayServicePropsCallback?.Invoke(CreatePublishTargetContext(environment), fargateServiceProps);
-        environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(fargateServiceProps);
+
+        // Track whether we will auto-configure the network (i.e. the caller hasn't supplied
+        // custom subnets). If so, we must add an explicit DependsOn on the VPC's internet
+        // connectivity after the service construct is created (see below).
+        var networkConfigWasNull = fargateServiceProps.NetworkConfiguration == null;
+
+        environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(fargateServiceProps, publishAnnotation.Config);
 
         var referencePoints = new CfnExpressGatewayServicePropsConnectionPoints(
             fargateServiceProps,
@@ -57,6 +63,24 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
         ProcessRelationShips(referencePoints, projectResource, environment);
 
         var fargateService = new CfnExpressGatewayService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
+
+        if (networkConfigWasNull)
+        {
+            // CloudFormation creates resources in parallel by default. Subnet IDs are passed
+            // to ECS Express as string tokens, which only creates an implicit dependency on
+            // the subnet *resources* — not on the IGW route entries that make those subnets
+            // "public". Without an explicit dependency, ECS Express may validate subnets
+            // before the IGW routes are ready, causing a "mixed subnet type" error.
+            // The VPC-level InternetConnectivityEstablished only resolves to the IGW attachment,
+            // not the per-subnet default routes, so depend on each public subnet's own
+            // InternetConnectivityEstablished — which represents its 0.0.0.0/0 -> IGW route —
+            // ensuring every public subnet's route exists before the ECS Express service is created.
+            foreach (var subnet in environment.DefaultsProvider.GetDefaultVpc().PublicSubnets)
+            {
+                fargateService.Node.AddDependency(subnet.InternetConnectivityEstablished);
+            }
+        }
+
         publishAnnotation.Config.ConstructCfnExpressGatewayServiceCallback?.Invoke(CreatePublishTargetContext(environment), fargateService);
         ApplyAWSLinkedObjectsAnnotation(environment, projectResource, fargateService, this);
 

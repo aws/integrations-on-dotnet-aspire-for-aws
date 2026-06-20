@@ -246,6 +246,141 @@ public partial class CDKDefaultsProvider
         });
     }
 
+    private InterfaceVpcEndpoint? _defaultECSExpressEcrApiEndpoint;
+    public InterfaceVpcEndpoint GetDefaultECSExpressEcrApiEndpoint()
+    {
+        if (_defaultECSExpressEcrApiEndpoint == null)
+        {
+            var definedDefault = FindDefaultConstructByAttribute<DefaultECSExpressEcrApiEndpointAttribute, InterfaceVpcEndpoint>();
+            if (definedDefault != null)
+            {
+                _defaultECSExpressEcrApiEndpoint = definedDefault;
+            }
+            else
+            {
+                _defaultECSExpressEcrApiEndpoint = CreateDefaultECSExpressEcrApiEndpoint();
+            }
+        }
+        return _defaultECSExpressEcrApiEndpoint;
+    }
+
+    protected virtual InterfaceVpcEndpoint CreateDefaultECSExpressEcrApiEndpoint()
+    {
+        var vpc = GetDefaultVpc();
+        var endpoint = new InterfaceVpcEndpoint(EnvironmentResource.CDKStack, "ECSExpressEcrApiEndpoint", new InterfaceVpcEndpointProps
+        {
+            Vpc = vpc,
+            Service = InterfaceVpcEndpointAwsService.ECR,
+            PrivateDnsEnabled = true,
+            Subnets = GetECSExpressEndpointSubnetSelection(vpc),
+            Open = false
+        });
+        endpoint.Connections.AllowDefaultPortFrom(GetDefaultECSClusterSecurityGroup());
+        return endpoint;
+    }
+
+    private InterfaceVpcEndpoint? _defaultECSExpressEcrDkrEndpoint;
+    public InterfaceVpcEndpoint GetDefaultECSExpressEcrDkrEndpoint()
+    {
+        if (_defaultECSExpressEcrDkrEndpoint == null)
+        {
+            var definedDefault = FindDefaultConstructByAttribute<DefaultECSExpressEcrDkrEndpointAttribute, InterfaceVpcEndpoint>();
+            if (definedDefault != null)
+            {
+                _defaultECSExpressEcrDkrEndpoint = definedDefault;
+            }
+            else
+            {
+                _defaultECSExpressEcrDkrEndpoint = CreateDefaultECSExpressEcrDkrEndpoint();
+            }
+        }
+        return _defaultECSExpressEcrDkrEndpoint;
+    }
+
+    protected virtual InterfaceVpcEndpoint CreateDefaultECSExpressEcrDkrEndpoint()
+    {
+        var vpc = GetDefaultVpc();
+        var endpoint = new InterfaceVpcEndpoint(EnvironmentResource.CDKStack, "ECSExpressEcrDkrEndpoint", new InterfaceVpcEndpointProps
+        {
+            Vpc = vpc,
+            Service = InterfaceVpcEndpointAwsService.ECR_DOCKER,
+            PrivateDnsEnabled = true,
+            Subnets = GetECSExpressEndpointSubnetSelection(vpc),
+            Open = false
+        });
+        endpoint.Connections.AllowDefaultPortFrom(GetDefaultECSClusterSecurityGroup());
+        return endpoint;
+    }
+
+    private GatewayVpcEndpoint? _defaultECSExpressS3Endpoint;
+    public GatewayVpcEndpoint GetDefaultECSExpressS3Endpoint()
+    {
+        if (_defaultECSExpressS3Endpoint == null)
+        {
+            var definedDefault = FindDefaultConstructByAttribute<DefaultECSExpressS3EndpointAttribute, GatewayVpcEndpoint>();
+            if (definedDefault != null)
+            {
+                _defaultECSExpressS3Endpoint = definedDefault;
+            }
+            else
+            {
+                _defaultECSExpressS3Endpoint = CreateDefaultECSExpressS3Endpoint();
+            }
+        }
+        return _defaultECSExpressS3Endpoint;
+    }
+
+    protected virtual GatewayVpcEndpoint CreateDefaultECSExpressS3Endpoint()
+    {
+        return new GatewayVpcEndpoint(EnvironmentResource.CDKStack, "ECSExpressS3Endpoint", new GatewayVpcEndpointProps
+        {
+            Vpc = GetDefaultVpc(),
+            Service = GatewayVpcEndpointAwsService.S3
+        });
+    }
+
+    private InterfaceVpcEndpoint? _defaultECSExpressLogsEndpoint;
+    public InterfaceVpcEndpoint GetDefaultECSExpressLogsEndpoint()
+    {
+        if (_defaultECSExpressLogsEndpoint == null)
+        {
+            var definedDefault = FindDefaultConstructByAttribute<DefaultECSExpressLogsEndpointAttribute, InterfaceVpcEndpoint>();
+            if (definedDefault != null)
+            {
+                _defaultECSExpressLogsEndpoint = definedDefault;
+            }
+            else
+            {
+                _defaultECSExpressLogsEndpoint = CreateDefaultECSExpressLogsEndpoint();
+            }
+        }
+        return _defaultECSExpressLogsEndpoint;
+    }
+
+    protected virtual InterfaceVpcEndpoint CreateDefaultECSExpressLogsEndpoint()
+    {
+        var vpc = GetDefaultVpc();
+        var endpoint = new InterfaceVpcEndpoint(EnvironmentResource.CDKStack, "ECSExpressLogsEndpoint", new InterfaceVpcEndpointProps
+        {
+            Vpc = vpc,
+            Service = InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
+            PrivateDnsEnabled = true,
+            Subnets = GetECSExpressEndpointSubnetSelection(vpc),
+            Open = false
+        });
+        endpoint.Connections.AllowDefaultPortFrom(GetDefaultECSClusterSecurityGroup());
+        return endpoint;
+    }
+
+    private static SubnetSelection GetECSExpressEndpointSubnetSelection(IVpc vpc)
+    {
+        if (vpc.PrivateSubnets.Length > 0)
+            return new SubnetSelection { SubnetType = SubnetType.PRIVATE_WITH_EGRESS };
+        if (vpc.IsolatedSubnets.Length > 0)
+            return new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED };
+        return new SubnetSelection { SubnetType = SubnetType.PUBLIC };
+    }
+
     private TConstruct? FindDefaultConstructByAttribute<TAttribute, TConstruct>()
         where TAttribute : Attribute
         where TConstruct : class

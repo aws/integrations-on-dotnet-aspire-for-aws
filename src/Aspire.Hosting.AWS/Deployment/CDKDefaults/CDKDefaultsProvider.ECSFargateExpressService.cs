@@ -38,7 +38,7 @@ public partial class CDKDefaultsProvider
     /// recommended defaults for an Express Gateway service.</param>
     /// <exception cref="InvalidDataException">Thrown if the <paramref name="props"/>.PrimaryContainer property is not set or is not of type <see
     /// cref="CfnExpressGatewayService.ExpressGatewayContainerProperty"/>.</exception>
-    protected internal virtual void ApplyCfnExpressGatewayServiceDefaults(CfnExpressGatewayServiceProps props)
+    protected internal virtual void ApplyCfnExpressGatewayServiceDefaults(CfnExpressGatewayServiceProps props, PublishECSFargateExpressServiceConfig? config = null)
     {
         if (props.Cluster == null)
             props.Cluster = GetDefaultECSCluster().ClusterName;
@@ -78,6 +78,26 @@ public partial class CDKDefaultsProvider
                 // Otherwise if you use private subnets the ALB will be internal only to the VPC.
                 Subnets = GetDefaultVpc().PublicSubnets.Select(s => s.SubnetId).ToArray()
             };
+
+            if (config?.EnableVpcEndpoints == true)
+                EnsureECSExpressVpcEndpoints();
         }
-    }    
+    }
+
+    /// <summary>
+    /// Ensures VPC Interface Endpoints for ECR and CloudWatch Logs and a Gateway Endpoint for S3 exist so that ECS Express
+    /// tasks running in public subnets without a public IP can pull images and ship logs via AWS PrivateLink.
+    /// </summary>
+    /// <remarks>
+    /// Only called when the defaults provider is also responsible for setting NetworkConfiguration,
+    /// i.e. when the caller has not supplied a custom network configuration. Safe to call multiple times;
+    /// each endpoint is created at most once via the GetDefault accessor caching pattern.
+    /// </remarks>
+    protected virtual void EnsureECSExpressVpcEndpoints()
+    {
+        GetDefaultECSExpressEcrApiEndpoint();
+        GetDefaultECSExpressEcrDkrEndpoint();
+        GetDefaultECSExpressS3Endpoint();
+        GetDefaultECSExpressLogsEndpoint();
+    }
 }

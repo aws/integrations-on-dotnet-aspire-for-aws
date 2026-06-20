@@ -84,3 +84,43 @@ public class DefaultElastiCacheServerlessSecurityGroupAttribute : Attribute
 {
 
 }
+
+/// <summary>
+/// Attribute applied on a property or field in the CDK deployment stack of type <see cref="Amazon.CDK.AWS.EC2.InterfaceVpcEndpoint"/>.
+/// This will be used as the default ECR API interface VPC endpoint for ECS Express services, allowing image pulls via PrivateLink.
+/// </summary>
+[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
+public class DefaultECSExpressEcrApiEndpointAttribute : Attribute
+{
+
+}
+
+/// <summary>
+/// Attribute applied on a property or field in the CDK deployment stack of type <see cref="Amazon.CDK.AWS.EC2.InterfaceVpcEndpoint"/>.
+/// This will be used as the default ECR Docker (DKR) interface VPC endpoint for ECS Express services, allowing image layer pulls via PrivateLink.
+/// </summary>
+[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
+public class DefaultECSExpressEcrDkrEndpointAttribute : Attribute
+{
+
+}
+
+/// <summary>
+/// Attribute applied on a property or field in the CDK deployment stack of type <see cref="Amazon.CDK.AWS.EC2.GatewayVpcEndpoint"/>.
+/// This will be used as the default S3 gateway VPC endpoint for ECS Express services, routing ECR image layer traffic through S3 PrivateLink.
+/// </summary>
+[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
+public class DefaultECSExpressS3EndpointAttribute : Attribute
+{
+
+}
+
+/// <summary>
+/// Attribute applied on a property or field in the CDK deployment stack of type <see cref="Amazon.CDK.AWS.EC2.InterfaceVpcEndpoint"/>.
+/// This will be used as the default CloudWatch Logs interface VPC endpoint for ECS Express services, allowing the awslogs log driver to reach CloudWatch Logs via PrivateLink.
+/// </summary>
+[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
+public class DefaultECSExpressLogsEndpointAttribute : Attribute
+{
+
+}

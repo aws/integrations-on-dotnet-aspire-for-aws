@@ -26,4 +26,11 @@ public class PublishECSFargateExpressServiceConfig
     /// Callback to modify the constructed CfnExpressGatewayService
     /// </summary>
     public PublishCallback<CfnExpressGatewayService>? ConstructCfnExpressGatewayServiceCallback { get; set; }
+
+    /// <summary>
+    /// When true, creates VPC Interface Endpoints for ECR (api + dkr) and a Gateway Endpoint
+    /// for S3 so that ECS Express tasks in public subnets without a public IP can pull images
+    /// via AWS PrivateLink. Required when the VPC subnets do not auto-assign public IPs.
+    /// </summary>
+    public bool EnableVpcEndpoints { get; init; } = false;
 }
