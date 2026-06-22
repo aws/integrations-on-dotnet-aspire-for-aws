@@ -28,6 +28,10 @@ namespace Aspire.Hosting.AWS.Deployment.CDKDefaults;
 ///         <term>Redis or Valkey Resource</term>
 ///         <description>ElastiCache Serverless Cluster</description>
 ///     </item>
+///     <item>
+///         <term>AgentCore Agents</term>
+///         <description>Bedrock AgentCore Runtime</description>
+///     </item>
 /// </list>
 /// </summary>
 /// <param name="environmentResource">The <see cref="AWSCDKEnvironmentResource"/> the CDKDefaultsProvider will create defaults for.</param>

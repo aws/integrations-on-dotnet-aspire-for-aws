@@ -1668,6 +1668,100 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
         await ExecutePublishAsync(nameof(Scenarios.PublishWithEnvironmentAndReference), cloudFormationValidation);
     }
 
+    [Fact]
+    public async Task TestPublishAgentCoreRuntime()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            // Validate NO VPC resources are created
+            var vpcs = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::VPC");
+            Assert.Empty(vpcs);
+
+            // Validate NO Subnet resources are created
+            var subnets = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::Subnet");
+            Assert.Empty(subnets);
+
+            // Validate NO Security Groups are created (AgentCore uses PUBLIC network mode)
+            var securityGroups = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroup");
+            Assert.Empty(securityGroups);
+
+            // Validate NO ECS resources are created
+            var ecsClusters = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::Cluster");
+            Assert.Empty(ecsClusters);
+
+            // Validate AgentCore Runtime exists
+            var agentRuntimes = GetResourcesOfType(cfTemplateDoc, "AWS::BedrockAgentCore::Runtime");
+            Assert.Single(agentRuntimes);
+            var agentRuntime = agentRuntimes[0];
+
+            // Validate AgentRuntime name
+            var runtimeName = AssertElementExistsAtPath(agentRuntime.Resource, "Properties/AgentRuntimeName");
+            Assert.Equal("AgentCoreAgent", runtimeName.GetString());
+
+            // Validate container configuration with image reference
+            var containerConfig = AssertElementExistsAtPath(agentRuntime.Resource, "Properties/AgentRuntimeArtifact/ContainerConfiguration/ContainerUri");
+            Assert.True(containerConfig.TryGetProperty("Fn::Sub", out _), "Container URI should be a Fn::Sub reference to ECR image");
+
+            // Validate network configuration is PUBLIC
+            var networkMode = AssertElementExistsAtPath(agentRuntime.Resource, "Properties/NetworkConfiguration/NetworkMode");
+            Assert.Equal("PUBLIC", networkMode.GetString());
+
+            // Validate role ARN references the default IAM role
+            var roleArn = AssertElementExistsAtPath(agentRuntime.Resource, "Properties/RoleArn");
+            Assert.True(roleArn.TryGetProperty("Fn::GetAtt", out _), "RoleArn should reference an IAM role construct");
+
+            // Validate IAM Role exists for AgentCore
+            var iamRoles = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Role");
+            Assert.Single(iamRoles);
+            var agentCoreRole = iamRoles[0];
+
+            // Validate IAM Role has bedrock service principal
+            var assumeRolePrincipal = AssertElementExistsAtPath(agentCoreRole.Resource, "Properties/AssumeRolePolicyDocument/Statement/0/Principal/Service");
+            Assert.Equal("bedrock.amazonaws.com", assumeRolePrincipal.GetString());
+
+            // Validate IAM Role has required managed policies
+            var managedPolicyArns = AssertElementExistsAtPath(agentCoreRole.Resource, "Properties/ManagedPolicyArns");
+            Assert.True(managedPolicyArns.GetArrayLength() >= 2);
+
+            // Validate AgentCore RuntimeEndpoint exists
+            var runtimeEndpoints = GetResourcesOfType(cfTemplateDoc, "AWS::BedrockAgentCore::RuntimeEndpoint");
+            Assert.Single(runtimeEndpoints);
+            var runtimeEndpoint = runtimeEndpoints[0];
+
+            // Validate RuntimeEndpoint references the runtime
+            var endpointRuntimeId = AssertElementExistsAtPath(runtimeEndpoint.Resource, "Properties/AgentRuntimeId");
+            Assert.True(endpointRuntimeId.TryGetProperty("Fn::GetAtt", out _), "AgentRuntimeId should reference the runtime construct");
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishAgentCoreRuntime), cloudFormationValidation);
+    }
+
+    [Fact]
+    public async Task TestPublishAgentCoreRuntimeWithCustomization()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            // Validate AgentCore Runtime exists
+            var agentRuntimes = GetResourcesOfType(cfTemplateDoc, "AWS::BedrockAgentCore::Runtime");
+            Assert.Single(agentRuntimes);
+            var agentRuntime = agentRuntimes[0];
+
+            // Validate custom description was applied
+            var description = AssertElementExistsAtPath(agentRuntime.Resource, "Properties/Description");
+            Assert.Equal("Custom agent description", description.GetString());
+
+            // Validate RuntimeEndpoint exists
+            var runtimeEndpoints = GetResourcesOfType(cfTemplateDoc, "AWS::BedrockAgentCore::RuntimeEndpoint");
+            Assert.Single(runtimeEndpoints);
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishAgentCoreRuntimeWithCustomization), cloudFormationValidation);
+    }
+
     private async Task ExecutePublishAsync(string scenario, Func<JsonDocument, Task> cfTemplateValidation)
     {
         var outputPath = GetTempOutputPath();

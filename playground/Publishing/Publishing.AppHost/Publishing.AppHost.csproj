@@ -20,6 +20,7 @@
 	  <ProjectReference Include="..\Backend\Backend.csproj" />
 	  <ProjectReference Include="..\Frontend\Frontend.csproj" />
 	  <ProjectReference Include="..\SQSProcessorFunction\SQSProcessorFunction.csproj" />
+	  <ProjectReference Include="..\Publishing.HoroscopeAgent\Publishing.HoroscopeAgent.csproj" />
 	</ItemGroup>
 
 </Project>

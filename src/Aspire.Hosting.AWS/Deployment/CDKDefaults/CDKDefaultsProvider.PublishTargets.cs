@@ -92,4 +92,25 @@ public partial class CDKDefaultsProvider
     /// The default publishing target to use when publishing <see cref="Aspire.Hosting.ApplicationModel.RedisResource">RedisResource</see> or <see cref="Aspire.Hosting.ApplicationModel.ValkeyResource">ValkeyResource</see>. The default value is <see cref="RedisResourcePublishTarget.ElastiCacheServerlessCluster"/>.
     /// </summary>
     public virtual RedisResourcePublishTarget DefaultRedisResourcePublishTarget { get; set; } = RedisResourcePublishTarget.ElastiCacheServerlessCluster;
+
+#if NET10_0_OR_GREATER
+    /// <summary>
+    /// Specifies the available publishing targets for AgentCore project resources registered via
+    /// <see cref="Aspire.Hosting.AWS.AgentCore.AgentCoreResourceBuilderExtensions.AddAgentCoreRuntime{TProject}"/>.
+    /// </summary>
+    public enum AgentCoreProjectResourcePublishTarget
+    {
+        /// <summary>
+        /// Deploy to AWS Bedrock AgentCore as a container runtime.
+        /// The CDK <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-bedrockagentcore-runtime.html">AWS::BedrockAgentCore::Runtime</a>
+        /// construct is used to create the AgentCore runtime.
+        /// </summary>
+        AgentCoreRuntime
+    }
+
+    /// <summary>
+    /// The default publishing target to use when publishing AgentCore project resources. The default value is <see cref="AgentCoreProjectResourcePublishTarget.AgentCoreRuntime"/>.
+    /// </summary>
+    public virtual AgentCoreProjectResourcePublishTarget DefaultAgentCoreProjectResourcePublishTarget { get; set; } = AgentCoreProjectResourcePublishTarget.AgentCoreRuntime;
+#endif
 }

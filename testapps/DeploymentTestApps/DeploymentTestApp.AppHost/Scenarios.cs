@@ -7,6 +7,7 @@ using Environment = System.Environment;
 #pragma warning disable ASPIREAWSPUBLISHERS001
 #pragma warning disable ASPIRECOMPUTE001
 #pragma warning disable ASPIREINTERACTION001
+#pragma warning disable ASPIREAWSAGENTCORE001
 
 namespace DeploymentTestApp.AppHost
 {
@@ -277,8 +278,37 @@ namespace DeploymentTestApp.AppHost
             await ExecuteApp(builder);
         }
 
+        public static async Task PublishAgentCoreRuntime()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntime));
+
+            builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent");
+
+            await ExecuteApp(builder);
+        }
+
+        public static async Task PublishAgentCoreRuntimeWithCustomization()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntimeWithCustomization));
+
+            builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent")
+                .PublishAsAgentCoreRuntime(new PublishAgentCoreRuntimeConfig
+                {
+                    PropsCfnRuntimeCallback = (ctx, props) =>
+                    {
+                        props.Description = "Custom agent description";
+                    }
+                });
+
+            await ExecuteApp(builder);
+        }
+
         /// <summary>
-        /// When running the IDistributedApplication through tests for publishing there are exceptions thrown 
+        /// When running the IDistributedApplication through tests for publishing there are exceptions thrown
         /// when the IDistributedApplication is shutting down. This method catches and ignores those exceptions to allow for clean test runs.
         /// </summary>
         /// <param name="builder"></param>

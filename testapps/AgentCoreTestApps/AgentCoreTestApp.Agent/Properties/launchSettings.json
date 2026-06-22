@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "AgentCoreTestApp.Agent": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:50481;http://localhost:50483"
+    }
+  }
+}

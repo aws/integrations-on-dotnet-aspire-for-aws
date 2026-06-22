@@ -121,6 +121,18 @@ builder.AddAWSCDKEnvironment<DeploymentStack>(
 
 By default, Aspire resources are mapped to AWS services based on their type. You can override this behavior using Publish extension methods:
 
+### Available Publish Extension Methods
+
+| Method | Resource Type | Deploys To |
+|--------|--------------|------------|
+| `PublishAsECSFargateExpressService()` | `ProjectResource` (web) | ECS Fargate Express Service with shared ALB |
+| `PublishAsECSFargateService()` | `ProjectResource` (console) | ECS Fargate Service (no HTTP endpoint) |
+| `PublishAsECSFargateServiceWithALB()` | `ProjectResource` (web) | ECS Fargate Service with dedicated ALB |
+| `PublishAsLambdaFunction()` | `LambdaProjectResource` | AWS Lambda Function |
+| `PublishAsElasticCacheProvisionCluster()` | `RedisResource` / `ValkeyResource` | ElastiCache Provisioned Cluster |
+| `PublishAsElasticCacheServerlessCluster()` | `RedisResource` / `ValkeyResource` | ElastiCache Serverless Cluster |
+| `PublishAsAgentCoreRuntime()` | `ProjectResource` (AgentCore) | Bedrock AgentCore Container Runtime |
+
 ### Overriding Defaults
 
 ```csharp
@@ -185,6 +197,31 @@ lambdaFunction.PublishAsLambdaFunction(new PublishLambdaFunctionConfig
 });
 ```
 
+### AgentCore Callbacks Example
+
+AgentCore publish targets expose callbacks for both the `CfnRuntime` and `CfnRuntimeEndpoint` constructs:
+
+```csharp
+builder.AddAgentCoreRuntime<Projects.MyAgent>("my-agent")
+    .PublishAsAgentCoreRuntime(new PublishAgentCoreRuntimeConfig
+    {
+        PropsCfnRuntimeCallback = (ctx, props) =>
+        {
+            props.Description = "My production agent";
+        },
+        ConstructCfnRuntimeCallback = (ctx, construct) =>
+        {
+            // Access the runtime after creation
+        },
+        PropsCfnRuntimeEndpointCallback = (ctx, props) =>
+        {
+            props.Description = "Production endpoint";
+        }
+    });
+```
+
+Note that projects registered with `AddAgentCoreRuntime<T>()` are automatically deployed to Bedrock AgentCore without needing to call `PublishAsAgentCoreRuntime()`. The explicit method is only needed when you want to customize the CDK props or constructs via callbacks.
+
 ### CDKPublishTargetContext
 
 The context object passed to callbacks provides:
@@ -229,6 +266,19 @@ public class DeploymentStack : Stack
 
 Now all resources requiring a VPC will use the account's default VPC instead of creating a new one.
 
+### Available Default Construct Attributes
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `[DefaultVpc]` | `IVpc` | Default VPC for all resources |
+| `[DefaultECSCluster]` | `ICluster` | Default ECS Cluster for Fargate services |
+| `[DefaultECSClusterSecurityGroup]` | `ISecurityGroup` | Security group for ECS cluster |
+| `[DefaultECSExpressExecutionRole]` | `IRole` | Execution role for ECS Express services |
+| `[DefaultECSExpressInfrastructureRole]` | `IRole` | Infrastructure role for ECS Express services |
+| `[DefaultElastiCacheCfnSubnetGroup]` | `CfnSubnetGroup` | Subnet group for ElastiCache provisioned clusters |
+| `[DefaultElastiCacheNodeSecurityGroup]` | `ISecurityGroup` | Security group for ElastiCache provisioned clusters |
+| `[DefaultElastiCacheServerlessSecurityGroup]` | `ISecurityGroup` | Security group for ElastiCache serverless clusters |
+| `[DefaultAgentCoreRuntimeRole]` | `IRole` | Execution role for Bedrock AgentCore runtimes |
 
 ### Default Construct Creation
 
@@ -307,6 +357,9 @@ public virtual LambdaProjectResourcePublishTarget DefaultLambdaProjectResourcePu
 
 public virtual RedisResourcePublishTarget DefaultRedisResourcePublishTarget 
     { get; set; } = RedisResourcePublishTarget.ElastiCacheServerlessCluster;
+
+public virtual AgentCoreProjectResourcePublishTarget DefaultAgentCoreProjectResourcePublishTarget 
+    { get; set; } = AgentCoreProjectResourcePublishTarget.AgentCoreRuntime;
 ```
 
 #### 2. Resource-Specific Defaults
@@ -332,6 +385,23 @@ public virtual void ApplyCfnExpressGatewayServiceDefaults(CfnExpressGatewayServi
     if (props.PrimaryContainer is ExpressGatewayContainerProperty container)
     {
         container.Port ??= 8080;  // Default container port
+    }
+}
+
+// Example: AgentCore runtime defaults
+public virtual void ApplyAgentCoreRuntimeDefaults(CfnRuntimeProps props)
+{
+    if (props.NetworkConfiguration == null)
+    {
+        props.NetworkConfiguration = new CfnRuntime.NetworkConfigurationProperty
+        {
+            NetworkMode = AgentCoreRuntimeNetworkMode  // Default: "PUBLIC"
+        };
+    }
+
+    if (string.IsNullOrEmpty(props.RoleArn))
+    {
+        props.RoleArn = GetDefaultAgentCoreRuntimeRole().RoleArn;
     }
 }
 ```
@@ -509,6 +579,33 @@ public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(
 }
 ```
 
+**Example: Bedrock AgentCore Runtime (annotation-based detection)**
+
+AgentCore uses a different detection strategy from Lambda and ECS. While Lambda checks the resource type (`LambdaProjectResource`) and ECS checks for endpoints, AgentCore detects the `AgentCoreRuntimeAnnotation` that `AddAgentCoreRuntime<T>()` attaches to the `ProjectResource`. This is necessary because AgentCore agents are standard `ProjectResource` instances, distinguished only by their annotation.
+
+```csharp
+public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(
+    CDKDefaultsProvider cdkDefaultsProvider, 
+    IResource resource)
+{
+    // Match any ProjectResource that was registered via AddAgentCoreRuntime<T>()
+    if (resource is ProjectResource &&
+        resource.Annotations.OfType<AgentCoreRuntimeAnnotation>().Any())
+    {
+        return new IsDefaultPublishTargetMatchResult
+        {
+            IsMatch = true,
+            PublishTargetAnnotation = new PublishAgentCoreRuntimeAnnotation(),
+            Rank = IsDefaultPublishTargetMatchResult.DEFAULT_MATCH_RANK + 200
+        };
+    }
+
+    return IsDefaultPublishTargetMatchResult.NO_MATCH;
+}
+```
+
+The rank of `DEFAULT_MATCH_RANK + 200` ensures AgentCore wins over both the web project default (rank 200) and the console project default (rank 100) when the annotation is present.
+
 ### Ranking System
 
 The rank determines priority when multiple targets match. An example of a scenario where there can be multiple matches is an Aspire `ProjectResource` that has endpoints (i.e. Web Project). The publishing target for web a web project match as well as the generic .NET project. The rank allows the system to prefer the web project match over the generic .NET project.
@@ -526,6 +623,8 @@ public virtual WebProjectResourcePublishTarget DefaultWebProjectResourcePublishT
 ```
 
 Publish targets check these properties in their `IsDefaultPublishTargetMatch()` implementation, allowing users to change defaults by customizing the provider.
+
+Note that some publish targets use annotation-based detection instead of (or in addition to) the defaults provider enum. For example, the AgentCore publish target matches any `ProjectResource` that has an `AgentCoreRuntimeAnnotation`, which is added by `AddAgentCoreRuntime<T>()`. This pattern is useful when a specialized deployment target applies to a standard resource type distinguished by an annotation rather than a dedicated subclass.
 
 ---
 
@@ -1096,8 +1195,18 @@ The AWS deployment system for .NET Aspire provides a flexible, extensible archit
 4. **Customization**: Use callbacks to modify CDK props and constructs
 5. **Default Constructs**: Override shared resources using attributes in your custom stack
 6. **Versioned Defaults**: CDKDefaultsProvider allows opt-in to breaking changes
-7. **Automatic Selection**: Resources without explicit publish targets are matched automatically
+7. **Automatic Selection**: Resources without explicit publish targets are matched automatically — including annotation-based detection (e.g., AgentCore agents are auto-detected via `AgentCoreRuntimeAnnotation`)
 8. **Reference Handling**: Automatic configuration of environment variables, VPC, and security groups
 9. **Extensibility**: Add new publish targets for new resource types or alternative deployment options
+
+### Supported Publish Targets
+
+| Aspire Resource | Default AWS Target | CDK Construct |
+|----------------|-------------------|---------------|
+| Web `ProjectResource` (with endpoints) | ECS Fargate Express Service | `CfnExpressGatewayService` |
+| Console `ProjectResource` (no endpoints) | ECS Fargate Service | `FargateService` |
+| `LambdaProjectResource` | AWS Lambda Function | `Function` |
+| `RedisResource` / `ValkeyResource` | ElastiCache Serverless Cluster | `CfnServerlessCache` |
+| `ProjectResource` with `AgentCoreRuntimeAnnotation` | Bedrock AgentCore Runtime | `CfnRuntime` + `CfnRuntimeEndpoint` |
 
 This design enables both simple deployments with sensible defaults and complex customizations for production workloads.
