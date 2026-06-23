@@ -6,6 +6,7 @@ using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
 using Amazon.CDK.AWS.EC2;
+using Amazon.CDK.AWS.IAM;
 using Aspire.Hosting.AWS.Deployment.CDKDefaults;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
@@ -52,7 +53,19 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
     /// <inheritdoc/>
     public virtual void ApplyReferenceSecurityGroup(AWSLinkedObjectsAnnotation linkedAnnotation, ISecurityGroup securityGroup)
     {
-        
+
+    }
+
+    /// <inheritdoc/>
+    public virtual bool ReferenceRequiresTaskRolePolicy()
+    {
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public virtual void ApplyReferenceTaskRolePolicy(AWSLinkedObjectsAnnotation linkedAnnotation, IRole taskRole)
+    {
+
     }
 
     /// <summary>
@@ -190,6 +203,11 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
             if (linkAnnotation.PublishTarget.ReferenceRequiresSecurityGroup() && referencePoints.ReferenceSecurityGroup != null)
             {
                 linkAnnotation.PublishTarget.ApplyReferenceSecurityGroup(linkAnnotation, referencePoints.ReferenceSecurityGroup);
+            }
+
+            if (linkAnnotation.PublishTarget.ReferenceRequiresTaskRolePolicy() && referencePoints.ReferenceTaskRole != null)
+            {
+                linkAnnotation.PublishTarget.ApplyReferenceTaskRolePolicy(linkAnnotation, referencePoints.ReferenceTaskRole);
             }
         }
 

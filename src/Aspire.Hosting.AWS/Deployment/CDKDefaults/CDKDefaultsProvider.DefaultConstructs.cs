@@ -246,6 +246,22 @@ public partial class CDKDefaultsProvider
         });
     }
 
+    /// <summary>
+    /// Creates the default ECS task role assigned to a service's task definition when the user has not
+    /// supplied one. This is the role the application's own code assumes at runtime to call AWS APIs, so
+    /// it is created per-service (rather than shared) and starts empty: reference hooks attach scoped
+    /// policies as needed (for example, AgentCore invoke permissions when a service references an agent).
+    /// </summary>
+    /// <param name="resourceName">The Aspire resource name, used to give the role a stable, unique construct id.</param>
+    /// <returns>The created task role, trusted by the ecs-tasks service principal.</returns>
+    protected internal virtual IRole CreateDefaultECSTaskRole(string resourceName)
+    {
+        return new Role(EnvironmentResource.CDKStack, $"{resourceName}-DefaultTaskRole", new RoleProps
+        {
+            AssumedBy = new ServicePrincipal("ecs-tasks.amazonaws.com")
+        });
+    }
+
     private TConstruct? FindDefaultConstructByAttribute<TAttribute, TConstruct>()
         where TAttribute : Attribute
         where TConstruct : class

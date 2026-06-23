@@ -307,6 +307,23 @@ namespace DeploymentTestApp.AppHost
             await ExecuteApp(builder);
         }
 
+        public static async Task PublishAgentCoreRuntimeWithReference()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntimeWithReference));
+
+            var agent = builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent");
+
+            // A consumer that references the agent should receive its runtime ARN as an environment
+            // variable derived from the standard reference convention.
+            builder.AddProject<Projects.DeploymentTestApps_WebApp1>("WebApp1")
+                .WithReference(agent)
+                .WithExternalHttpEndpoints();
+
+            await ExecuteApp(builder);
+        }
+
         /// <summary>
         /// When running the IDistributedApplication through tests for publishing there are exceptions thrown
         /// when the IDistributedApplication is shutting down. This method catches and ignores those exceptions to allow for clean test runs.

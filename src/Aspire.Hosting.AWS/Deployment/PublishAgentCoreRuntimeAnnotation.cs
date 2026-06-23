@@ -28,16 +28,6 @@ public class PublishAgentCoreRuntimeConfig
     /// Callback to modify the constructed AgentCore Runtime
     /// </summary>
     public PublishCallback<CfnRuntime>? ConstructCfnRuntimeCallback { get; set; }
-
-    /// <summary>
-    /// Callback to modify the properties used to construct the AgentCore Runtime Endpoint
-    /// </summary>
-    public PublishCallback<CfnRuntimeEndpointProps>? PropsCfnRuntimeEndpointCallback { get; set; }
-
-    /// <summary>
-    /// Callback to modify the constructed AgentCore Runtime Endpoint
-    /// </summary>
-    public PublishCallback<CfnRuntimeEndpoint>? ConstructCfnRuntimeEndpointCallback { get; set; }
 }
 
 #endif

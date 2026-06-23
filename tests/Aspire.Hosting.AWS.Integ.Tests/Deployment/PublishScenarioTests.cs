@@ -66,10 +66,15 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             var vpcs = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::VPC");
             Assert.Single(vpcs);
 
+            // 4 roles: shared Express execution + infrastructure roles, plus a per-service default task role for each of the 2 apps.
             var iamRoles = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Role");
-            Assert.Equal(2, iamRoles.Count);
+            Assert.Equal(4, iamRoles.Count);
 
-            var executionRole = iamRoles.FirstOrDefault(r => r.LogicalId.Contains("ExecutionRole"));            
+            // Each app gets its own default task role wired into the service's TaskRoleArn.
+            var taskRoles = iamRoles.Where(r => r.LogicalId.Contains("DefaultTaskRole")).ToList();
+            Assert.Equal(2, taskRoles.Count);
+
+            var executionRole = iamRoles.FirstOrDefault(r => r.LogicalId.Contains("ExecutionRole"));
             AssertJsonEquals("""
             {
              "Type": "AWS::IAM::Role",
@@ -408,9 +413,15 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             var ecsClusters = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::Cluster");
             Assert.Single(ecsClusters);
 
-            // Validate IAM Roles (4 total: 2 for Express, 2 for Service1)
+            // Validate IAM Roles (5 total: 2 shared Express roles (execution + infrastructure), a default task
+            // role for the Express WebApp1, plus the Fargate Service1's task role and execution role).
             var iamRoles = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Role");
-            Assert.Equal(4, iamRoles.Count);
+            Assert.Equal(5, iamRoles.Count);
+
+            // Both services get a default task role (the Express service's is named *-DefaultTaskRole;
+            // the Fargate Service1's task role is wired into its task definition).
+            var defaultTaskRoles = iamRoles.Where(r => r.LogicalId.Contains("DefaultTaskRole")).ToList();
+            Assert.Equal(2, defaultTaskRoles.Count);
 
             // Validate Security Groups
             var securityGroups = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroup");
@@ -1715,27 +1726,113 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             Assert.Single(iamRoles);
             var agentCoreRole = iamRoles[0];
 
-            // Validate IAM Role has bedrock service principal
+            // Validate IAM Role has the Bedrock AgentCore service principal
             var assumeRolePrincipal = AssertElementExistsAtPath(agentCoreRole.Resource, "Properties/AssumeRolePolicyDocument/Statement/0/Principal/Service");
-            Assert.Equal("bedrock.amazonaws.com", assumeRolePrincipal.GetString());
+            Assert.Equal("bedrock-agentcore.amazonaws.com", assumeRolePrincipal.GetString());
 
             // Validate IAM Role has required managed policies
             var managedPolicyArns = AssertElementExistsAtPath(agentCoreRole.Resource, "Properties/ManagedPolicyArns");
             Assert.True(managedPolicyArns.GetArrayLength() >= 2);
 
-            // Validate AgentCore RuntimeEndpoint exists
-            var runtimeEndpoints = GetResourcesOfType(cfTemplateDoc, "AWS::BedrockAgentCore::RuntimeEndpoint");
-            Assert.Single(runtimeEndpoints);
-            var runtimeEndpoint = runtimeEndpoints[0];
+            // Validate the role has an inline policy granting the Bedrock model invocation actions, since
+            // the agent code running in the runtime invokes foundation models. The statement must cover both
+            // foundation-model and inference-profile ARNs (agents commonly invoke via inference profiles).
+            var policies = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Policy");
+            var invokeModelPolicy = policies.FirstOrDefault(p =>
+            {
+                var statements = GetElementAtPath(p.Resource, "Properties/PolicyDocument/Statement");
+                if (statements is not { ValueKind: JsonValueKind.Array } stmts)
+                    return false;
+                return stmts.EnumerateArray().Any(s =>
+                {
+                    var action = GetElementAtPath(s, "Action");
+                    if (action is not { ValueKind: JsonValueKind.String } a || a.GetString() != "bedrock:InvokeModel*")
+                        return false;
 
-            // Validate RuntimeEndpoint references the runtime
-            var endpointRuntimeId = AssertElementExistsAtPath(runtimeEndpoint.Resource, "Properties/AgentRuntimeId");
-            Assert.True(endpointRuntimeId.TryGetProperty("Fn::GetAtt", out _), "AgentRuntimeId should reference the runtime construct");
+                    var resource = GetElementAtPath(s, "Resource");
+                    if (resource is not { ValueKind: JsonValueKind.Array } resources)
+                        return false;
+                    // ARNs are built with the AWS::Partition token, so each resource renders as an Fn::Join
+                    // object rather than a plain string. Match against the raw JSON of each element.
+                    var resourceTexts = resources.EnumerateArray().Select(r => r.GetRawText()).ToList();
+                    return resourceTexts.Any(r => r.Contains("foundation-model/")) &&
+                           resourceTexts.Any(r => r.Contains("inference-profile/"));
+                });
+            });
+            Assert.False(string.IsNullOrEmpty(invokeModelPolicy.LogicalId), "The AgentCore runtime role should have an inline policy granting bedrock:InvokeModel* on foundation-model and inference-profile resources");
+
+            // Validate NO AgentCore RuntimeEndpoint is created. The runtime's auto-created DEFAULT
+            // endpoint is used for invocation; a named endpoint may be added as an opt-in in a future version.
+            var runtimeEndpoints = GetResourcesOfType(cfTemplateDoc, "AWS::BedrockAgentCore::RuntimeEndpoint");
+            Assert.Empty(runtimeEndpoints);
 
             return Task.CompletedTask;
         };
 
         await ExecutePublishAsync(nameof(Scenarios.PublishAgentCoreRuntime), cloudFormationValidation);
+    }
+
+    [Fact]
+    public async Task TestPublishAgentCoreRuntimeWithReference()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            // The agent runtime is created.
+            var agentRuntimes = GetResourcesOfType(cfTemplateDoc, "AWS::BedrockAgentCore::Runtime");
+            Assert.Single(agentRuntimes);
+            var agentRuntimeLogicalId = agentRuntimes[0].LogicalId;
+
+            // The referencing consumer (WebApp1) receives the runtime ARN as an environment variable
+            // keyed by the standard reference convention: AWS:Resources:AgentCoreAgent:AgentRuntimeArn
+            // which is delivered as AWS__Resources__AgentCoreAgent__AgentRuntimeArn.
+            var arnEnvVar = AssertElementExistsAtPath(cfTemplateDoc,
+                "Resources/ProjectWebApp1/Properties/PrimaryContainer/Environment/{Name=AWS__Resources__AgentCoreAgent__AgentRuntimeArn}/Value");
+
+            // The value is a Fn::GetAtt against the runtime's AgentRuntimeArn attribute.
+            var getAtt = AssertElementExistsAtPath(arnEnvVar, "Fn::GetAtt");
+            Assert.Equal(JsonValueKind.Array, getAtt.ValueKind);
+            Assert.Equal(agentRuntimeLogicalId, getAtt[0].GetString());
+            Assert.Equal("AgentRuntimeArn", getAtt[1].GetString());
+
+            // The consumer (WebApp1, an Express service) is assigned a default task role wired into TaskRoleArn.
+            var iamRoles = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Role");
+            var taskRole = iamRoles.FirstOrDefault(r => r.LogicalId.Contains("DefaultTaskRole"));
+            Assert.False(string.IsNullOrEmpty(taskRole.LogicalId), "A default task role should be created for the referencing service");
+
+            var taskRoleArn = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/TaskRoleArn");
+            var taskRoleArnGetAtt = AssertElementExistsAtPath(taskRoleArn, "Fn::GetAtt");
+            Assert.Equal(taskRole.LogicalId, taskRoleArnGetAtt[0].GetString());
+
+            // Because WebApp1 references the agent and was assigned the default task role, an inline policy
+            // granting the AgentCore invoke APIs (scoped to the runtime ARN and its child endpoints) is attached.
+            var policies = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Policy");
+            var invokePolicy = policies.FirstOrDefault(p =>
+            {
+                var statements = GetElementAtPath(p.Resource, "Properties/PolicyDocument/Statement");
+                if (statements is not { ValueKind: JsonValueKind.Array } stmts)
+                    return false;
+                return stmts.EnumerateArray().Any(s =>
+                {
+                    var action = GetElementAtPath(s, "Action");
+                    return action is { ValueKind: JsonValueKind.String } a && a.GetString() == "bedrock-agentcore:Invoke*";
+                });
+            });
+            Assert.False(string.IsNullOrEmpty(invokePolicy.LogicalId), "An inline policy granting bedrock-agentcore:Invoke* should be attached");
+
+            // The invoke policy is attached to the consumer's task role.
+            var policyRoles = AssertElementExistsAtPath(invokePolicy.Resource, "Properties/Roles");
+            Assert.Equal(JsonValueKind.Array, policyRoles.ValueKind);
+            var attachedToTaskRole = policyRoles.EnumerateArray().Any(r =>
+            {
+                var refEl = GetElementAtPath(r, "Ref");
+                return refEl is { ValueKind: JsonValueKind.String } refStr && refStr.GetString() == taskRole.LogicalId;
+            });
+            Assert.True(attachedToTaskRole, "The invoke policy should be attached to the service's default task role");
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishAgentCoreRuntimeWithReference), cloudFormationValidation);
     }
 
     [Fact]
@@ -1752,9 +1849,9 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             var description = AssertElementExistsAtPath(agentRuntime.Resource, "Properties/Description");
             Assert.Equal("Custom agent description", description.GetString());
 
-            // Validate RuntimeEndpoint exists
+            // Validate NO RuntimeEndpoint is created (the runtime's auto-created DEFAULT endpoint is used).
             var runtimeEndpoints = GetResourcesOfType(cfTemplateDoc, "AWS::BedrockAgentCore::RuntimeEndpoint");
-            Assert.Single(runtimeEndpoints);
+            Assert.Empty(runtimeEndpoints);
 
             return Task.CompletedTask;
         };

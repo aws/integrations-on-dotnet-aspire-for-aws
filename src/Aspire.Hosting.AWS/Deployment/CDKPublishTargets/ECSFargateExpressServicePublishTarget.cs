@@ -6,6 +6,7 @@ using Amazon.CDK;
 using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.Ecr.Assets;
 using Amazon.CDK.AWS.ECS;
+using Amazon.CDK.AWS.IAM;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Deployment.CDKDefaults;
 using Aspire.Hosting.AWS.Deployment.Services;
@@ -51,9 +52,20 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
         publishAnnotation.Config.PropsCfnExpressGatewayServicePropsCallback?.Invoke(CreatePublishTargetContext(environment), fargateServiceProps);
         environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(fargateServiceProps);
 
+        // Assign a default task role when the user hasn't supplied one so the application's own AWS calls
+        // run under a controllable role. Only the integration-created role is exposed to reference hooks
+        // (via ReferenceTaskRole) so a user-supplied role is never mutated.
+        IRole? defaultTaskRole = null;
+        if (string.IsNullOrEmpty(fargateServiceProps.TaskRoleArn))
+        {
+            defaultTaskRole = environment.DefaultsProvider.CreateDefaultECSTaskRole(projectResource.Name);
+            fargateServiceProps.TaskRoleArn = defaultTaskRole.RoleArn;
+        }
+
         var referencePoints = new CfnExpressGatewayServicePropsConnectionPoints(
             fargateServiceProps,
-            environment.DefaultsProvider.GetDefaultECSClusterSecurityGroup());
+            environment.DefaultsProvider.GetDefaultECSClusterSecurityGroup(),
+            defaultTaskRole);
         ProcessRelationShips(referencePoints, projectResource, environment);
 
         var fargateService = new CfnExpressGatewayService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
@@ -102,7 +114,7 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
 }
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-internal class CfnExpressGatewayServicePropsConnectionPoints(CfnExpressGatewayServiceProps props, ISecurityGroup securityGroup) : AbstractCDKConstructConnectionPoints
+internal class CfnExpressGatewayServicePropsConnectionPoints(CfnExpressGatewayServiceProps props, ISecurityGroup securityGroup, IRole? taskRole = null) : AbstractCDKConstructConnectionPoints
 {
     public override IDictionary<string, string>? EnvironmentVariables
     {
@@ -142,5 +154,7 @@ internal class CfnExpressGatewayServicePropsConnectionPoints(CfnExpressGatewaySe
     }
 
     public override ISecurityGroup? ReferenceSecurityGroup => securityGroup;
+
+    public override IRole? ReferenceTaskRole => taskRole;
 }
 

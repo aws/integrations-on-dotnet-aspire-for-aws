@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS;
 using Aspire.Hosting.AWS.AgentCore;
+using Aspire.Hosting.Publishing;
 using AWS.AgentCore.Testing;
 using AWS.AgentCore.Testing.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,7 +46,11 @@ public static class AgentCoreResourceBuilderExtensions
 
         var agentApp = builder.AddProject<TProject>(projectName, o => o.ExcludeLaunchProfile = true)
             .WithHttpEndpoint(name: "http")
-            .WithEnvironment("AWS_AGENTCORE_ASPIRE_MANAGED", "true");
+            .WithEnvironment("AWS_AGENTCORE_ASPIRE_MANAGED", "true")
+            // Bedrock AgentCore only runs arm64 container images, so the published image must be
+            // built for linux/arm64 regardless of the host architecture. This affects publish only;
+            // local development runs the project directly without a container.
+            .WithContainerBuildOptions(context => context.TargetPlatform = ContainerTargetPlatform.LinuxArm64);
 
         // Suppress default endpoint URLs — we add our own with display names
         agentApp.WithUrls(context =>
@@ -326,6 +331,9 @@ public static class AgentCoreResourceBuilderExtensions
                 // Defer the env var value until the agent's emulator has actually bound a port.
                 // EmulatorStarted is completed by the agent's own BeforeResourceStartedEvent handler.
                 var ann = agentRefs[0].Annotation!;
+                var agentName = agentRefs[0].Source.Name;
+                var agentRuntimeArnKey =
+                    $"{Constants.DefaultConfigSection}:{agentName}:{Constants.AgentRuntimeArnOutputName}".ToEnvironmentVariables();
                 consumer.Annotations.Add(new EnvironmentCallbackAnnotation(async ctx =>
                 {
                     if (ctx.ExecutionContext.IsPublishMode)
@@ -336,6 +344,11 @@ public static class AgentCoreResourceBuilderExtensions
                     await ann.EmulatorStarted.Task;
                     ctx.EnvironmentVariables["AWS_ENDPOINT_URL_BEDROCK_AGENTCORE"] =
                         $"http://localhost:{ann.RuntimeEmulatorPort}";
+
+                    // Mirror the deployment convention so app code reads the same IConfiguration key
+                    // in both modes. The emulator ignores the ARN, so a placeholder is sufficient locally;
+                    // at deploy time the CDK stack sets this to the real AWS::BedrockAgentCore::Runtime ARN.
+                    ctx.EnvironmentVariables[agentRuntimeArnKey] = "local-agent";
                 }));
             }
 

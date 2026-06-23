@@ -5,8 +5,10 @@
 #pragma warning disable ASPIREPUBLISHERS001
 #pragma warning disable ASPIREAWSPUBLISHERS001
 
+using Amazon.CDK;
 using Amazon.CDK.AWS.BedrockAgentCore;
 using Amazon.CDK.AWS.Ecr.Assets;
+using Amazon.CDK.AWS.IAM;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.AgentCore;
 using Aspire.Hosting.AWS.Deployment.CDKDefaults;
@@ -61,17 +63,6 @@ internal class AgentCoreRuntimePublishTarget(ITarballContainerImageBuilder image
         var runtime = new CfnRuntime(environment.CDKStack, $"AgentRuntime-{projectResource.Name}", runtimeProps);
         publishAnnotation.Config.ConstructCfnRuntimeCallback?.Invoke(CreatePublishTargetContext(environment), runtime);
 
-        var endpointProps = new CfnRuntimeEndpointProps
-        {
-            AgentRuntimeId = runtime.AttrAgentRuntimeId,
-            Name = $"{projectResource.Name}-endpoint",
-            AgentRuntimeVersion = runtime.AttrAgentRuntimeVersion
-        };
-        publishAnnotation.Config.PropsCfnRuntimeEndpointCallback?.Invoke(CreatePublishTargetContext(environment), endpointProps);
-
-        var endpoint = new CfnRuntimeEndpoint(environment.CDKStack, $"AgentRuntimeEndpoint-{projectResource.Name}", endpointProps);
-        publishAnnotation.Config.ConstructCfnRuntimeEndpointCallback?.Invoke(CreatePublishTargetContext(environment), endpoint);
-
         ApplyAWSLinkedObjectsAnnotation(environment, projectResource, runtime, this);
     }
 
@@ -93,7 +84,44 @@ internal class AgentCoreRuntimePublishTarget(ITarballContainerImageBuilder image
 
     public override ReferenceConnectionInfo GetReferenceConnectionInfo(AWSLinkedObjectsAnnotation linkedAnnotation)
     {
-        return new ReferenceConnectionInfo();
+        var result = new ReferenceConnectionInfo();
+        if (linkedAnnotation.Construct is not CfnRuntime runtime)
+            return result;
+
+        // Expose the runtime ARN to referencing apps under the standard reference convention:
+        //   AWS:Resources:{agentName}:AgentRuntimeArn  ->  AWS_RESOURCES__{AGENT}__AGENTRUNTIMEARN
+        // AttrAgentRuntimeArn resolves to a CloudFormation Fn::GetAtt token during synthesis.
+        var prefix = $"{Constants.DefaultConfigSection}:{linkedAnnotation.Resource.Name}".ToEnvironmentVariables();
+        result.EnvironmentVariables = new Dictionary<string, string>
+        {
+            [$"{prefix}__{Constants.AgentRuntimeArnOutputName}"] = runtime.AttrAgentRuntimeArn
+        };
+        return result;
+    }
+
+    /// <inheritdoc/>
+    public override bool ReferenceRequiresTaskRolePolicy() => true;
+
+    /// <inheritdoc/>
+    public override void ApplyReferenceTaskRolePolicy(AWSLinkedObjectsAnnotation linkedAnnotation, IRole taskRole)
+    {
+        if (linkedAnnotation.Construct is not CfnRuntime runtime)
+            return;
+
+        // A resource referencing this agent invokes it at runtime via the AgentCore invoke APIs, so its
+        // task role needs permission to call them. The policy is scoped to this runtime and its child
+        // endpoints (named qualifiers) using the runtime ARN, which resolves to an Fn::GetAtt token.
+        var runtimeArn = runtime.AttrAgentRuntimeArn;
+        taskRole.AddToPrincipalPolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Effect = Effect.ALLOW,
+            Actions = new[] { "bedrock-agentcore:Invoke*" },
+            Resources = new[]
+            {
+                runtimeArn,
+                Fn.Join("", new[] { runtimeArn, "/*" })
+            }
+        }));
     }
 }
 

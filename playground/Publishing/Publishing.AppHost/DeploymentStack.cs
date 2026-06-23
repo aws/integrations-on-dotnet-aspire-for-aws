@@ -1,5 +1,6 @@
 ﻿using Amazon.CDK;
 using Amazon.CDK.AWS.EC2;
+using Amazon.CDK.AWS.IAM;
 using Amazon.CDK.AWS.SQS;
 using Aspire.Hosting.AWS.Deployment;
 using Constructs;

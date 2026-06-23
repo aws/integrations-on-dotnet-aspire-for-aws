@@ -7,6 +7,7 @@ using Amazon.CDK;
 using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.ECS.Patterns;
+using Amazon.CDK.AWS.IAM;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Deployment.CDKDefaults;
 using Aspire.Hosting.AWS.Deployment.Services;
@@ -49,9 +50,20 @@ internal class ECSFargateServiceWithALBPublishTarget(ITarballContainerImageBuild
         publishAnnotation.Config.PropsApplicationLoadBalancedFargateServiceCallback?.Invoke(CreatePublishTargetContext(environment), fargateServiceProps);
         environment.DefaultsProvider.ApplyECSFargateServiceWithALBDefaults(fargateServiceProps);
 
+        // Assign a default task role when the user hasn't supplied one so the application's own AWS calls
+        // run under a controllable role. Only the integration-created role is exposed to reference hooks
+        // (via ReferenceTaskRole) so a user-supplied role is never mutated.
+        IRole? defaultTaskRole = null;
+        if (taskImageOptions.TaskRole == null)
+        {
+            defaultTaskRole = environment.DefaultsProvider.CreateDefaultECSTaskRole(projectResource.Name);
+            taskImageOptions.TaskRole = defaultTaskRole;
+        }
+
         var referencePoints = new ApplicationLoadBalancedFargateServicePropsConnectionPoints(
             fargateServiceProps,
-                () => CreateEmptyReferenceSecurityGroup(environment, projectResource, fargateServiceProps, x => x.SecurityGroups, (x, v) => x.SecurityGroups = v));
+                () => CreateEmptyReferenceSecurityGroup(environment, projectResource, fargateServiceProps, x => x.SecurityGroups, (x, v) => x.SecurityGroups = v),
+                defaultTaskRole);
         ProcessRelationShips(referencePoints, projectResource, environment);
 
         var fargateService = new ApplicationLoadBalancedFargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
@@ -99,7 +111,7 @@ internal class ECSFargateServiceWithALBPublishTarget(ITarballContainerImageBuild
 }
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-internal class ApplicationLoadBalancedFargateServicePropsConnectionPoints(ApplicationLoadBalancedFargateServiceProps props, Func<ISecurityGroup> securityGroupFactory) : AbstractCDKConstructConnectionPoints
+internal class ApplicationLoadBalancedFargateServicePropsConnectionPoints(ApplicationLoadBalancedFargateServiceProps props, Func<ISecurityGroup> securityGroupFactory, IRole? taskRole = null) : AbstractCDKConstructConnectionPoints
 {
     ISecurityGroup? _referenceSecurityGroup;
     public override IDictionary<string, string>? EnvironmentVariables
@@ -138,4 +150,6 @@ internal class ApplicationLoadBalancedFargateServicePropsConnectionPoints(Applic
             return _referenceSecurityGroup;
         }
     }
+
+    public override IRole? ReferenceTaskRole => taskRole;
 }

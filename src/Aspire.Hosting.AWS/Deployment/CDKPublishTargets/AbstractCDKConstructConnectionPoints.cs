@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Amazon.CDK.AWS.EC2;
+using Amazon.CDK.AWS.IAM;
 
 namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
 
@@ -27,7 +28,16 @@ public class AbstractCDKConstructConnectionPoints
     /// default security group as an ingress rule.
     /// </summary>
     public virtual ISecurityGroup? ReferenceSecurityGroup { get; } = null;
-    
+
+    /// <summary>
+    /// Gets the task role that the publish target created by default for the construct, or <c>null</c>
+    /// when the user supplied their own task role. When a reference requires permissions on the
+    /// referencing construct's task role (for example, granting AgentCore invoke permissions), the
+    /// reference's publish target attaches a scoped policy to this role. It is only set when the role
+    /// was created by the integration so that user-supplied roles are never mutated.
+    /// </summary>
+    public virtual IRole? ReferenceTaskRole { get; } = null;
+
     /// <summary>
     /// Gets and sets the VPC for the construct. This is should be overriden when VPC configuration is optional
     /// like a Lambda function. If a reference requires the construct to be in the VPC this property will set the

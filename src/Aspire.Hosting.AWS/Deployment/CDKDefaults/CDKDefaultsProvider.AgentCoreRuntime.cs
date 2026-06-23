@@ -2,6 +2,7 @@
 
 #if NET10_0_OR_GREATER
 
+using Amazon.CDK;
 using Amazon.CDK.AWS.BedrockAgentCore;
 using Amazon.CDK.AWS.IAM;
 
@@ -42,20 +43,56 @@ public partial class CDKDefaultsProvider
     }
 
     /// <summary>
-    /// Creates the default IAM role for AgentCore runtimes with trust policy for the bedrock service principal.
+    /// Creates the default IAM role for AgentCore runtimes with a trust policy for the Bedrock AgentCore service principal.
     /// </summary>
     /// <returns>The created IAM role.</returns>
     protected virtual IRole CreateDefaultAgentCoreRuntimeRole()
     {
-        return new Role(EnvironmentResource.CDKStack, "DefaultAgentCoreRuntimeRole", new RoleProps
+        var stack = EnvironmentResource.CDKStack;
+
+        // Bedrock AgentCore runtimes are assumed by the bedrock-agentcore service principal (NOT
+        // bedrock.amazonaws.com). The trust policy is scoped with aws:SourceAccount/aws:SourceArn
+        // conditions to guard against the confused-deputy problem, per the AgentCore documentation.
+        var role = new Role(stack, "DefaultAgentCoreRuntimeRole", new RoleProps
         {
-            AssumedBy = new ServicePrincipal("bedrock.amazonaws.com"),
+            AssumedBy = new ServicePrincipal("bedrock-agentcore.amazonaws.com", new ServicePrincipalOpts
+            {
+                Conditions = new Dictionary<string, object>
+                {
+                    ["StringEquals"] = new Dictionary<string, object>
+                    {
+                        ["aws:SourceAccount"] = stack.Account
+                    },
+                    ["ArnLike"] = new Dictionary<string, object>
+                    {
+                        ["aws:SourceArn"] = $"arn:{stack.Partition}:bedrock-agentcore:{stack.Region}:{stack.Account}:*"
+                    }
+                }
+            }),
             ManagedPolicies = new[]
             {
                 ManagedPolicy.FromAwsManagedPolicyName("AmazonEC2ContainerRegistryReadOnly"),
                 ManagedPolicy.FromAwsManagedPolicyName("CloudWatchLogsFullAccess"),
             }
         });
+
+        // The agent code running in the runtime invokes Bedrock models, so grant the model invocation
+        // actions (InvokeModel, InvokeModelWithResponseStream, etc.) via the InvokeModel* wildcard.
+        // Invocation can target a model directly or route through a (cross-region) inference profile, so
+        // the policy covers both: foundation models (account-less ARN, region wildcarded so a global
+        // profile's underlying models in any region are allowed) and inference profiles in this account.
+        role.AddToPrincipalPolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Effect = Effect.ALLOW,
+            Actions = new[] { "bedrock:InvokeModel*" },
+            Resources = new[]
+            {
+                $"arn:{stack.Partition}:bedrock:*::foundation-model/*",
+                $"arn:{stack.Partition}:bedrock:*:{stack.Account}:inference-profile/*"
+            }
+        }));
+
+        return role;
     }
 
     /// <summary>
