@@ -54,11 +54,11 @@ internal class AgentCoreRuntimePublishTarget(ITarballContainerImageBuilder image
             EnvironmentVariables = new Dictionary<string, string>()
         };
 
-        var referencePoints = new AgentCoreRuntimeConnectionPoints(runtimeProps);
-        ProcessRelationShips(referencePoints, projectResource, environment);
-
         publishAnnotation.Config.PropsCfnRuntimeCallback?.Invoke(CreatePublishTargetContext(environment), runtimeProps);
         environment.DefaultsProvider.ApplyAgentCoreRuntimeDefaults(runtimeProps);
+
+        var referencePoints = new AgentCoreRuntimeConnectionPoints(runtimeProps);
+        ProcessRelationShips(referencePoints, projectResource, environment);
 
         var runtime = new CfnRuntime(environment.CDKStack, $"AgentRuntime-{projectResource.Name}", runtimeProps);
         publishAnnotation.Config.ConstructCfnRuntimeCallback?.Invoke(CreatePublishTargetContext(environment), runtime);
@@ -69,7 +69,8 @@ internal class AgentCoreRuntimePublishTarget(ITarballContainerImageBuilder image
     public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
     {
         if (resource is ProjectResource &&
-            resource.Annotations.OfType<AgentCoreRuntimeAnnotation>().Any())
+            resource.Annotations.OfType<AgentCoreRuntimeAnnotation>().Any() &&
+             cdkDefaultsProvider.DefaultAgentCoreProjectResourcePublishTarget == CDKDefaultsProvider.AgentCoreProjectResourcePublishTarget.AgentCoreRuntime)
         {
             return new IsDefaultPublishTargetMatchResult
             {
@@ -89,7 +90,7 @@ internal class AgentCoreRuntimePublishTarget(ITarballContainerImageBuilder image
             return result;
 
         // Expose the runtime ARN to referencing apps under the standard reference convention:
-        //   AWS:Resources:{agentName}:AgentRuntimeArn  ->  AWS_RESOURCES__{AGENT}__AGENTRUNTIMEARN
+        //   AWS:Resources:{agentName}:AgentRuntimeArn  ->  AWS__Resources__{agentName}__AgentRuntimeArn
         // AttrAgentRuntimeArn resolves to a CloudFormation Fn::GetAtt token during synthesis.
         var prefix = $"{Constants.DefaultConfigSection}:{linkedAnnotation.Resource.Name}".ToEnvironmentVariables();
         result.EnvironmentVariables = new Dictionary<string, string>

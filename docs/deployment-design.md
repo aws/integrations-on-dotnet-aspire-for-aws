@@ -343,7 +343,7 @@ the standard reference convention:
 AWS:Resources:{agentName}:AgentRuntimeArn
 ```
 
-which is delivered as the environment variable `AWS_RESOURCES__{AGENT}__AGENTRUNTIMEARN`. The
+which is delivered as the environment variable `AWS__Resources__{agentName}__AgentRuntimeArn`. The
 consuming application reads this single key in both local and deployed modes:
 
 ```csharp
