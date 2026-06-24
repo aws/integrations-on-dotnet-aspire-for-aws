@@ -1707,7 +1707,7 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
 
             // Validate AgentRuntime name
             var runtimeName = AssertElementExistsAtPath(agentRuntime.Resource, "Properties/AgentRuntimeName");
-            Assert.Equal("AgentCoreAgent", runtimeName.GetString());
+            Assert.Equal("PublishAgentCoreRuntime_AgentCoreAgent", runtimeName.GetString());
 
             // Validate container configuration with image reference
             var containerConfig = AssertElementExistsAtPath(agentRuntime.Resource, "Properties/AgentRuntimeArtifact/ContainerConfiguration/ContainerUri");
