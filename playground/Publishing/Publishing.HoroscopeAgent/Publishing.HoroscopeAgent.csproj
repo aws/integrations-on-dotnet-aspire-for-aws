@@ -8,6 +8,11 @@
 
     <ItemGroup>
         <PackageReference Include="AWS.AgentCore.Hosting" />
+		<PackageReference Include="Aspire.StackExchange.Redis" />
+	</ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Publishing.ServiceDefaults\Publishing.ServiceDefaults.csproj" />
     </ItemGroup>
 
 </Project>

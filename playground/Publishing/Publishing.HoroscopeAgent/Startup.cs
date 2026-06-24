@@ -11,6 +11,9 @@ public class Startup
 {
     public void ConfigureServices(WebApplicationBuilder builder)
     {
+        builder.AddServiceDefaults();
+        builder.AddRedisClient("cache");
+
         builder.AddAgentCore(options =>
         {
             options.ModelId = "global.anthropic.claude-sonnet-4-6";

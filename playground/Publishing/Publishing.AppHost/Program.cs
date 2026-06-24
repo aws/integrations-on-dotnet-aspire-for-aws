@@ -23,7 +23,7 @@ var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.US
 
 builder.AddAWSCDKEnvironment("aws", 
                                     CDKDefaultsProviderFactory.Preview_V1, 
-                                    (app, props) => new DeploymentStack(app, "AspirePlay1", props), 
+                                    (app, props) => new DeploymentStack(app, "AspirePlay5", props), 
                                     new AWSCDKEnvironmentResourceConfig { AWSSDKConfig = awsSdkConfig });
 
 var cdkStackResource = builder.AddAWSCDKStack("AWSLambdaPlaygroundResources");
@@ -37,7 +37,9 @@ builder.Configuration["Parameters:db-connection"] = "Server=localhost;Database=m
 var apiKey = builder.AddParameter("api-key");
 var dbConnection = builder.AddParameter("db-connection", secret: true);
 
-var horoscopeAgent = builder.AddAgentCoreRuntime<Projects.Publishing_HoroscopeAgent>("HoroscopeAgent");
+var horoscopeAgent = builder.AddAgentCoreRuntime<Projects.Publishing_HoroscopeAgent>("HoroscopeAgent")
+        .WithReference(cache)
+        .WaitFor(cache);
 
 var frontend = builder.AddProject<Projects.Frontend>("Frontend")
         .WithEnvironment("ENV_LAMBDA_1", "LambdaValue1")

@@ -37,6 +37,22 @@ public partial class CDKDefaultsProvider
         });
     }
 
+    /// <summary>
+    /// Gets the subnet IDs of the default VPC to place VPC-attached resources in. Private subnets are
+    /// preferred; public subnets are used only when the VPC has no private subnets. At most two subnets
+    /// are returned (matching the ElastiCache subnet group selection).
+    /// </summary>
+    /// <returns>The selected subnet IDs.</returns>
+    protected internal virtual string[] GetDefaultVpcSubnetIds()
+    {
+        var vpc = GetDefaultVpc();
+        var subnetIds = vpc.PrivateSubnets.Select(s => s.SubnetId).ToArray();
+        if (!subnetIds.Any())
+            subnetIds = vpc.PublicSubnets.Select(s => s.SubnetId).ToArray();
+
+        return subnetIds.Take(2).ToArray();
+    }
+
     private ICluster? _defaultECSCluster;
     public ICluster GetDefaultECSCluster()
     {

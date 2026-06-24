@@ -132,10 +132,29 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
     /// <param name="getter">The function used to get the existing security groups from the construct</param>
     /// <param name="setter">The action used to set the security groups on the construct</param>
     /// <returns></returns>
-    protected ISecurityGroup CreateEmptyReferenceSecurityGroup<T>(AWSCDKEnvironmentResource environmentResource, 
+    protected ISecurityGroup CreateEmptyReferenceSecurityGroup<T>(AWSCDKEnvironmentResource environmentResource,
         IResource resource, T construct, Func<T, ISecurityGroup[]?> getter, Action<T, ISecurityGroup[]> setter)
     {
-        var securityGroup = new SecurityGroup(
+        var securityGroup = CreateReferenceSecurityGroup(environmentResource, resource);
+
+        AppendSecurityGroup(construct, getter, setter, securityGroup);
+
+        return securityGroup;
+    }
+
+    /// <summary>
+    /// Creates a security group in the default VPC used to link the resource to its Aspire references.
+    /// The security group allows all outbound traffic and is added as an ingress rule on referenced
+    /// resources (for example an ElastiCache cluster). Unlike <see cref="CreateEmptyReferenceSecurityGroup{T}"/>
+    /// this does not attach the security group to a construct, for publish targets that store security group
+    /// IDs directly (e.g. the AgentCore runtime's VPC network configuration) rather than CDK objects.
+    /// </summary>
+    /// <param name="environmentResource">The owning environment</param>
+    /// <param name="resource">The Aspire resource being published</param>
+    /// <returns>The created security group.</returns>
+    protected ISecurityGroup CreateReferenceSecurityGroup(AWSCDKEnvironmentResource environmentResource, IResource resource)
+    {
+        return new SecurityGroup(
             environmentResource.CDKStack,
             $"{resource.Name}-Ref",
             new SecurityGroupProps
@@ -144,10 +163,6 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
                 Description = $"Security group for linking {resource.Name} to Aspire References",
                 AllowAllOutbound = true
             });
-        
-        AppendSecurityGroup(construct, getter, setter, securityGroup);
-        
-        return securityGroup;
     }
 
     private void AppendSecurityGroup<T>(T construct, Func<T, ISecurityGroup[]?> getter, Action<T, ISecurityGroup[]> setter, ISecurityGroup securityGroup)

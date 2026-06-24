@@ -1836,6 +1836,88 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
     }
 
     [Fact]
+    public async Task TestPublishAgentCoreRuntimeWithVpcReference()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            // The agent runtime is created.
+            var agentRuntimes = GetResourcesOfType(cfTemplateDoc, "AWS::BedrockAgentCore::Runtime");
+            Assert.Single(agentRuntimes);
+            var agentRuntime = agentRuntimes[0];
+
+            // Referencing a VPC-requiring resource (ElastiCache) switches the runtime to VPC network mode.
+            var networkMode = AssertElementExistsAtPath(agentRuntime.Resource, "Properties/NetworkConfiguration/NetworkMode");
+            Assert.Equal("VPC", networkMode.GetString());
+
+            // The VPC network config carries the default VPC's subnets.
+            var subnets = AssertElementExistsAtPath(agentRuntime.Resource, "Properties/NetworkConfiguration/NetworkModeConfig/Subnets");
+            Assert.Equal(JsonValueKind.Array, subnets.ValueKind);
+            Assert.True(subnets.GetArrayLength() >= 1, "VPC network config should include at least one subnet");
+
+            // The VPC network config references the runtime's reference security group (a *-Ref security group).
+            var sgIds = AssertElementExistsAtPath(agentRuntime.Resource, "Properties/NetworkConfiguration/NetworkModeConfig/SecurityGroups");
+            Assert.Equal(JsonValueKind.Array, sgIds.ValueKind);
+            Assert.True(sgIds.GetArrayLength() >= 1, "VPC network config should include the reference security group");
+
+            // A VPC is created for the runtime and cache to share.
+            var vpcs = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::VPC");
+            Assert.Single(vpcs);
+
+            // The reference security group exists (named with the resource's "-Ref" suffix).
+            var securityGroups = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroup");
+            var refSecurityGroup = securityGroups.FirstOrDefault(sg => sg.LogicalId.Contains("AgentCoreAgentRef"));
+            Assert.False(string.IsNullOrEmpty(refSecurityGroup.LogicalId), "A reference security group should be created for the agent runtime");
+
+            // ElastiCache grants ingress from the runtime's reference security group on the Redis port(s).
+            var serverlessCaches = GetResourcesOfType(cfTemplateDoc, "AWS::ElastiCache::ServerlessCache");
+            Assert.Single(serverlessCaches);
+
+            var ingressRules = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroupIngress");
+            Assert.NotEmpty(ingressRules);
+            foreach (var ingress in ingressRules)
+            {
+                var fromPort = AssertElementExistsAtPath(ingress.Resource, "Properties/FromPort");
+                Assert.Contains(fromPort.GetInt32(), new[] { 6379, 6380 });
+            }
+            var ingressFromRefSg = ingressRules.Any(ingress =>
+            {
+                var src = GetElementAtPath(ingress.Resource, "Properties/SourceSecurityGroupId/Fn::GetAtt");
+                return src is { ValueKind: JsonValueKind.Array } arr && arr[0].GetString() == refSecurityGroup.LogicalId;
+            });
+            Assert.True(ingressFromRefSg, "ElastiCache should allow ingress from the agent runtime's reference security group");
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishAgentCoreRuntimeWithVpcReference), cloudFormationValidation);
+    }
+
+    [Fact]
+    public async Task TestPublishAgentCoreRuntimeWithVpcReferenceAndSubnets()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            var agentRuntimes = GetResourcesOfType(cfTemplateDoc, "AWS::BedrockAgentCore::Runtime");
+            Assert.Single(agentRuntimes);
+            var agentRuntime = agentRuntimes[0];
+
+            // VPC mode is still enabled by the ElastiCache reference.
+            var networkMode = AssertElementExistsAtPath(agentRuntime.Resource, "Properties/NetworkConfiguration/NetworkMode");
+            Assert.Equal("VPC", networkMode.GetString());
+
+            // The explicitly configured subnet IDs take precedence over the default VPC's subnets.
+            var subnets = AssertElementExistsAtPath(agentRuntime.Resource, "Properties/NetworkConfiguration/NetworkModeConfig/Subnets");
+            Assert.Equal(JsonValueKind.Array, subnets.ValueKind);
+            var subnetValues = subnets.EnumerateArray().Select(s => s.GetString()).ToList();
+            Assert.Equal(new[] { "subnet-aaaa1111", "subnet-bbbb2222" }, subnetValues);
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishAgentCoreRuntimeWithVpcReferenceAndSubnets), cloudFormationValidation);
+    }
+
+    [Fact]
     public async Task TestPublishAgentCoreRuntimeWithCustomization()
     {
         var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>

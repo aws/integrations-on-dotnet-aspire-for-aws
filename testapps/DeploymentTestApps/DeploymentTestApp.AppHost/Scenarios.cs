@@ -324,6 +324,42 @@ namespace DeploymentTestApp.AppHost
             await ExecuteApp(builder);
         }
 
+        public static async Task PublishAgentCoreRuntimeWithVpcReference()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntimeWithVpcReference));
+
+            var cache = builder.AddRedis("Cache");
+
+            // Referencing a VPC-requiring resource (ElastiCache) should switch the agent runtime's
+            // network configuration to VPC mode.
+            builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent")
+                .WithReference(cache);
+
+            await ExecuteApp(builder);
+        }
+
+        public static async Task PublishAgentCoreRuntimeWithVpcReferenceAndSubnets()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntimeWithVpcReferenceAndSubnets));
+
+            var cache = builder.AddRedis("Cache");
+
+            // The user pins explicit subnet IDs (e.g. to avoid AgentCore-unsupported availability zones).
+            // These should take precedence over the default VPC's subnets.
+            builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent")
+                .WithReference(cache)
+                .PublishAsAgentCoreRuntime(new PublishAgentCoreRuntimeConfig
+                {
+                    VpcSubnetIds = new[] { "subnet-aaaa1111", "subnet-bbbb2222" }
+                });
+
+            await ExecuteApp(builder);
+        }
+
         /// <summary>
         /// When running the IDistributedApplication through tests for publishing there are exceptions thrown
         /// when the IDistributedApplication is shutting down. This method catches and ignores those exceptions to allow for clean test runs.

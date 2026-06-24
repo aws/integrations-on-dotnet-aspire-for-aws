@@ -1,29 +1,51 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-using System.ComponentModel;
 using AWS.AgentCore.Hosting;
 using Microsoft.Agents.AI;
 using Publishing.HoroscopeAgent.Models;
+using StackExchange.Redis;
+using System.ComponentModel;
 
 namespace Publishing.HoroscopeAgent;
 
-public class HoroscopeAgent(ChatClientAgent chatAgent, ILogger<HoroscopeAgent> logger)
+public class HoroscopeAgent
 {
+    private ChatClientAgent _chatAgent;
+    private ILogger<HoroscopeAgent> _logger;
+    private IDatabase _database;
+
+    public HoroscopeAgent(ChatClientAgent chatAgent, IConnectionMultiplexer mp, ILogger<HoroscopeAgent> logger)
+    {
+        _chatAgent = chatAgent;
+        _database = mp.GetDatabase();
+        _logger = logger;
+    }
+
     [AgentCoreHandler]
     public async Task<string> HandleInvocation(
         PromptRequest request,
         AgentCoreRuntimeContext context,
         CancellationToken cancellationToken)
     {
-        logger.LogInformation("Horoscope invocation — SessionId={SessionId}, RequestId={RequestId}",
+        _logger.LogInformation("Horoscope invocation — SessionId={SessionId}, RequestId={RequestId}",
             context.SessionId, context.RequestId);
 
-        var session = await chatAgent.CreateSessionAsync(cancellationToken: cancellationToken);
+        var session = await _chatAgent.CreateSessionAsync(cancellationToken: cancellationToken);
 
-        var response = await chatAgent.RunAsync(
-            request.Prompt ?? "Give me a general horoscope for today.",
+        var prompt = request.Prompt ?? "Give me a general horoscope for today.";
+
+        if(_database.StringGet(prompt) is var cachedResponse && cachedResponse.HasValue)
+        {
+            _logger.LogInformation("Returning cached response for prompt: {Prompt}", prompt);
+            return cachedResponse.ToString();
+        }
+
+        var response = await _chatAgent.RunAsync(
+            prompt,
             session: session,
             cancellationToken: cancellationToken);
+
+        _database.StringSet(prompt, response.ToString(), TimeSpan.FromMinutes(10));
 
         return response.ToString();
     }
