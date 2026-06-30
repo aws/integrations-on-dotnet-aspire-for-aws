@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="AWS.AgentCore.Hosting" />
+		<PackageReference Include="Aspire.StackExchange.Redis" />
+	</ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Publishing.ServiceDefaults\Publishing.ServiceDefaults.csproj" />
+    </ItemGroup>
+
+</Project>

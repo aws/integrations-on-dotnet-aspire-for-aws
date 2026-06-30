@@ -9,6 +9,14 @@ var builder = WebApplication.CreateBuilder(args);
 // set by Aspire's WithReference() — no manual ServiceURL configuration needed.
 builder.Services.TryAddAWSService<IAmazonBedrockAgentCore>();
 
+// WithReference(agent) injects the agent's runtime ARN under this IConfiguration key. Locally it
+// resolves to the "local-agent" placeholder (the emulator ignores it); when deployed the generated
+// CDK stack sets it to the real AWS::BedrockAgentCore::Runtime ARN — same code path either way.
+var agentRuntimeArn = builder.Configuration["AWS:Resources:AgentCoreTestApp-Agent:AgentRuntimeArn"]
+    ?? throw new InvalidOperationException(
+        "Missing configuration 'AWS:Resources:AgentCoreTestApp-Agent:AgentRuntimeArn'. " +
+        "Ensure the ChatUI has WithReference(agent) in the AppHost.");
+
 var app = builder.Build();
 
 // Simple API to invoke the agent via the SDK
@@ -19,7 +27,7 @@ app.MapPost("/chat", async (ChatRequest request, IAmazonBedrockAgentCore client)
 
     var response = await client.InvokeAgentRuntimeAsync(new Amazon.BedrockAgentCore.Model.InvokeAgentRuntimeRequest
     {
-        AgentRuntimeArn = "local-agent",
+        AgentRuntimeArn = agentRuntimeArn,
         Payload = payloadStream
     });
 

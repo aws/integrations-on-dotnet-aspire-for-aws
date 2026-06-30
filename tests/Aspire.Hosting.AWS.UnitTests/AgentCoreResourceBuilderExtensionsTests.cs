@@ -180,6 +180,11 @@ public class AgentCoreResourceBuilderExtensionsTests
         // Use Run-mode execution context so the env callback writes the var (it skips publish mode by design).
         var envVars = await EvaluateEnvironmentVariables(consumer.Resource, app.Services);
         Assert.Equal("http://localhost:12345", envVars["AWS_ENDPOINT_URL_BEDROCK_AGENTCORE"]);
+
+        // The hook also sets the runtime ARN under the standard reference convention so app code
+        // reads the same IConfiguration key locally and when deployed. Locally it's the placeholder
+        // "local-agent" (the emulator ignores it); deployment overrides it with the real ARN.
+        Assert.Equal("local-agent", envVars["AWS__Resources__my-agent__AgentRuntimeArn"]);
     }
 
     [Fact]

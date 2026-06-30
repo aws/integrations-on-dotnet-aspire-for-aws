@@ -22,6 +22,7 @@
 	  <ProjectReference Include="..\DeploymentTestApp.Service1\DeploymentTestApp.Service1.csproj" />
 	  <ProjectReference Include="..\DeploymentTestApps.WebApp1\DeploymentTestApps.WebApp1.csproj" />
 	  <ProjectReference Include="..\DeploymentTestApps.WebApp2\DeploymentTestApps.WebApp2.csproj" />
-	</ItemGroup>	
+	  <ProjectReference Include="..\DeploymentTestApp.AgentCoreAgent\DeploymentTestApp.AgentCoreAgent.csproj" />
+	</ItemGroup>
 
 </Project>

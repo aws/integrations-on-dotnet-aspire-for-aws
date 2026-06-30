@@ -3,6 +3,7 @@
 using Aspire.Hosting.ApplicationModel;
 using System.Diagnostics.CodeAnalysis;
 using Amazon.CDK.AWS.EC2;
+using Amazon.CDK.AWS.IAM;
 using Aspire.Hosting.AWS.Deployment.CDKDefaults;
 
 namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
@@ -57,6 +58,21 @@ public interface IAWSPublishTarget
     /// <param name="linkedAnnotation">The container of the Aspire resource and CDK construct that where the ingress will be created</param>
     /// <param name="securityGroup">The security group that will be added as a ingress rule to the resource</param>
     void ApplyReferenceSecurityGroup(AWSLinkedObjectsAnnotation linkedAnnotation, ISecurityGroup securityGroup);
+
+    /// <summary>
+    /// Returns true if a resource referencing this resource needs permissions added to its task role.
+    /// For example a service referencing an AgentCore runtime needs its task role granted permission to call the AgentCore invoke APIs.
+    /// </summary>
+    /// <returns></returns>
+    bool ReferenceRequiresTaskRolePolicy();
+
+    /// <summary>
+    /// Attaches a scoped policy to the referencing resource's task role granting it the permissions needed to use this resource.
+    /// Only called when the referencing publish target created a default task role, so user-supplied roles are never mutated.
+    /// </summary>
+    /// <param name="linkedAnnotation">The container of this resource's Aspire resource and CDK construct being referenced</param>
+    /// <param name="taskRole">The task role of the referencing resource that the policy will be attached to</param>
+    void ApplyReferenceTaskRolePolicy(AWSLinkedObjectsAnnotation linkedAnnotation, IRole taskRole);
 
     /// <summary>
     /// For Aspire resources that do not have an explicit publish target added this method is called to see if the publish target is the best 

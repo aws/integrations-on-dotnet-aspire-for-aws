@@ -37,6 +37,22 @@ public partial class CDKDefaultsProvider
         });
     }
 
+    /// <summary>
+    /// Gets the subnet IDs of the default VPC to place VPC-attached resources in. Private subnets are
+    /// preferred; public subnets are used only when the VPC has no private subnets. At most two subnets
+    /// are returned (matching the ElastiCache subnet group selection).
+    /// </summary>
+    /// <returns>The selected subnet IDs.</returns>
+    protected internal virtual string[] GetDefaultVpcSubnetIds()
+    {
+        var vpc = GetDefaultVpc();
+        var subnetIds = vpc.PrivateSubnets.Select(s => s.SubnetId).ToArray();
+        if (!subnetIds.Any())
+            subnetIds = vpc.PublicSubnets.Select(s => s.SubnetId).ToArray();
+
+        return subnetIds.Take(2).ToArray();
+    }
+
     private ICluster? _defaultECSCluster;
     public ICluster GetDefaultECSCluster()
     {
@@ -243,6 +259,22 @@ public partial class CDKDefaultsProvider
             {
                 ManagedPolicy.FromAwsManagedPolicyName("service-role/AmazonECSInfrastructureRoleforExpressGatewayServices"),
             }
+        });
+    }
+
+    /// <summary>
+    /// Creates the default ECS task role assigned to a service's task definition when the user has not
+    /// supplied one. This is the role the application's own code assumes at runtime to call AWS APIs, so
+    /// it is created per-service (rather than shared) and starts empty: reference hooks attach scoped
+    /// policies as needed (for example, AgentCore invoke permissions when a service references an agent).
+    /// </summary>
+    /// <param name="resourceName">The Aspire resource name, used to give the role a stable, unique construct id.</param>
+    /// <returns>The created task role, trusted by the ecs-tasks service principal.</returns>
+    protected internal virtual IRole CreateDefaultECSTaskRole(string resourceName)
+    {
+        return new Role(EnvironmentResource.CDKStack, $"{resourceName}-DefaultTaskRole", new RoleProps
+        {
+            AssumedBy = new ServicePrincipal("ecs-tasks.amazonaws.com")
         });
     }
 

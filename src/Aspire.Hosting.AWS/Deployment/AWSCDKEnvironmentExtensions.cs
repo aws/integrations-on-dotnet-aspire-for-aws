@@ -38,6 +38,10 @@ public static class AWSCDKEnvironmentExtensions
         builder.Services.AddTransient<IAWSPublishTarget, ElastiCacheProvisionClusterPublishTarget>();
         builder.Services.AddTransient<IAWSPublishTarget, ElastiCacheServerlessClusterPublishTarget>();
         builder.Services.AddTransient<IAWSPublishTarget, LambdaFunctionPublishTarget>();
+
+#if NET10_0_OR_GREATER
+        builder.Services.AddTransient<IAWSPublishTarget, AgentCoreRuntimePublishTarget>();
+#endif
     }
 
     /// <summary>
@@ -332,5 +336,24 @@ public static class AWSCDKEnvironmentExtensions
         builder.Resource.Annotations.Add(annotation);
 
         return builder;
-    }    
+    }
+
+#if NET10_0_OR_GREATER
+    /// <summary>
+    /// Deploy project to AWS Bedrock AgentCore as a container runtime.
+    /// The CDK <see href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-bedrockagentcore-runtime.html">AWS::BedrockAgentCore::Runtime</see>
+    /// construct is used to create the AgentCore runtime.
+    /// </summary>
+    /// <param name="builder">The resource builder for the resource to configure.</param>
+    /// <param name="config">Configuration for attaching callbacks to customize the CDK construct's props and associate the created CDK construct to other CDK constructs.</param>
+    /// <returns>The same resource builder instance for chaining additional configuration.</returns>
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+    public static IResourceBuilder<ProjectResource> PublishAsAgentCoreRuntime(this IResourceBuilder<ProjectResource> builder, PublishAgentCoreRuntimeConfig? config = null)
+    {
+        var annotation = new PublishAgentCoreRuntimeAnnotation { Config = config ?? new PublishAgentCoreRuntimeConfig() };
+        builder.Resource.Annotations.Add(annotation);
+
+        return builder;
+    }
+#endif
 }
