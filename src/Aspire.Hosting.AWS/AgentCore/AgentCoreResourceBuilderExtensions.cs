@@ -187,9 +187,8 @@ public static class AgentCoreResourceBuilderExtensions
     /// <para>
     /// During local development this adds an embedded memory emulator and sets the
     /// <c>AWS_AGENTCORE_MEMORY_ID</c> and <c>AWS_AGENTCORE_SERVICE_ENDPOINT</c> environment variables on
-    /// the agent resource. During deployment an <c>AWS::BedrockAgentCore::Memory</c> resource is
     /// provisioned and <c>AWS_AGENTCORE_MEMORY_ID</c> is pointed at it. Deployment memory creation can be
-    /// overridden with <see cref="Deployment.PublishAgentCoreRuntimeConfig.CreateMemory"/>.
+    /// overridden with <see cref="Aspire.Hosting.AWS.Deployment.PublishAgentCoreRuntimeConfig.CreateMemory"/>.
     /// </para>
     /// </summary>
     /// <param name="agentApp">The agent resource builder.</param>
