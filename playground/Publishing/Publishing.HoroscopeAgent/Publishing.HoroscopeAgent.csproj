@@ -8,7 +8,6 @@
 
     <ItemGroup>
         <PackageReference Include="AWS.AgentCore.Hosting" />
-		<PackageReference Include="Aspire.StackExchange.Redis" />
 	</ItemGroup>
 
     <ItemGroup>

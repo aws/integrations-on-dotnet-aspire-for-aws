@@ -12,7 +12,6 @@ public class Startup
     public void ConfigureServices(WebApplicationBuilder builder)
     {
         builder.AddServiceDefaults();
-        builder.AddRedisClient("cache");
 
         builder.AddAgentCore(options =>
         {

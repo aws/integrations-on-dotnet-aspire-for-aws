@@ -488,12 +488,12 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 // Register a non-streaming agent with short-term memory
 var agent = builder.AddAgentCoreRuntime<Projects.MyAgent>("my-agent")
-    .WithInMemory();
+    .WithAgentCoreMemory();
 
 // Register a streaming agent
 builder.AddAgentCoreRuntime<Projects.MyStreamingAgent>("my-streaming-agent")
     .WithStreaming()
-    .WithInMemory();
+    .WithAgentCoreMemory();
 
 // Wire a consumer project — AWS_ENDPOINT_URL_BEDROCK_AGENTCORE is injected automatically
 builder.AddProject<Projects.MyChatUI>("ChatUI")
@@ -508,7 +508,7 @@ builder.Build().Run();
 |--------|-------------|
 | `AddAgentCoreRuntime<TProject>()` | Registers an agent with embedded runtime and chat emulators |
 | `.WithStreaming()` | Enables SSE streaming mode for the chat app |
-| `.WithInMemory()` | Adds a short-term memory emulator |
+| `.WithAgentCoreMemory()` | Enables AgentCore memory: a short-term memory emulator locally, and a provisioned AgentCore Memory resource on deployment |
 | `.WithReference(agent)` | Injects the runtime emulator endpoint into a consumer project via `AWS_ENDPOINT_URL_BEDROCK_AGENTCORE` |
 
 ### Options

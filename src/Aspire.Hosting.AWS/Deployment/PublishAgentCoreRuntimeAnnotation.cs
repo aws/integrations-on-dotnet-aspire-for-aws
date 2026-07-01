@@ -30,6 +30,30 @@ public class PublishAgentCoreRuntimeConfig
     public PublishCallback<CfnRuntime>? ConstructCfnRuntimeCallback { get; set; }
 
     /// <summary>
+    /// Callback to modify the properties used to construct the AgentCore Memory. Only invoked when an
+    /// AgentCore Memory resource is created for the runtime (see <see cref="CreateMemory"/>).
+    /// </summary>
+    public PublishCallback<CfnMemoryProps>? PropsCfnMemoryCallback { get; set; }
+
+    /// <summary>
+    /// Callback to modify the constructed AgentCore Memory. Only invoked when an AgentCore Memory resource
+    /// is created for the runtime (see <see cref="CreateMemory"/>).
+    /// </summary>
+    public PublishCallback<CfnMemory>? ConstructCfnMemoryCallback { get; set; }
+
+    /// <summary>
+    /// Controls whether an <c>AWS::BedrockAgentCore::Memory</c> resource is provisioned for the runtime
+    /// during deployment.
+    /// <para>
+    /// When <c>null</c> (the default) memory creation follows whether <c>WithAgentCoreMemory()</c> was called on
+    /// the agent. Set to <c>true</c> or <c>false</c> to force or suppress memory creation during
+    /// deployment independently of local testing — for example call <c>WithAgentCoreMemory()</c> to use the memory
+    /// emulator locally while setting this to <c>false</c> to skip provisioning memory when deployed.
+    /// </para>
+    /// </summary>
+    public bool? CreateMemory { get; set; }
+
+    /// <summary>
     /// The subnet IDs to place the runtime in when it is attached to a VPC. A runtime is attached to a
     /// VPC only when it references a resource that requires VPC access (for example an ElastiCache
     /// cluster); otherwise the runtime uses public networking and this property is ignored.

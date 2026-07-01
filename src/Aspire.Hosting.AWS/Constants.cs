@@ -31,6 +31,12 @@ internal static class Constants
     /// </summary>
     internal const string AgentRuntimeArnOutputName = "AgentRuntimeArn";
 
+    /// <summary>
+    /// The environment variable the agent reads to discover its AgentCore memory id. Shared between the
+    /// local development emulator wiring and the deployment publish target so the name can never drift.
+    /// </summary>
+    internal const string AgentCoreMemoryIdEnvironmentVariable = "AWS_AGENTCORE_MEMORY_ID";
+
     internal const string IsAspireHostedEnvVariable = "ASPIRE_HOSTED";
     
     /// <summary>

@@ -183,26 +183,31 @@ public static class AgentCoreResourceBuilderExtensions
     }
 
     /// <summary>
-    /// Adds an embedded memory emulator and wires it to the agent application.
-    /// Sets the <c>AWS_AGENTCORE_MEMORY_ID</c> and <c>AWS_AGENTCORE_SERVICE_ENDPOINT</c>
-    /// environment variables on the agent resource.
+    /// Enables AgentCore memory for the agent application.
+    /// <para>
+    /// During local development this adds an embedded memory emulator and sets the
+    /// <c>AWS_AGENTCORE_MEMORY_ID</c> and <c>AWS_AGENTCORE_SERVICE_ENDPOINT</c> environment variables on
+    /// the agent resource. During deployment an <c>AWS::BedrockAgentCore::Memory</c> resource is
+    /// provisioned and <c>AWS_AGENTCORE_MEMORY_ID</c> is pointed at it. Deployment memory creation can be
+    /// overridden with <see cref="Deployment.PublishAgentCoreRuntimeConfig.CreateMemory"/>.
+    /// </para>
     /// </summary>
     /// <param name="agentApp">The agent resource builder.</param>
     /// <returns>The resource builder for further chaining.</returns>
     [Experimental(Constants.ASPIREAWSAGENTCORE001)]
-    public static IResourceBuilder<ProjectResource> WithInMemory(
+    public static IResourceBuilder<ProjectResource> WithAgentCoreMemory(
         this IResourceBuilder<ProjectResource> agentApp)
     {
         var annotation = agentApp.Resource.Annotations
             .OfType<AgentCoreRuntimeAnnotation>()
             .FirstOrDefault()
             ?? throw new InvalidOperationException(
-                "WithInMemory can only be called on an AgentCore runtime resource. " +
+                "WithAgentCoreMemory can only be called on an AgentCore runtime resource. " +
                 "Use AddAgentCoreRuntime<T>() to create it.");
 
         annotation.HasMemory = true;
 
-        agentApp.WithEnvironment("AWS_AGENTCORE_MEMORY_ID", "localdev-memory");
+        agentApp.WithEnvironment(Constants.AgentCoreMemoryIdEnvironmentVariable, "localdev-memory");
 
         agentApp.WithEnvironment(async context =>
         {
