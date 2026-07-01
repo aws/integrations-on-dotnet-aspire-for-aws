@@ -142,10 +142,33 @@ public partial class CDKDefaultsProvider
     }
 
     /// <summary>
+    /// The AgentCore memory data-plane actions granted to the runtime role. The agent code running in the
+    /// runtime reads and writes memory events and records, so its role needs these permissions.
+    /// </summary>
+    private static readonly string[] AgentCoreMemoryDataPlaneActions =
+    {
+        "bedrock-agentcore:CreateEvent",
+        "bedrock-agentcore:GetEvent",
+        "bedrock-agentcore:ListEvents",
+        "bedrock-agentcore:DeleteEvent",
+        "bedrock-agentcore:ListActors",
+        "bedrock-agentcore:ListSessions",
+        "bedrock-agentcore:RetrieveMemoryRecords",
+        "bedrock-agentcore:GetMemoryRecord",
+        "bedrock-agentcore:ListMemoryRecords"
+    };
+
+    private PolicyStatement? _agentCoreRuntimeMemoryPolicyStatement;
+
+    /// <summary>
     /// Grants the default AgentCore runtime role permission to use the data-plane APIs of the AgentCore
-    /// memory identified by <paramref name="memoryArn"/>. The agent code running in the runtime reads and
-    /// writes memory events and records, so its role needs these permissions, scoped to the memory and its
-    /// child resources.
+    /// memory identified by <paramref name="memoryArn"/>, scoped to the memory and its child resources.
+    /// <para>
+    /// All memories share a single policy statement: the first call creates the statement (with the memory
+    /// actions) and attaches it to the role; subsequent calls append the additional memory ARNs to that
+    /// same statement's resource list rather than adding a new statement. This keeps the IAM policy compact
+    /// when multiple agents each provision a memory.
+    /// </para>
     /// <para>
     /// When the runtime role was supplied by the user (rather than created by the integration) the role is
     /// left untouched, mirroring how user-supplied roles are never mutated elsewhere.
@@ -160,27 +183,26 @@ public partial class CDKDefaultsProvider
             return;
         }
 
-        role.AddToPrincipalPolicy(new PolicyStatement(new PolicyStatementProps
+        var memoryChildArn = Fn.Join("", new[] { memoryArn, "/*" });
+
+        if (_agentCoreRuntimeMemoryPolicyStatement == null)
         {
-            Effect = Effect.ALLOW,
-            Actions = new[]
+            _agentCoreRuntimeMemoryPolicyStatement = new PolicyStatement(new PolicyStatementProps
             {
-                "bedrock-agentcore:CreateEvent",
-                "bedrock-agentcore:GetEvent",
-                "bedrock-agentcore:ListEvents",
-                "bedrock-agentcore:DeleteEvent",
-                "bedrock-agentcore:ListActors",
-                "bedrock-agentcore:ListSessions",
-                "bedrock-agentcore:RetrieveMemoryRecords",
-                "bedrock-agentcore:GetMemoryRecord",
-                "bedrock-agentcore:ListMemoryRecords"
-            },
-            Resources = new[]
-            {
-                memoryArn,
-                Fn.Join("", new[] { memoryArn, "/*" })
-            }
-        }));
+                Effect = Effect.ALLOW,
+                Actions = AgentCoreMemoryDataPlaneActions,
+                Resources = new[] { memoryArn, memoryChildArn }
+            });
+
+            // AddToPrincipalPolicy attaches the statement object by reference; CDK renders it at synth
+            // time, so resources appended to the cached instance on later calls are reflected in the
+            // final template.
+            role.AddToPrincipalPolicy(_agentCoreRuntimeMemoryPolicyStatement);
+        }
+        else
+        {
+            _agentCoreRuntimeMemoryPolicyStatement.AddResources(memoryArn, memoryChildArn);
+        }
     }
 }
 

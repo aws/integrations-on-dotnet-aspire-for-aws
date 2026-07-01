@@ -1840,6 +1840,64 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
     }
 
     [Fact]
+    public async Task TestPublishAgentCoreRuntimeWithMultipleMemories()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            // Both agents are created, each with its own memory resource.
+            var agentRuntimes = GetResourcesOfType(cfTemplateDoc, "AWS::BedrockAgentCore::Runtime");
+            Assert.Equal(2, agentRuntimes.Count);
+
+            var memories = GetResourcesOfType(cfTemplateDoc, "AWS::BedrockAgentCore::Memory");
+            Assert.Equal(2, memories.Count);
+
+            // Both agents share the single default runtime role, and the memory data-plane actions are
+            // granted through a single policy statement listing both memory ARNs — not one statement per
+            // memory. Find every statement that carries the memory actions across all IAM policies.
+            var policies = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Policy");
+            var memoryStatements = policies
+                .SelectMany(p =>
+                {
+                    var statements = GetElementAtPath(p.Resource, "Properties/PolicyDocument/Statement");
+                    if (statements is not { ValueKind: JsonValueKind.Array } stmts)
+                        return Enumerable.Empty<JsonElement>();
+                    return stmts.EnumerateArray().Where(s =>
+                    {
+                        var action = GetElementAtPath(s, "Action");
+                        if (action is not { ValueKind: JsonValueKind.Array } actions)
+                            return false;
+                        var actionTexts = actions.EnumerateArray()
+                            .Where(a => a.ValueKind == JsonValueKind.String)
+                            .Select(a => a.GetString())
+                            .ToList();
+                        return actionTexts.Contains("bedrock-agentcore:CreateEvent") &&
+                               actionTexts.Contains("bedrock-agentcore:RetrieveMemoryRecords");
+                    });
+                })
+                .ToList();
+
+            // Exactly one statement grants the memory actions (no duplicated action list per memory).
+            Assert.Single(memoryStatements);
+
+            // That single statement's Resource list references both memories' ARNs.
+            var resource = GetElementAtPath(memoryStatements[0], "Resource");
+            Assert.True(resource is { ValueKind: JsonValueKind.Array }, "The memory statement should scope access to an array of memory ARNs");
+            var resources = resource!.Value.EnumerateArray().ToList();
+
+            // Each memory contributes a base MemoryArn entry plus a "/*" child entry (Fn::Join wrapping
+            // the Fn::GetAtt MemoryArn), so both memory logical ids should appear in the resource list.
+            foreach (var memory in memories)
+            {
+                Assert.Contains(resources, r => r.GetRawText().Contains(memory.LogicalId));
+            }
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishAgentCoreRuntimeWithMultipleMemories), cloudFormationValidation);
+    }
+
+    [Fact]
     public async Task TestPublishAgentCoreRuntimeWithMemoryDisabled()
     {
         var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>

@@ -303,6 +303,24 @@ namespace DeploymentTestApp.AppHost
             await ExecuteApp(builder);
         }
 
+        public static async Task PublishAgentCoreRuntimeWithMultipleMemories()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntimeWithMultipleMemories));
+
+            // Two agents each provision their own memory but share the default runtime role. The role
+            // should receive a single bedrock-agentcore memory statement listing both memory ARNs, rather
+            // than one statement per memory.
+            builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent1")
+                .WithAgentCoreMemory();
+
+            builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent2")
+                .WithAgentCoreMemory();
+
+            await ExecuteApp(builder);
+        }
+
         public static async Task PublishAgentCoreRuntimeWithMemoryDisabled()
         {
             var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
