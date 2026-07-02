@@ -1,0 +1,12 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "When deploying to AgentCore support provisioning AgentCore memory",
+		"[Breaking Change] Rename the preview WithInMemory method to WithAgentCoreMemory"
+      ]
+    }
+  ]
+}
