@@ -37,7 +37,8 @@ builder.Configuration["Parameters:db-connection"] = "Server=localhost;Database=m
 var apiKey = builder.AddParameter("api-key");
 var dbConnection = builder.AddParameter("db-connection", secret: true);
 
-var horoscopeAgent = builder.AddAgentCoreRuntime<Projects.Publishing_HoroscopeAgent>("HoroscopeAgent");
+var horoscopeAgent = builder.AddAgentCoreRuntime<Projects.Publishing_HoroscopeAgent>("HoroscopeAgent")
+            .WithAgentCoreMemory();
 
 var frontend = builder.AddProject<Projects.Frontend>("Frontend")
         .WithEnvironment("ENV_LAMBDA_1", "LambdaValue1")

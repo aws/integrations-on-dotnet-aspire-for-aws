@@ -289,6 +289,56 @@ namespace DeploymentTestApp.AppHost
             await ExecuteApp(builder);
         }
 
+        public static async Task PublishAgentCoreRuntimeWithMemory()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntimeWithMemory));
+
+            // WithAgentCoreMemory() requests AgentCore memory, which should provision an AgentCore Memory resource,
+            // point the agent's AWS_AGENTCORE_MEMORY_ID at it, and grant the runtime role memory access.
+            builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent")
+                .WithAgentCoreMemory();
+
+            await ExecuteApp(builder);
+        }
+
+        public static async Task PublishAgentCoreRuntimeWithMultipleMemories()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntimeWithMultipleMemories));
+
+            // Two agents each provision their own memory but share the default runtime role. The role
+            // should receive a single bedrock-agentcore memory statement listing both memory ARNs, rather
+            // than one statement per memory.
+            builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent1")
+                .WithAgentCoreMemory();
+
+            builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent2")
+                .WithAgentCoreMemory();
+
+            await ExecuteApp(builder);
+        }
+
+        public static async Task PublishAgentCoreRuntimeWithMemoryDisabled()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntimeWithMemoryDisabled));
+
+            // WithAgentCoreMemory() is used for local testing, but CreateMemory = false suppresses provisioning the
+            // memory resource during deployment.
+            builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent")
+                .WithAgentCoreMemory()
+                .PublishAsAgentCoreRuntime(new PublishAgentCoreRuntimeConfig
+                {
+                    CreateMemory = false
+                });
+
+            await ExecuteApp(builder);
+        }
+
         public static async Task PublishAgentCoreRuntimeWithCustomization()
         {
             var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());

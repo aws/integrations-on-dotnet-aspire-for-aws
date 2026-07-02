@@ -44,7 +44,7 @@ internal class AgentCoreRuntimePublishTarget(ITarballContainerImageBuilder image
 
         var runtimeProps = new CfnRuntimeProps
         {
-            AgentRuntimeName = $"{environment.CDKStack.StackName}_{projectResource.Name}",
+            AgentRuntimeName = SanitizeName($"{environment.CDKStack.StackName}_{projectResource.Name}"),
             AgentRuntimeArtifact = new CfnRuntime.AgentRuntimeArtifactProperty
             {
                 ContainerConfiguration = new CfnRuntime.ContainerConfigurationProperty
@@ -52,10 +52,15 @@ internal class AgentCoreRuntimePublishTarget(ITarballContainerImageBuilder image
                     ContainerUri = asset.ImageUri
                 }
             },
-            EnvironmentVariables = new Dictionary<string, string>(),            
+            EnvironmentVariables = new Dictionary<string, string>(),
         };
 
         publishAnnotation.Config.PropsCfnRuntimeCallback?.Invoke(CreatePublishTargetContext(environment), runtimeProps);
+
+        // Capture whether the user supplied the runtime role before defaults fill in the integration's
+        // default role, so memory permissions are only added to a role the integration owns.
+        var userSuppliedRoleArn = !string.IsNullOrEmpty(runtimeProps.RoleArn);
+
         environment.DefaultsProvider.ApplyAgentCoreRuntimeDefaults(runtimeProps);
 
         var referencePoints = new AgentCoreRuntimeConnectionPoints(
@@ -67,10 +72,74 @@ internal class AgentCoreRuntimePublishTarget(ITarballContainerImageBuilder image
             logger);
         ProcessRelationShips(referencePoints, projectResource, environment);
 
+        // Memory creation follows WithAgentCoreMemory() (HasMemory) unless the user explicitly overrode it via the
+        // publish config. It is resolved here (rather than from the annotation directly) so the opt-out
+        // works regardless of the order WithAgentCoreMemory() and PublishAsAgentCoreRuntime() were called in.
+        var runtimeAnnotation = projectResource.Annotations.OfType<AgentCoreRuntimeAnnotation>().FirstOrDefault();
+        var createMemory = publishAnnotation.Config.CreateMemory ?? (runtimeAnnotation?.HasMemory ?? false);
+
+        CfnMemory? memory = null;
+        if (createMemory)
+        {
+            var memoryProps = new CfnMemoryProps
+            {
+                Name = SanitizeName($"{environment.CDKStack.StackName}_{projectResource.Name}")
+            };
+
+            publishAnnotation.Config.PropsCfnMemoryCallback?.Invoke(CreatePublishTargetContext(environment), memoryProps);
+            environment.DefaultsProvider.ApplyAgentCoreMemoryDefaults(memoryProps);
+
+            memory = new CfnMemory(environment.CDKStack, $"AgentMemory-{projectResource.Name}", memoryProps);
+            publishAnnotation.Config.ConstructCfnMemoryCallback?.Invoke(CreatePublishTargetContext(environment), memory);
+
+            // Point the deployed agent at the real memory id. WithAgentCoreMemory() seeds AWS_AGENTCORE_MEMORY_ID
+            // with the local "localdev-memory" placeholder, which ProcessRelationShips copied into the
+            // runtime environment above; overwrite it with the created memory's id token.
+            runtimeProps.EnvironmentVariables = WithMemoryIdEnvironmentVariable(runtimeProps.EnvironmentVariables, memory.AttrMemoryId);
+
+            // The agent code reads and writes memory at runtime, so grant its role memory data-plane
+            // access. Only do so when the integration created the role (a user-supplied role is untouched).
+            if (!userSuppliedRoleArn)
+            {
+                environment.DefaultsProvider.GrantAgentCoreRuntimeMemoryAccess(memory.AttrMemoryArn);
+            }
+        }
+
         var runtime = new CfnRuntime(environment.CDKStack, $"AgentRuntime-{projectResource.Name}", runtimeProps);
         publishAnnotation.Config.ConstructCfnRuntimeCallback?.Invoke(CreatePublishTargetContext(environment), runtime);
 
+        // Ensure the memory is provisioned before the runtime that depends on its id.
+        if (memory != null)
+        {
+            runtime.Node.AddDependency(memory);
+        }
+
         ApplyAWSLinkedObjectsAnnotation(environment, projectResource, runtime, this);
+    }
+
+    /// <summary>
+    /// Sets the <c>AWS_AGENTCORE_MEMORY_ID</c> environment variable to the given value on the runtime's
+    /// environment variable collection, preserving any other variables already present.
+    /// </summary>
+    private static IDictionary<string, string> WithMemoryIdEnvironmentVariable(object? existing, string memoryId)
+    {
+        var env = existing as IDictionary<string, string> ?? new Dictionary<string, string>();
+        env[Constants.AgentCoreMemoryIdEnvironmentVariable] = memoryId;
+        return env;
+    }
+
+    /// <summary>
+    /// Sanitizes a candidate name to the allowed charset. Names must start with a
+    /// letter and contain only letters, digits and underscores.
+    /// </summary>
+    private static string SanitizeName(string candidate)
+    {
+        var sanitized = new string(candidate.Select(c => char.IsLetterOrDigit(c) || c == '_' ? c : '_').ToArray());
+        if (sanitized.Length == 0 || !char.IsLetter(sanitized[0]))
+        {
+            sanitized = "m" + sanitized;
+        }
+        return sanitized;
     }
 
     public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)

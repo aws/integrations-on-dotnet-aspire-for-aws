@@ -103,12 +103,12 @@ public class AgentCoreResourceBuilderExtensionsTests
     }
 
     [Fact]
-    public void WithInMemory_SetsMemoryFlag()
+    public void WithAgentCoreMemory_SetsMemoryFlag()
     {
         var builder = DistributedApplication.CreateBuilder();
 
         var agent = builder.AddAgentCoreRuntime<FakeAgent>("my-agent")
-            .WithInMemory();
+            .WithAgentCoreMemory();
 
         var annotation = agent.Resource.Annotations
             .OfType<AgentCoreRuntimeAnnotation>()
@@ -118,13 +118,13 @@ public class AgentCoreResourceBuilderExtensionsTests
     }
 
     [Fact]
-    public void WithInMemory_ThrowsOnNonAgentCoreResource()
+    public void WithAgentCoreMemory_ThrowsOnNonAgentCoreResource()
     {
         var builder = DistributedApplication.CreateBuilder();
 
         var project = builder.AddProject<FakeAgent>("plain-project", o => o.ExcludeLaunchProfile = true);
 
-        Assert.Throws<InvalidOperationException>(() => project.WithInMemory());
+        Assert.Throws<InvalidOperationException>(() => project.WithAgentCoreMemory());
     }
 
     [Fact]
@@ -270,13 +270,13 @@ public class AgentCoreResourceBuilderExtensionsTests
     }
 
     [Fact]
-    public void WithStreaming_CanBeChainedWithWithInMemory()
+    public void WithStreaming_CanBeChainedWithWithAgentCoreMemory()
     {
         var builder = DistributedApplication.CreateBuilder();
 
         var agent = builder.AddAgentCoreRuntime<FakeAgent>("my-agent")
             .WithStreaming()
-            .WithInMemory();
+            .WithAgentCoreMemory();
 
         var annotation = agent.Resource.Annotations
             .OfType<AgentCoreRuntimeAnnotation>()

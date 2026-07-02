@@ -19,6 +19,7 @@ public partial class CDKDefaultsProvider
     public virtual string AgentCoreRuntimeNetworkMode => "PUBLIC";
 
     private IRole? _defaultAgentCoreRuntimeRole;
+    private bool _defaultAgentCoreRuntimeRoleCreatedByIntegration;
 
     /// <summary>
     /// Gets the default IAM role for AgentCore runtimes. The role is shared across all AgentCore runtimes in the stack.
@@ -32,10 +33,12 @@ public partial class CDKDefaultsProvider
             if (definedDefault != null)
             {
                 _defaultAgentCoreRuntimeRole = definedDefault;
+                _defaultAgentCoreRuntimeRoleCreatedByIntegration = false;
             }
             else
             {
                 _defaultAgentCoreRuntimeRole = CreateDefaultAgentCoreRuntimeRole();
+                _defaultAgentCoreRuntimeRoleCreatedByIntegration = true;
             }
         }
 
@@ -112,6 +115,93 @@ public partial class CDKDefaultsProvider
         if (string.IsNullOrEmpty(props.RoleArn))
         {
             props.RoleArn = GetDefaultAgentCoreRuntimeRole().RoleArn;
+        }
+    }
+
+    /// <summary>
+    /// Gets the default event expiry duration, in days, applied to an AgentCore memory when the user has
+    /// not specified one.
+    /// </summary>
+    public virtual double AgentCoreMemoryEventExpiryDurationDays => 90;
+
+    /// <summary>
+    /// Applies default configuration values to the specified AgentCore memory properties if they are not already set.
+    /// </summary>
+    /// <param name="props">The AgentCore memory properties to which default values will be applied.</param>
+    protected internal virtual void ApplyAgentCoreMemoryDefaults(CfnMemoryProps props)
+    {
+        // A short-term (event) memory only requires a name and an event expiry duration. The name is set
+        // by the publish target (it knows the stack and resource name), so only default the expiry here.
+        // Long-term memory strategies and a memory execution role are left to the user via the memory
+        // props callback.
+        // EventExpiryDuration is a non-nullable double on CfnMemoryProps; treat the default 0 as unset.
+        if (props.EventExpiryDuration == 0)
+        {
+            props.EventExpiryDuration = AgentCoreMemoryEventExpiryDurationDays;
+        }
+    }
+
+    /// <summary>
+    /// The AgentCore memory data-plane actions granted to the runtime role. The agent code running in the
+    /// runtime reads and writes memory events and records, so its role needs these permissions.
+    /// </summary>
+    private static readonly string[] AgentCoreMemoryDataPlaneActions =
+    {
+        "bedrock-agentcore:CreateEvent",
+        "bedrock-agentcore:GetEvent",
+        "bedrock-agentcore:ListEvents",
+        "bedrock-agentcore:DeleteEvent",
+        "bedrock-agentcore:ListActors",
+        "bedrock-agentcore:ListSessions",
+        "bedrock-agentcore:RetrieveMemoryRecords",
+        "bedrock-agentcore:GetMemoryRecord",
+        "bedrock-agentcore:ListMemoryRecords"
+    };
+
+    private PolicyStatement? _agentCoreRuntimeMemoryPolicyStatement;
+
+    /// <summary>
+    /// Grants the default AgentCore runtime role permission to use the data-plane APIs of the AgentCore
+    /// memory identified by <paramref name="memoryArn"/>, scoped to the memory and its child resources.
+    /// <para>
+    /// All memories share a single policy statement: the first call creates the statement (with the memory
+    /// actions) and attaches it to the role; subsequent calls append the additional memory ARNs to that
+    /// same statement's resource list rather than adding a new statement. This keeps the IAM policy compact
+    /// when multiple agents each provision a memory.
+    /// </para>
+    /// <para>
+    /// When the runtime role was supplied by the user (rather than created by the integration) the role is
+    /// left untouched, mirroring how user-supplied roles are never mutated elsewhere.
+    /// </para>
+    /// </summary>
+    /// <param name="memoryArn">The ARN of the AgentCore memory to grant access to.</param>
+    internal void GrantAgentCoreRuntimeMemoryAccess(string memoryArn)
+    {
+        var role = GetDefaultAgentCoreRuntimeRole();
+        if (!_defaultAgentCoreRuntimeRoleCreatedByIntegration)
+        {
+            return;
+        }
+
+        var memoryChildArn = Fn.Join("", new[] { memoryArn, "/*" });
+
+        if (_agentCoreRuntimeMemoryPolicyStatement == null)
+        {
+            _agentCoreRuntimeMemoryPolicyStatement = new PolicyStatement(new PolicyStatementProps
+            {
+                Effect = Effect.ALLOW,
+                Actions = AgentCoreMemoryDataPlaneActions,
+                Resources = new[] { memoryArn, memoryChildArn }
+            });
+
+            // AddToPrincipalPolicy attaches the statement object by reference; CDK renders it at synth
+            // time, so resources appended to the cached instance on later calls are reflected in the
+            // final template.
+            role.AddToPrincipalPolicy(_agentCoreRuntimeMemoryPolicyStatement);
+        }
+        else
+        {
+            _agentCoreRuntimeMemoryPolicyStatement.AddResources(memoryArn, memoryChildArn);
         }
     }
 }

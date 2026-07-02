@@ -1773,6 +1773,160 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
     }
 
     [Fact]
+    public async Task TestPublishAgentCoreRuntimeWithMemory()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            // The agent runtime is created.
+            var agentRuntimes = GetResourcesOfType(cfTemplateDoc, "AWS::BedrockAgentCore::Runtime");
+            Assert.Single(agentRuntimes);
+            var agentRuntime = agentRuntimes[0];
+
+            // Exactly one AgentCore Memory resource is provisioned because the agent called WithAgentCoreMemory().
+            var memories = GetResourcesOfType(cfTemplateDoc, "AWS::BedrockAgentCore::Memory");
+            Assert.Single(memories);
+            var memory = memories[0];
+
+            // The memory has the defaulted event expiry duration and a sanitized name.
+            var expiry = AssertElementExistsAtPath(memory.Resource, "Properties/EventExpiryDuration");
+            Assert.Equal(90, expiry.GetInt32());
+            var memoryName = AssertElementExistsAtPath(memory.Resource, "Properties/Name");
+            Assert.Equal("PublishAgentCoreRuntimeWithMemory_AgentCoreAgent", memoryName.GetString());
+
+            // The runtime's AWS_AGENTCORE_MEMORY_ID env var resolves to the created memory's id via
+            // Fn::GetAtt, not the local "localdev-memory" placeholder seeded by WithAgentCoreMemory().
+            var memoryIdEnv = AssertElementExistsAtPath(agentRuntime.Resource,
+                "Properties/EnvironmentVariables/AWS_AGENTCORE_MEMORY_ID");
+            Assert.NotEqual("localdev-memory", memoryIdEnv.GetRawText().Trim('"'));
+            var memoryIdGetAtt = AssertElementExistsAtPath(memoryIdEnv, "Fn::GetAtt");
+            Assert.Equal(JsonValueKind.Array, memoryIdGetAtt.ValueKind);
+            Assert.Equal(memory.LogicalId, memoryIdGetAtt[0].GetString());
+            Assert.Equal("MemoryId", memoryIdGetAtt[1].GetString());
+
+            // The agent's default runtime role is granted the AgentCore memory data-plane actions, scoped
+            // to the created memory's ARN (and its child resources).
+            var policies = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Policy");
+            var memoryPolicy = policies.FirstOrDefault(p =>
+            {
+                var statements = GetElementAtPath(p.Resource, "Properties/PolicyDocument/Statement");
+                if (statements is not { ValueKind: JsonValueKind.Array } stmts)
+                    return false;
+                return stmts.EnumerateArray().Any(s =>
+                {
+                    var action = GetElementAtPath(s, "Action");
+                    if (action is not { ValueKind: JsonValueKind.Array } actions)
+                        return false;
+                    var actionTexts = actions.EnumerateArray()
+                        .Where(a => a.ValueKind == JsonValueKind.String)
+                        .Select(a => a.GetString())
+                        .ToList();
+                    if (!actionTexts.Contains("bedrock-agentcore:CreateEvent") ||
+                        !actionTexts.Contains("bedrock-agentcore:RetrieveMemoryRecords"))
+                        return false;
+
+                    // The resources are scoped to the memory ARN via Fn::GetAtt MemoryArn.
+                    var resource = GetElementAtPath(s, "Resource");
+                    if (resource is not { ValueKind: JsonValueKind.Array } resources)
+                        return false;
+                    return resources.EnumerateArray().Any(r => r.GetRawText().Contains("MemoryArn"));
+                });
+            });
+            Assert.False(string.IsNullOrEmpty(memoryPolicy.LogicalId), "The AgentCore runtime role should have an inline policy granting bedrock-agentcore memory data-plane actions scoped to the memory ARN");
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishAgentCoreRuntimeWithMemory), cloudFormationValidation);
+    }
+
+    [Fact]
+    public async Task TestPublishAgentCoreRuntimeWithMultipleMemories()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            // Both agents are created, each with its own memory resource.
+            var agentRuntimes = GetResourcesOfType(cfTemplateDoc, "AWS::BedrockAgentCore::Runtime");
+            Assert.Equal(2, agentRuntimes.Count);
+
+            var memories = GetResourcesOfType(cfTemplateDoc, "AWS::BedrockAgentCore::Memory");
+            Assert.Equal(2, memories.Count);
+
+            // Both agents share the single default runtime role, and the memory data-plane actions are
+            // granted through a single policy statement listing both memory ARNs — not one statement per
+            // memory. Find every statement that carries the memory actions across all IAM policies.
+            var policies = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Policy");
+            var memoryStatements = policies
+                .SelectMany(p =>
+                {
+                    var statements = GetElementAtPath(p.Resource, "Properties/PolicyDocument/Statement");
+                    if (statements is not { ValueKind: JsonValueKind.Array } stmts)
+                        return Enumerable.Empty<JsonElement>();
+                    return stmts.EnumerateArray().Where(s =>
+                    {
+                        var action = GetElementAtPath(s, "Action");
+                        if (action is not { ValueKind: JsonValueKind.Array } actions)
+                            return false;
+                        var actionTexts = actions.EnumerateArray()
+                            .Where(a => a.ValueKind == JsonValueKind.String)
+                            .Select(a => a.GetString())
+                            .ToList();
+                        return actionTexts.Contains("bedrock-agentcore:CreateEvent") &&
+                               actionTexts.Contains("bedrock-agentcore:RetrieveMemoryRecords");
+                    });
+                })
+                .ToList();
+
+            // Exactly one statement grants the memory actions (no duplicated action list per memory).
+            Assert.Single(memoryStatements);
+
+            // That single statement's Resource list references both memories' ARNs.
+            var resource = GetElementAtPath(memoryStatements[0], "Resource");
+            Assert.True(resource is { ValueKind: JsonValueKind.Array }, "The memory statement should scope access to an array of memory ARNs");
+            var resources = resource!.Value.EnumerateArray().ToList();
+
+            // Each memory contributes a base MemoryArn entry plus a "/*" child entry (Fn::Join wrapping
+            // the Fn::GetAtt MemoryArn), so both memory logical ids should appear in the resource list.
+            foreach (var memory in memories)
+            {
+                Assert.Contains(resources, r => r.GetRawText().Contains(memory.LogicalId));
+            }
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishAgentCoreRuntimeWithMultipleMemories), cloudFormationValidation);
+    }
+
+    [Fact]
+    public async Task TestPublishAgentCoreRuntimeWithMemoryDisabled()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            // The agent runtime is created.
+            var agentRuntimes = GetResourcesOfType(cfTemplateDoc, "AWS::BedrockAgentCore::Runtime");
+            Assert.Single(agentRuntimes);
+
+            // CreateMemory = false suppresses provisioning the memory resource even though WithAgentCoreMemory()
+            // was called (for local testing).
+            var memories = GetResourcesOfType(cfTemplateDoc, "AWS::BedrockAgentCore::Memory");
+            Assert.Empty(memories);
+
+            // The AWS_AGENTCORE_MEMORY_ID env var, if present, is not a memory Fn::GetAtt (it keeps the
+            // local placeholder copied from WithAgentCoreMemory()).
+            var memoryIdEnv = GetElementAtPath(cfTemplateDoc,
+                $"Resources/{agentRuntimes[0].LogicalId}/Properties/EnvironmentVariables/AWS_AGENTCORE_MEMORY_ID");
+            if (memoryIdEnv is { } env)
+            {
+                Assert.NotEqual(JsonValueKind.Object, env.ValueKind);
+            }
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishAgentCoreRuntimeWithMemoryDisabled), cloudFormationValidation);
+    }
+
+    [Fact]
     public async Task TestPublishAgentCoreRuntimeWithReference()
     {
         var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
