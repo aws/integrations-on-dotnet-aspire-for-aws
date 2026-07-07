@@ -103,12 +103,12 @@ public class AgentCoreResourceBuilderExtensionsTests
     }
 
     [Fact]
-    public void WithInMemory_SetsMemoryFlag()
+    public void WithAgentCoreMemory_SetsMemoryFlag()
     {
         var builder = DistributedApplication.CreateBuilder();
 
         var agent = builder.AddAgentCoreRuntime<FakeAgent>("my-agent")
-            .WithInMemory();
+            .WithAgentCoreMemory();
 
         var annotation = agent.Resource.Annotations
             .OfType<AgentCoreRuntimeAnnotation>()
@@ -118,13 +118,13 @@ public class AgentCoreResourceBuilderExtensionsTests
     }
 
     [Fact]
-    public void WithInMemory_ThrowsOnNonAgentCoreResource()
+    public void WithAgentCoreMemory_ThrowsOnNonAgentCoreResource()
     {
         var builder = DistributedApplication.CreateBuilder();
 
         var project = builder.AddProject<FakeAgent>("plain-project", o => o.ExcludeLaunchProfile = true);
 
-        Assert.Throws<InvalidOperationException>(() => project.WithInMemory());
+        Assert.Throws<InvalidOperationException>(() => project.WithAgentCoreMemory());
     }
 
     [Fact]
@@ -180,6 +180,11 @@ public class AgentCoreResourceBuilderExtensionsTests
         // Use Run-mode execution context so the env callback writes the var (it skips publish mode by design).
         var envVars = await EvaluateEnvironmentVariables(consumer.Resource, app.Services);
         Assert.Equal("http://localhost:12345", envVars["AWS_ENDPOINT_URL_BEDROCK_AGENTCORE"]);
+
+        // The hook also sets the runtime ARN under the standard reference convention so app code
+        // reads the same IConfiguration key locally and when deployed. Locally it's the placeholder
+        // "local-agent" (the emulator ignores it); deployment overrides it with the real ARN.
+        Assert.Equal("local-agent", envVars["AWS__Resources__my-agent__AgentRuntimeArn"]);
     }
 
     [Fact]
@@ -265,13 +270,13 @@ public class AgentCoreResourceBuilderExtensionsTests
     }
 
     [Fact]
-    public void WithStreaming_CanBeChainedWithWithInMemory()
+    public void WithStreaming_CanBeChainedWithWithAgentCoreMemory()
     {
         var builder = DistributedApplication.CreateBuilder();
 
         var agent = builder.AddAgentCoreRuntime<FakeAgent>("my-agent")
             .WithStreaming()
-            .WithInMemory();
+            .WithAgentCoreMemory();
 
         var annotation = agent.Resource.Annotations
             .OfType<AgentCoreRuntimeAnnotation>()

@@ -1,3 +1,10 @@
+## Release 2026-07-07
+
+### Aspire.Hosting.AWS (13.4.0)
+* [Preview] Add support for deploying to Bedrock AgentCore
+* When deploying to AgentCore support provisioning AgentCore memory
+* [Breaking Change] Rename the preview WithInMemory method to WithAgentCoreMemory
+
 ## Release 2026-06-19
 
 ### Aspire.Hosting.AWS (13.3.1)

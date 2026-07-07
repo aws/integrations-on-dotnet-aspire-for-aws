@@ -96,6 +96,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgentCore.StreamingAgent", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgentCore.ChatUI", "playground\AgentCore\AgentCore.ChatUI\AgentCore.ChatUI.csproj", "{A7D9BE9B-D93D-4293-BAC1-B32E144AA84A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Publishing.HoroscopeAgent", "playground\Publishing\Publishing.HoroscopeAgent\Publishing.HoroscopeAgent.csproj", "{A3BF9A43-3708-6FDE-B53B-8ED52AE9779D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -514,6 +516,18 @@ Global
 		{A7D9BE9B-D93D-4293-BAC1-B32E144AA84A}.Release|x64.Build.0 = Release|Any CPU
 		{A7D9BE9B-D93D-4293-BAC1-B32E144AA84A}.Release|x86.ActiveCfg = Release|Any CPU
 		{A7D9BE9B-D93D-4293-BAC1-B32E144AA84A}.Release|x86.Build.0 = Release|Any CPU
+		{A3BF9A43-3708-6FDE-B53B-8ED52AE9779D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3BF9A43-3708-6FDE-B53B-8ED52AE9779D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3BF9A43-3708-6FDE-B53B-8ED52AE9779D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A3BF9A43-3708-6FDE-B53B-8ED52AE9779D}.Debug|x64.Build.0 = Debug|Any CPU
+		{A3BF9A43-3708-6FDE-B53B-8ED52AE9779D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A3BF9A43-3708-6FDE-B53B-8ED52AE9779D}.Debug|x86.Build.0 = Debug|Any CPU
+		{A3BF9A43-3708-6FDE-B53B-8ED52AE9779D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3BF9A43-3708-6FDE-B53B-8ED52AE9779D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3BF9A43-3708-6FDE-B53B-8ED52AE9779D}.Release|x64.ActiveCfg = Release|Any CPU
+		{A3BF9A43-3708-6FDE-B53B-8ED52AE9779D}.Release|x64.Build.0 = Release|Any CPU
+		{A3BF9A43-3708-6FDE-B53B-8ED52AE9779D}.Release|x86.ActiveCfg = Release|Any CPU
+		{A3BF9A43-3708-6FDE-B53B-8ED52AE9779D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -559,6 +573,7 @@ Global
 		{352351D7-5E50-4542-ADD1-6D8E860F9079} = {A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
 		{8AF39284-B5D3-408E-A39A-27A88AF7D6F9} = {A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
 		{A7D9BE9B-D93D-4293-BAC1-B32E144AA84A} = {A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
+		{A3BF9A43-3708-6FDE-B53B-8ED52AE9779D} = {95D2252C-FE45-4452-80A8-3C425756CB5D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FBA55172-92F1-4495-A082-E0ABE4F4AF09}

@@ -15,6 +15,7 @@ using Lambda.AppHost;
 #pragma warning disable ASPIREAWSPUBLISHERS001
 #pragma warning disable ASPIRECOMPUTE001
 #pragma warning disable ASPIREINTERACTION001
+#pragma warning disable ASPIREAWSAGENTCORE001
 
 var builder = DistributedApplication.CreateBuilder(args);
 
@@ -35,6 +36,9 @@ builder.Configuration["Parameters:api-key"] = "default-api-key";
 builder.Configuration["Parameters:db-connection"] = "Server=localhost;Database=mydb";
 var apiKey = builder.AddParameter("api-key");
 var dbConnection = builder.AddParameter("db-connection", secret: true);
+
+var horoscopeAgent = builder.AddAgentCoreRuntime<Projects.Publishing_HoroscopeAgent>("HoroscopeAgent")
+            .WithAgentCoreMemory();
 
 var frontend = builder.AddProject<Projects.Frontend>("Frontend")
         .WithEnvironment("ENV_LAMBDA_1", "LambdaValue1")
@@ -57,6 +61,7 @@ builder.AddProject<Projects.Backend>("backend")
         })
         .WithReference(frontend)
         .WithReference(cache)
+        .WithReference(horoscopeAgent)
         .WaitFor(cache);
 
 builder.AddAWSLambdaFunction<Projects.SQSProcessorFunction>("SQSProcessorFunction", "SQSProcessorFunction::SQSProcessorFunction.Function::FunctionHandler")

@@ -4,6 +4,7 @@
 
 using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.ECS;
+using Amazon.CDK.AWS.IAM;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Deployment.CDKDefaults;
 using Aspire.Hosting.AWS.Deployment.Services;
@@ -34,6 +35,16 @@ internal class ECSFargateServicePublishTarget(ITarballContainerImageBuilder imag
         publishAnnotation.Config.PropsFargateTaskDefinitionCallback?.Invoke(CreatePublishTargetContext(environment), fargateTaskDefinitionProps);
         environment.DefaultsProvider.ApplyECSFargateServiceDefaults(fargateTaskDefinitionProps);
 
+        // Assign a default task role when the user hasn't supplied one so the application's own AWS calls
+        // run under a controllable role. Only the integration-created role is exposed to reference hooks
+        // (via ReferenceTaskRole) so a user-supplied role is never mutated.
+        IRole? defaultTaskRole = null;
+        if (fargateTaskDefinitionProps.TaskRole == null)
+        {
+            defaultTaskRole = environment.DefaultsProvider.CreateDefaultECSTaskRole(projectResource.Name);
+            fargateTaskDefinitionProps.TaskRole = defaultTaskRole;
+        }
+
         var taskDef = new FargateTaskDefinition(environment.CDKStack, $"TaskDefinition-{projectResource.Name}", fargateTaskDefinitionProps);
         publishAnnotation.Config.ConstructFargateTaskDefinitionCallback?.Invoke(CreatePublishTargetContext(environment), taskDef);
 
@@ -59,7 +70,8 @@ internal class ECSFargateServicePublishTarget(ITarballContainerImageBuilder imag
         publishAnnotation.Config.PropsFargateServiceCallback?.Invoke(CreatePublishTargetContext(environment), fargateServiceProps);
         environment.DefaultsProvider.ApplyECSFargateServiceDefaults(fargateServiceProps);
         ProcessRelationShips(new FargateServicePropsConnectionPoints(
-            () => CreateEmptyReferenceSecurityGroup(environment, projectResource, fargateServiceProps, x => x.SecurityGroups, (x, v) => x.SecurityGroups = v)),
+            () => CreateEmptyReferenceSecurityGroup(environment, projectResource, fargateServiceProps, x => x.SecurityGroups, (x, v) => x.SecurityGroups = v),
+            defaultTaskRole),
             resource, environment);
 
         var fargateService = new FargateService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
@@ -100,7 +112,7 @@ internal class ContainerDefinitionPropsConnectionPoints(ContainerDefinitionProps
 }
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-internal class FargateServicePropsConnectionPoints(Func<ISecurityGroup> securityGroupFactory) : AbstractCDKConstructConnectionPoints
+internal class FargateServicePropsConnectionPoints(Func<ISecurityGroup> securityGroupFactory, IRole? taskRole = null) : AbstractCDKConstructConnectionPoints
 {
     ISecurityGroup? _referenceSecurityGroup;
 
@@ -112,4 +124,6 @@ internal class FargateServicePropsConnectionPoints(Func<ISecurityGroup> security
             return _referenceSecurityGroup;
         }
     }
+
+    public override IRole? ReferenceTaskRole => taskRole;
 }

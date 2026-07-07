@@ -20,6 +20,14 @@
 	  <ProjectReference Include="..\Backend\Backend.csproj" />
 	  <ProjectReference Include="..\Frontend\Frontend.csproj" />
 	  <ProjectReference Include="..\SQSProcessorFunction\SQSProcessorFunction.csproj" />
+	  <ProjectReference Include="..\Publishing.HoroscopeAgent\Publishing.HoroscopeAgent.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="Properties\launchSettings.json">
+	    <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+	    <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+	  </None>
 	</ItemGroup>
 
 </Project>

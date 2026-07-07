@@ -7,6 +7,7 @@ using Environment = System.Environment;
 #pragma warning disable ASPIREAWSPUBLISHERS001
 #pragma warning disable ASPIRECOMPUTE001
 #pragma warning disable ASPIREINTERACTION001
+#pragma warning disable ASPIREAWSAGENTCORE001
 
 namespace DeploymentTestApp.AppHost
 {
@@ -277,8 +278,140 @@ namespace DeploymentTestApp.AppHost
             await ExecuteApp(builder);
         }
 
+        public static async Task PublishAgentCoreRuntime()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntime));
+
+            builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent");
+
+            await ExecuteApp(builder);
+        }
+
+        public static async Task PublishAgentCoreRuntimeWithMemory()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntimeWithMemory));
+
+            // WithAgentCoreMemory() requests AgentCore memory, which should provision an AgentCore Memory resource,
+            // point the agent's AWS_AGENTCORE_MEMORY_ID at it, and grant the runtime role memory access.
+            builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent")
+                .WithAgentCoreMemory();
+
+            await ExecuteApp(builder);
+        }
+
+        public static async Task PublishAgentCoreRuntimeWithMultipleMemories()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntimeWithMultipleMemories));
+
+            // Two agents each provision their own memory but share the default runtime role. The role
+            // should receive a single bedrock-agentcore memory statement listing both memory ARNs, rather
+            // than one statement per memory.
+            builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent1")
+                .WithAgentCoreMemory();
+
+            builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent2")
+                .WithAgentCoreMemory();
+
+            await ExecuteApp(builder);
+        }
+
+        public static async Task PublishAgentCoreRuntimeWithMemoryDisabled()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntimeWithMemoryDisabled));
+
+            // WithAgentCoreMemory() is used for local testing, but CreateMemory = false suppresses provisioning the
+            // memory resource during deployment.
+            builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent")
+                .WithAgentCoreMemory()
+                .PublishAsAgentCoreRuntime(new PublishAgentCoreRuntimeConfig
+                {
+                    CreateMemory = false
+                });
+
+            await ExecuteApp(builder);
+        }
+
+        public static async Task PublishAgentCoreRuntimeWithCustomization()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntimeWithCustomization));
+
+            builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent")
+                .PublishAsAgentCoreRuntime(new PublishAgentCoreRuntimeConfig
+                {
+                    PropsCfnRuntimeCallback = (ctx, props) =>
+                    {
+                        props.Description = "Custom agent description";
+                    }
+                });
+
+            await ExecuteApp(builder);
+        }
+
+        public static async Task PublishAgentCoreRuntimeWithReference()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntimeWithReference));
+
+            var agent = builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent");
+
+            // A consumer that references the agent should receive its runtime ARN as an environment
+            // variable derived from the standard reference convention.
+            builder.AddProject<Projects.DeploymentTestApps_WebApp1>("WebApp1")
+                .WithReference(agent)
+                .WithExternalHttpEndpoints();
+
+            await ExecuteApp(builder);
+        }
+
+        public static async Task PublishAgentCoreRuntimeWithVpcReference()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntimeWithVpcReference));
+
+            var cache = builder.AddRedis("Cache");
+
+            // Referencing a VPC-requiring resource (ElastiCache) should switch the agent runtime's
+            // network configuration to VPC mode.
+            builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent")
+                .WithReference(cache);
+
+            await ExecuteApp(builder);
+        }
+
+        public static async Task PublishAgentCoreRuntimeWithVpcReferenceAndSubnets()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntimeWithVpcReferenceAndSubnets));
+
+            var cache = builder.AddRedis("Cache");
+
+            // The user pins explicit subnet IDs (e.g. to avoid AgentCore-unsupported availability zones).
+            // These should take precedence over the default VPC's subnets.
+            builder.AddAgentCoreRuntime<Projects.DeploymentTestApp_AgentCoreAgent>("AgentCoreAgent")
+                .WithReference(cache)
+                .PublishAsAgentCoreRuntime(new PublishAgentCoreRuntimeConfig
+                {
+                    VpcSubnetIds = new[] { "subnet-aaaa1111", "subnet-bbbb2222" }
+                });
+
+            await ExecuteApp(builder);
+        }
+
         /// <summary>
-        /// When running the IDistributedApplication through tests for publishing there are exceptions thrown 
+        /// When running the IDistributedApplication through tests for publishing there are exceptions thrown
         /// when the IDistributedApplication is shutting down. This method catches and ignores those exceptions to allow for clean test runs.
         /// </summary>
         /// <param name="builder"></param>

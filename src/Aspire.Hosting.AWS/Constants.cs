@@ -24,6 +24,19 @@ internal static class Constants
     /// </summary>
     public const string DefaultConfigSection = "AWS:Resources";
 
+    /// <summary>
+    /// The output name appended to an AgentCore runtime's config section when a resource references it.
+    /// The full key is <c>AWS:Resources:{agentName}:AgentRuntimeArn</c>. Shared between the local
+    /// development reference hook and the deployment publish target so the convention can never drift.
+    /// </summary>
+    internal const string AgentRuntimeArnOutputName = "AgentRuntimeArn";
+
+    /// <summary>
+    /// The environment variable the agent reads to discover its AgentCore memory id. Shared between the
+    /// local development emulator wiring and the deployment publish target so the name can never drift.
+    /// </summary>
+    internal const string AgentCoreMemoryIdEnvironmentVariable = "AWS_AGENTCORE_MEMORY_ID";
+
     internal const string IsAspireHostedEnvVariable = "ASPIRE_HOSTED";
     
     /// <summary>
