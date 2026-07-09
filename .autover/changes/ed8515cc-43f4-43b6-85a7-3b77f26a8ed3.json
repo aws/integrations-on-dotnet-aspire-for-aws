@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Minor",
+      "ChangelogMessages": [
+		"[Breaking Change] Rename the preview WithStreaming method to WithAgentCoreStreaming"
+      ]
+    }
+  ]
+}
