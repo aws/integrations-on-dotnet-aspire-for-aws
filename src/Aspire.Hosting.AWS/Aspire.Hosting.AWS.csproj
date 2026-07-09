@@ -10,7 +10,7 @@
          AWS.AgentCore.Testing because its Aspire extensions are marked [Experimental] and
          consumers explicitly opt in (NU5104). -->
     <NoWarn>$(NoWarn);CS8002;NU5104</NoWarn>
-    <Version>13.4.0</Version>
+    <Version>13.5.0</Version>
     <PackageReadmeFile>docs\README.md</PackageReadmeFile>
   </PropertyGroup>
 
