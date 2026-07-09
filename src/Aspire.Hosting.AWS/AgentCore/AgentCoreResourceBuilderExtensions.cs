@@ -167,14 +167,14 @@ public static class AgentCoreResourceBuilderExtensions
     /// <param name="agentApp">The agent resource builder.</param>
     /// <returns>The resource builder for further chaining.</returns>
     [Experimental(Constants.ASPIREAWSAGENTCORE001)]
-    public static IResourceBuilder<ProjectResource> WithStreaming(
+    public static IResourceBuilder<ProjectResource> WithAgentCoreStreaming(
         this IResourceBuilder<ProjectResource> agentApp)
     {
         var annotation = agentApp.Resource.Annotations
             .OfType<AgentCoreRuntimeAnnotation>()
             .FirstOrDefault()
             ?? throw new InvalidOperationException(
-                "WithStreaming can only be called on an AgentCore runtime resource. " +
+                "WithAgentCoreStreaming can only be called on an AgentCore runtime resource. " +
                 "Use AddAgentCoreRuntime<T>() to create it.");
 
         annotation.IsStreaming = true;

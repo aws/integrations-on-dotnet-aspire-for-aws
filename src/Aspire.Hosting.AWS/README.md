@@ -492,7 +492,7 @@ var agent = builder.AddAgentCoreRuntime<Projects.MyAgent>("my-agent")
 
 // Register a streaming agent
 builder.AddAgentCoreRuntime<Projects.MyStreamingAgent>("my-streaming-agent")
-    .WithStreaming()
+    .WithAgentCoreStreaming()
     .WithAgentCoreMemory();
 
 // Wire a consumer project — AWS_ENDPOINT_URL_BEDROCK_AGENTCORE is injected automatically
@@ -507,7 +507,7 @@ builder.Build().Run();
 | Method | Description |
 |--------|-------------|
 | `AddAgentCoreRuntime<TProject>()` | Registers an agent with embedded runtime and chat emulators |
-| `.WithStreaming()` | Enables SSE streaming mode for the chat app |
+| `.WithAgentCoreStreaming()` | Enables SSE streaming mode for the chat app |
 | `.WithAgentCoreMemory()` | Enables AgentCore memory: a short-term memory emulator locally, and a provisioned AgentCore Memory resource on deployment |
 | `.WithReference(agent)` | Injects the runtime emulator endpoint into a consumer project via `AWS_ENDPOINT_URL_BEDROCK_AGENTCORE` |
 

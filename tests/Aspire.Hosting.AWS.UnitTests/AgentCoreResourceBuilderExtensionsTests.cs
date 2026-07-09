@@ -78,12 +78,12 @@ public class AgentCoreResourceBuilderExtensionsTests
     }
 
     [Fact]
-    public void WithStreaming_SetsStreamingFlag()
+    public void WithAgentCoreStreaming_SetsStreamingFlag()
     {
         var builder = DistributedApplication.CreateBuilder();
 
         var agent = builder.AddAgentCoreRuntime<FakeAgent>("my-agent")
-            .WithStreaming();
+            .WithAgentCoreStreaming();
 
         var annotation = agent.Resource.Annotations
             .OfType<AgentCoreRuntimeAnnotation>()
@@ -93,13 +93,13 @@ public class AgentCoreResourceBuilderExtensionsTests
     }
 
     [Fact]
-    public void WithStreaming_ThrowsOnNonAgentCoreResource()
+    public void WithAgentCoreStreaming_ThrowsOnNonAgentCoreResource()
     {
         var builder = DistributedApplication.CreateBuilder();
 
         var project = builder.AddProject<FakeAgent>("plain-project", o => o.ExcludeLaunchProfile = true);
 
-        Assert.Throws<InvalidOperationException>(() => project.WithStreaming());
+        Assert.Throws<InvalidOperationException>(() => project.WithAgentCoreStreaming());
     }
 
     [Fact]
@@ -270,12 +270,12 @@ public class AgentCoreResourceBuilderExtensionsTests
     }
 
     [Fact]
-    public void WithStreaming_CanBeChainedWithWithAgentCoreMemory()
+    public void WithAgentCoreStreaming_CanBeChainedWithWithAgentCoreMemory()
     {
         var builder = DistributedApplication.CreateBuilder();
 
         var agent = builder.AddAgentCoreRuntime<FakeAgent>("my-agent")
-            .WithStreaming()
+            .WithAgentCoreStreaming()
             .WithAgentCoreMemory();
 
         var annotation = agent.Resource.Annotations
