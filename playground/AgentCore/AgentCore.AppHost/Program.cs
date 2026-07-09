@@ -11,10 +11,10 @@ var agent = builder.AddAgentCoreRuntime<Projects.AgentCore_Agent>(
     .WithAgentCoreMemory();
 
 // Register a streaming agent.
-// WithStreaming tells the chat app to use SSE streaming mode.
+// WithAgentCoreStreaming tells the chat app to use SSE streaming mode.
 builder.AddAgentCoreRuntime<Projects.AgentCore_StreamingAgent>(
     "AgentCore-StreamingAgent", new() { IncludeEmulatorLogs = true })
-    .WithStreaming()
+    .WithAgentCoreStreaming()
     .WithAgentCoreMemory();
 
 // WithReference injects AWS_ENDPOINT_URL_BEDROCK_AGENTCORE into the ChatUI project

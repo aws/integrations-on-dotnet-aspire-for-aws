@@ -1,3 +1,8 @@
+## Release 2026-07-09
+
+### Aspire.Hosting.AWS (13.5.0)
+* [Breaking Change] Rename the preview WithStreaming method to WithAgentCoreStreaming
+
 ## Release 2026-07-07
 
 ### Aspire.Hosting.AWS (13.4.0)

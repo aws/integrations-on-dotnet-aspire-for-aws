@@ -6,7 +6,7 @@ var agent = builder.AddAgentCoreRuntime<Projects.AgentCoreTestApp_Agent>("AgentC
 
 // Streaming agent
 builder.AddAgentCoreRuntime<Projects.AgentCoreTestApp_StreamingAgent>("AgentCoreTestApp-StreamingAgent")
-    .WithStreaming()
+    .WithAgentCoreStreaming()
     .WithAgentCoreMemory();
 
 // Chat UI that invokes the agent via the AWS SDK
