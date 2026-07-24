@@ -5,7 +5,7 @@ phases:
     runtime-versions:
       nodejs: 22
     commands:
-      - npm install -g aws-cdk@2.1106.0
+      - npm install -g aws-cdk@2.1133.0
       - cdk --version   
       - find / -type f -name 'global.json' -delete
       - curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 8.0
