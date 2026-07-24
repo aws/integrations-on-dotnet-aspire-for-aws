@@ -93,7 +93,7 @@ public class ApplyDefaultsTests
         {
             Image = ContainerImage.FromRegistry("nginx"),
             Logging = customLogging,
-            PortMappings = new[] { new PortMapping { ContainerPort = 3000 } }
+            PortMappings = new[] { new PortMapping { ContainerPort = 3000, Name = "custom-http", Protocol = Protocol.TCP } }
         };
 
         // Act
@@ -103,7 +103,8 @@ public class ApplyDefaultsTests
         Assert.Equal(customLogging, props.Logging);
         Assert.Single(props.PortMappings);
         Assert.Equal(3000, props.PortMappings[0].ContainerPort);
-    }
+        Assert.Equal("custom-http", props.PortMappings[0].Name);
+        Assert.Equal(Protocol.TCP, props.PortMappings[0].Protocol);
 
     [Fact]
     public void ApplyCfnExpressGatewayServiceDefaults_AppliesAllDefaults()
