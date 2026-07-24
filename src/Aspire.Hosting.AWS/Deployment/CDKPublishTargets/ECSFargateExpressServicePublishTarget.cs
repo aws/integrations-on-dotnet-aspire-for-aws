@@ -72,6 +72,11 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
         if (containerDefinitionProps.ContainerName != "Main")
             throw new InvalidOperationException("ECS Fargate Express requires the application container to be named \"Main\".");
 
+        // ECS Fargate Express requires the "Main" container to expose at least one named TCP port mapping.
+        // The defaults below add one when the user supplied none; when the user supplied their own mappings
+        // via the callback, validate the requirement so we fail at synth time rather than at deploy time.
+        ValidateExpressPortMappings(containerDefinitionProps.PortMappings);
+
         environment.DefaultsProvider.ApplyCfnExpressGatewayServiceContainerDefinitionDefaults(projectResource.Name, containerDefinitionProps);
 
         var containerDefinition = taskDef.AddContainer($"Container-{projectResource.Name}", containerDefinitionProps);
@@ -95,6 +100,31 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
             Description = "Endpoint for the ECS Express Gateway Service",
             Value = Fn.Join("", ["https://", Fn.GetAtt(fargateService.LogicalId, "Endpoint").ToString(), "/"])
         });
+    }
+
+    /// <summary>
+    /// Validates that a user-supplied set of port mappings satisfies the ECS Fargate Express requirement that
+    /// the "Main" container expose at least one named TCP port mapping. No validation is performed when
+    /// <paramref name="portMappings"/> is null or empty, since the defaults provider adds a compliant mapping
+    /// in that case. A null protocol is treated as TCP, matching the ECS/CDK default.
+    /// </summary>
+    /// <param name="portMappings">The container's port mappings after the user's props callback has run.</param>
+    /// <exception cref="InvalidOperationException">Thrown when mappings are supplied but none is a named TCP port.</exception>
+    internal static void ValidateExpressPortMappings(IPortMapping[]? portMappings)
+    {
+        if (portMappings is not { Length: > 0 })
+            return;
+
+        var hasNamedTcpPort = portMappings.Any(pm =>
+            !string.IsNullOrEmpty(pm.Name) &&
+            pm.ContainerPort > 0 &&
+            (pm.Protocol == null || pm.Protocol == Amazon.CDK.AWS.ECS.Protocol.TCP));
+
+        if (!hasNamedTcpPort)
+        {
+            throw new InvalidOperationException(
+                "ECS Fargate Express requires the \"Main\" container to have at least one named port mapping using the TCP protocol.");
+        }
     }
 
     public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)

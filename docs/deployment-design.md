@@ -510,12 +510,15 @@ Because only the integration-created role is exposed through `ReferenceTaskRole`
 primary container that the publish target satisfies automatically:
 
 - **The primary container must be named `Main`.** The publish target sets `ContainerDefinitionProps.ContainerName = "Main"`. (The CDK construct id remains `Container-{resourceName}`, but the container *name* emitted to CloudFormation is `Main`.) Deploying with any other name fails with `Task definition must have a Main container`.
-- **The `Main` container must expose a named TCP port mapping.** The default port mapping sets `ContainerPort` (8080), `Name` (`http`, via `ECSFargateExpressContainerPortName`), and `Protocol = Protocol.TCP`. Omitting the port name or protocol fails at deploy time with `Task definition must have a port mapping with TCP protocol, a container port, and a port name on the Main container`.
+- **The `Main` container must expose a named TCP port mapping.** The default port mapping sets `ContainerPort` (8080), `Name` (`http`, via `ECSFargateExpressContainerPortName`), and `Protocol = Protocol.TCP`. Without a named TCP port, ECS rejects the deployment with `Task definition must have a port mapping with TCP protocol, a container port, and a port name on the Main container`.
 
 The `Main` name is set when the container props are created. The default port mapping is applied by
 `ApplyCfnExpressGatewayServiceContainerDefinitionDefaults` **after** the user's
-`PropsContainerDefinitionCallback` runs, and only when no port mapping was supplied — so a user who
-supplies their own port mapping is responsible for keeping it a named TCP mapping.
+`PropsContainerDefinitionCallback` runs, and only when no port mapping was supplied. If the user
+supplies their own port mappings, `ValidateExpressPortMappings` checks that at least one is a named TCP
+mapping (a null protocol counts as TCP, matching the ECS/CDK default) and throws at synth time
+otherwise — so a misconfiguration fails fast rather than at deploy. The named TCP mapping need not be
+first in the list; any compliant entry satisfies the requirement.
 
 ---
 

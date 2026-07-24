@@ -10,6 +10,7 @@ using Amazon.CDK.AWS.ECS.Patterns;
 using Amazon.CDK.AWS.ElastiCache;
 using Amazon.CDK.AWS.Lambda;
 using Aspire.Hosting.AWS.Deployment;
+using Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
 using Aspire.Hosting.AWS.Lambda;
 using Xunit;
 
@@ -105,6 +106,55 @@ public class ApplyDefaultsTests
         Assert.Equal(3000, props.PortMappings[0].ContainerPort);
         Assert.Equal("custom-http", props.PortMappings[0].Name);
         Assert.Equal(Protocol.TCP, props.PortMappings[0].Protocol);
+    }
+
+    [Fact]
+    public void ValidateExpressPortMappings_NullOrEmpty_DoesNotThrow()
+    {
+        // The defaults provider supplies a compliant mapping when the user provides none, so nothing to validate.
+        ECSFargateExpressServicePublishTarget.ValidateExpressPortMappings(null);
+        ECSFargateExpressServicePublishTarget.ValidateExpressPortMappings(Array.Empty<IPortMapping>());
+    }
+
+    [Fact]
+    public void ValidateExpressPortMappings_NamedTcpPortPresent_DoesNotThrow()
+    {
+        // A named TCP mapping need not be the first entry; any compliant mapping in the list satisfies ECS Express.
+        var mappings = new IPortMapping[]
+        {
+            new PortMapping { ContainerPort = 9090 },                                          // unnamed metrics port
+            new PortMapping { ContainerPort = 8080, Name = "http", Protocol = Protocol.TCP }    // compliant
+        };
+
+        ECSFargateExpressServicePublishTarget.ValidateExpressPortMappings(mappings);
+    }
+
+    [Fact]
+    public void ValidateExpressPortMappings_NullProtocolTreatedAsTcp_DoesNotThrow()
+    {
+        // ECS/CDK default an omitted protocol to TCP, so a named mapping without an explicit protocol is valid.
+        var mappings = new IPortMapping[] { new PortMapping { ContainerPort = 8080, Name = "http" } };
+
+        ECSFargateExpressServicePublishTarget.ValidateExpressPortMappings(mappings);
+    }
+
+    [Fact]
+    public void ValidateExpressPortMappings_UnnamedPort_Throws()
+    {
+        var mappings = new IPortMapping[] { new PortMapping { ContainerPort = 8080, Protocol = Protocol.TCP } };
+
+        Assert.Throws<InvalidOperationException>(() =>
+            ECSFargateExpressServicePublishTarget.ValidateExpressPortMappings(mappings));
+    }
+
+    [Fact]
+    public void ValidateExpressPortMappings_NonTcpProtocol_Throws()
+    {
+        var mappings = new IPortMapping[] { new PortMapping { ContainerPort = 8080, Name = "udp", Protocol = Protocol.UDP } };
+
+        Assert.Throws<InvalidOperationException>(() =>
+            ECSFargateExpressServicePublishTarget.ValidateExpressPortMappings(mappings));
+    }
 
     [Fact]
     public void ApplyCfnExpressGatewayServiceDefaults_AppliesAllDefaults()
