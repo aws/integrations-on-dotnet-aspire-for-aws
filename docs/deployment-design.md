@@ -468,7 +468,7 @@ An ECS task definition has two distinct IAM roles:
 - **Execution role** — used by the ECS/Fargate platform to pull the image, write logs, and resolve secrets. The integration assigns a shared default for this (e.g. `DefaultECSExpressExecutionRole`).
 - **Task role** — the role the application's *own* code assumes at runtime to call AWS APIs (S3, DynamoDB, Bedrock AgentCore, etc.).
 
-All three ECS publish targets — `PublishAsECSFargateExpressService` (`CfnExpressGatewayService.TaskRoleArn`), `PublishAsECSFargateService` (`FargateTaskDefinition.TaskRole`), and `PublishAsECSFargateServiceWithALB` (`ApplicationLoadBalancedTaskImageOptions.TaskRole`) — assign a **default task role when the user has not supplied one**. This gives every service a consistent, controllable identity and a place for references to attach scoped permissions.
+All three ECS publish targets — `PublishAsECSFargateExpressService` (`FargateTaskDefinition.TaskRole`), `PublishAsECSFargateService` (`FargateTaskDefinition.TaskRole`), and `PublishAsECSFargateServiceWithALB` (`ApplicationLoadBalancedTaskImageOptions.TaskRole`) — assign a **default task role when the user has not supplied one**. This gives every service a consistent, controllable identity and a place for references to attach scoped permissions.
 
 ### Per-service, created empty
 
@@ -488,10 +488,10 @@ Each publish target creates the role only when the relevant prop is unset (after
 
 ```csharp
 IRole? defaultTaskRole = null;
-if (string.IsNullOrEmpty(fargateServiceProps.TaskRoleArn))   // L2 targets check the IRole TaskRole prop instead
+if (fargateTaskDefinitionProps.TaskRole == null)   // all three ECS targets now check an IRole prop on the task definition
 {
     defaultTaskRole = environment.DefaultsProvider.CreateDefaultECSTaskRole(projectResource.Name);
-    fargateServiceProps.TaskRoleArn = defaultTaskRole.RoleArn;
+    fargateTaskDefinitionProps.TaskRole = defaultTaskRole;
 }
 // defaultTaskRole is passed to the connection-points object; ReferenceTaskRole returns it (else null)
 ```
@@ -499,6 +499,23 @@ if (string.IsNullOrEmpty(fargateServiceProps.TaskRoleArn))   // L2 targets check
 ### Interaction with references
 
 Because only the integration-created role is exposed through `ReferenceTaskRole`, the task-role policy hooks (see [Task Role Policies](#4-task-role-policies)) run **only** when the default role was used. If the user supplies their own task role — via a props callback on the publish target — the integration never mutates it, and the user owns granting any permissions their references need. The concrete payoff: a service that `WithReference`s an AgentCore agent automatically gets `bedrock-agentcore:Invoke*` on its default task role.
+
+---
+
+## ECS Fargate Express Task Definition Requirements
+
+`PublishAsECSFargateExpressService` runs the project on a `FargateTaskDefinition` that the
+`CfnExpressGatewayService` points at via its `TaskDefinitionArn` property (rather than the inline
+`PrimaryContainer` property). Amazon ECS Express imposes two requirements on that task definition's
+primary container that the publish target satisfies automatically:
+
+- **The primary container must be named `Main`.** The publish target sets `ContainerDefinitionProps.ContainerName = "Main"`. (The CDK construct id remains `Container-{resourceName}`, but the container *name* emitted to CloudFormation is `Main`.) Deploying with any other name fails with `Task definition must have a Main container`.
+- **The `Main` container must expose a named TCP port mapping.** The default port mapping sets `ContainerPort` (8080), `Name` (`http`, via `ECSFargateExpressContainerPortName`), and `Protocol = Protocol.TCP`. Omitting the port name or protocol fails at deploy time with `Task definition must have a port mapping with TCP protocol, a container port, and a port name on the Main container`.
+
+The `Main` name is set when the container props are created. The default port mapping is applied by
+`ApplyCfnExpressGatewayServiceContainerDefinitionDefaults` **after** the user's
+`PropsContainerDefinitionCallback` runs, and only when no port mapping was supplied — so a user who
+supplies their own port mapping is responsible for keeping it a named TCP mapping.
 
 ---
 
@@ -570,16 +587,38 @@ public virtual void ApplyLambdaFunctionDefaults(FunctionProps props, LambdaProje
     props.Architecture ??= Architecture.X86_64;
 }
 
-// Example: ECS Express service defaults
+// Example: ECS Express service defaults.
+// The Express service runs a FargateTaskDefinition (referenced via TaskDefinitionArn), so the
+// container-hosting settings are split across three Apply* methods, mirroring the ECS Fargate target.
+public virtual void ApplyCfnExpressGatewayServiceTaskDefinitionDefaults(FargateTaskDefinitionProps props)
+{
+    props.Cpu ??= ECSFargateExpressCpu;                        // e.g. 1024
+    props.MemoryLimitMiB ??= ECSFargateExpressMiB;             // e.g. 2048
+    props.ExecutionRole ??= GetDefaultECSExpressExecutionRole();
+}
+
+public virtual void ApplyCfnExpressGatewayServiceContainerDefinitionDefaults(string projectName, ContainerDefinitionProps props)
+{
+    props.Logging ??= CreateECSFargateServiceLogDriver(projectName);   // awslogs driver
+    // ECS Fargate Express requires the primary container's port mapping to be a *named* TCP port.
+    if (props.PortMappings is null || props.PortMappings.Length == 0)
+        props.PortMappings = new[]
+        {
+            new PortMapping
+            {
+                ContainerPort = ECSFargateExpressContainerPort ?? 8080,
+                Name = ECSFargateExpressContainerPortName,   // e.g. "http"
+                Protocol = Protocol.TCP
+            }
+        };
+}
+
 public virtual void ApplyCfnExpressGatewayServiceDefaults(CfnExpressGatewayServiceProps props)
 {
-    props.ExecutionRole ??= GetDefaultECSExpressExecutionRole().RoleArn;
-    props.InfrastructureRole ??= GetDefaultECSExpressInfrastructureRole().RoleArn;
-    
-    if (props.PrimaryContainer is ExpressGatewayContainerProperty container)
-    {
-        container.Port ??= 8080;  // Default container port
-    }
+    // The service itself only needs the infrastructure role and network configuration; the container,
+    // CPU/memory, execution role, and task role live on the task definition it points at.
+    props.InfrastructureRoleArn ??= GetDefaultECSExpressInfrastructureRole().RoleArn;
+    // props.NetworkConfiguration ??= ... (security groups + public subnets)
 }
 
 // Example: AgentCore runtime defaults
