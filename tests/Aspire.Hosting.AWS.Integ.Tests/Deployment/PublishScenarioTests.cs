@@ -40,7 +40,17 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             ]
             """, webApp1OutputFnJoin);
 
-            var webApp2EnvFnJoin = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp2/Properties/PrimaryContainer/Environment/{Name=services__WebApp1__https__0}/Value/Fn::Join");
+            // The container image, environment variables, and memory now live on a per-service task
+            // definition; the Express service points at it via TaskDefinitionArn.
+            var taskDefinitions = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::TaskDefinition");
+            Assert.Equal(2, taskDefinitions.Count);
+
+            var webApp1TaskDef = taskDefinitions.FirstOrDefault(td => td.LogicalId.Contains("WebApp1"));
+            Assert.NotNull(webApp1TaskDef.LogicalId);
+            var webApp2TaskDef = taskDefinitions.FirstOrDefault(td => td.LogicalId.Contains("WebApp2"));
+            Assert.NotNull(webApp2TaskDef.LogicalId);
+
+            var webApp2EnvFnJoin = AssertElementExistsAtPath(cfTemplateDoc, $"Resources/{webApp2TaskDef.LogicalId}/Properties/ContainerDefinitions/{{Name=Main}}/Environment/{{Name=services__WebApp1__https__0}}/Value/Fn::Join");
             AssertJsonEquals("""
             [
              "",
@@ -57,10 +67,10 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             ]
             """, webApp2EnvFnJoin);
 
-            var webApp1Memory = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/Memory");
+            var webApp1Memory = AssertElementExistsAtPath(webApp1TaskDef.Resource, "Properties/Memory");
             Assert.Equal("4096", webApp1Memory.GetString());
 
-            var webApp2Memory = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp2/Properties/Memory");
+            var webApp2Memory = AssertElementExistsAtPath(webApp2TaskDef.Resource, "Properties/Memory");
             Assert.Equal("2048", webApp2Memory.GetString());
 
             var vpcs = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::VPC");
@@ -124,7 +134,8 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             }
             """, executionRole.Resource);
 
-            var executionRoleAssignment = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/ExecutionRoleArn");
+            // The execution role is now assigned to the task definition rather than the Express service.
+            var executionRoleAssignment = AssertElementExistsAtPath(webApp1TaskDef.Resource, "Properties/ExecutionRoleArn");
             AssertJsonEquals("""
             {
              "Fn::GetAtt": [
@@ -200,8 +211,12 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             var subnetAssignment = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/NetworkConfiguration/Subnets");
             Assert.Equal(2, subnetAssignment.GetArrayLength());
 
-            var imageAssignment = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/PrimaryContainer/Image");
+            var imageAssignment = AssertElementExistsAtPath(webApp1TaskDef.Resource, "Properties/ContainerDefinitions/{Name=Main}/Image");
             Assert.True(imageAssignment.TryGetProperty("Fn::Sub", out var _));
+
+            // The container port is now a port mapping on the task definition's container.
+            var webApp1ContainerPort = AssertElementExistsAtPath(webApp1TaskDef.Resource, "Properties/ContainerDefinitions/{Name=Main}/PortMappings/0/ContainerPort");
+            Assert.Equal(8080, webApp1ContainerPort.GetInt32());
 
             return Task.CompletedTask;
         };
@@ -427,10 +442,10 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             var securityGroups = GetResourcesOfType(cfTemplateDoc, "AWS::EC2::SecurityGroup");
             Assert.Single(securityGroups);
 
-            // Validate ECS TaskDefinition for Service1
+            // Validate ECS TaskDefinitions: one for WebApp1 (Express) and one for Service1 (Fargate).
             var taskDefinitions = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::TaskDefinition");
-            Assert.Single(taskDefinitions);
-            var service1TaskDef = taskDefinitions[0];
+            Assert.Equal(2, taskDefinitions.Count);
+            var service1TaskDef = taskDefinitions.First(td => td.LogicalId.Contains("Service1"));
 
             // Validate Service1 TaskDefinition properties
             var service1Cpu = AssertElementExistsAtPath(service1TaskDef.Resource, "Properties/Cpu");
@@ -495,13 +510,14 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             var dependsOnArray = service1DependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
             Assert.Contains("ProjectWebApp1", dependsOnArray);
 
-            // Validate Log Group exists
+            // Validate Log Groups: one for the WebApp1 Express container, one for Service1.
             var logGroups = GetResourcesOfType(cfTemplateDoc, "AWS::Logs::LogGroup");
-            Assert.Single(logGroups);
+            Assert.Equal(2, logGroups.Count);
 
-            // Validate IAM Policy for Service1 Execution Role
+            // Validate IAM Policies: the shared Express execution role's default policy (ECR pull + log
+            // writes for the WebApp1 task definition) and Service1's execution role default policy.
             var iamPolicies = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Policy");
-            Assert.Single(iamPolicies);
+            Assert.Equal(2, iamPolicies.Count);
 
             return Task.CompletedTask;
         };
@@ -899,8 +915,9 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             var expressGatewayServices = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::ExpressGatewayService");
             Assert.Single(expressGatewayServices);
 
-            // Validate WebApp1 has ConnectionStrings__Cache environment variable
-            var webApp1EnvFnJoin = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/PrimaryContainer/Environment/{Name=ConnectionStrings__Cache}/Value/Fn::Join");
+            // WebApp1's container now lives on its own task definition; its environment variables are set there.
+            var webApp1TaskDef = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::TaskDefinition").First(td => td.LogicalId.Contains("WebApp1"));
+            var webApp1EnvFnJoin = AssertElementExistsAtPath(webApp1TaskDef.Resource, "Properties/ContainerDefinitions/{Name=Main}/Environment/{Name=ConnectionStrings__Cache}/Value/Fn::Join");
             var webApp1EnvParts = webApp1EnvFnJoin.EnumerateArray().ToList();
             Assert.Equal(2, webApp1EnvParts.Count);
             Assert.Equal("", webApp1EnvParts[0].GetString());
@@ -919,10 +936,10 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             var webApp1DependsOnArray = webApp1DependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
             Assert.Contains(elastiCache.LogicalId, webApp1DependsOnArray);
 
-            // Validate ECS TaskDefinition for Service1
+            // Validate ECS TaskDefinitions: one for WebApp1 (Express) and one for Service1 (Fargate).
             var taskDefinitions = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::TaskDefinition");
-            Assert.Single(taskDefinitions);
-            var service1TaskDef = taskDefinitions[0];
+            Assert.Equal(2, taskDefinitions.Count);
+            var service1TaskDef = taskDefinitions.First(td => td.LogicalId.Contains("Service1"));
 
             // Validate Service1 TaskDefinition has ConnectionStrings__Cache environment variable
             var service1EnvFnJoin = AssertElementExistsAtPath(cfTemplateDoc, $"Resources/{service1TaskDef.LogicalId}/Properties/ContainerDefinitions/{{Name=Container-Service1}}/Environment/{{Name=ConnectionStrings__Cache}}/Value/Fn::Join");
@@ -1103,8 +1120,9 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             var expressGatewayServices = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::ExpressGatewayService");
             Assert.Single(expressGatewayServices);
 
-            // Validate WebApp1 has ConnectionStrings__Cache environment variable
-            var webApp1EnvFnJoin = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/PrimaryContainer/Environment/{Name=ConnectionStrings__Cache}/Value/Fn::Join");
+            // WebApp1's container now lives on its own task definition; its environment variables are set there.
+            var webApp1TaskDef = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::TaskDefinition").First(td => td.LogicalId.Contains("WebApp1"));
+            var webApp1EnvFnJoin = AssertElementExistsAtPath(webApp1TaskDef.Resource, "Properties/ContainerDefinitions/{Name=Main}/Environment/{Name=ConnectionStrings__Cache}/Value/Fn::Join");
             var webApp1EnvParts = webApp1EnvFnJoin.EnumerateArray().ToList();
             Assert.Equal(2, webApp1EnvParts.Count);
             Assert.Equal("", webApp1EnvParts[0].GetString());
@@ -1123,10 +1141,10 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             var webApp1DependsOnArray = webApp1DependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
             Assert.Contains(elastiCache.LogicalId, webApp1DependsOnArray);
 
-            // Validate ECS TaskDefinition for Service1
+            // Validate ECS TaskDefinitions: one for WebApp1 (Express) and one for Service1 (Fargate).
             var taskDefinitions = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::TaskDefinition");
-            Assert.Single(taskDefinitions);
-            var service1TaskDef = taskDefinitions[0];
+            Assert.Equal(2, taskDefinitions.Count);
+            var service1TaskDef = taskDefinitions.First(td => td.LogicalId.Contains("Service1"));
 
             // Validate Service1 TaskDefinition has ConnectionStrings__Cache environment variable
             var service1EnvFnJoin = AssertElementExistsAtPath(cfTemplateDoc, $"Resources/{service1TaskDef.LogicalId}/Properties/ContainerDefinitions/{{Name=Container-Service1}}/Environment/{{Name=ConnectionStrings__Cache}}/Value/Fn::Join");
@@ -1275,8 +1293,9 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             var expressGatewayServices = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::ExpressGatewayService");
             Assert.Single(expressGatewayServices);
 
-            // Validate WebApp1 has ConnectionStrings__Cache environment variable
-            var webApp1EnvFnJoin = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/PrimaryContainer/Environment/{Name=ConnectionStrings__Cache}/Value/Fn::Join");
+            // WebApp1's container now lives on its own task definition; its environment variables are set there.
+            var webApp1TaskDef = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::TaskDefinition").First(td => td.LogicalId.Contains("WebApp1"));
+            var webApp1EnvFnJoin = AssertElementExistsAtPath(webApp1TaskDef.Resource, "Properties/ContainerDefinitions/{Name=Main}/Environment/{Name=ConnectionStrings__Cache}/Value/Fn::Join");
             var webApp1EnvParts = webApp1EnvFnJoin.EnumerateArray().ToList();
             Assert.Equal(2, webApp1EnvParts.Count);
             Assert.Equal("", webApp1EnvParts[0].GetString());
@@ -1295,10 +1314,10 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             var webApp1DependsOnArray = webApp1DependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
             Assert.Contains(elastiCache.LogicalId, webApp1DependsOnArray);
 
-            // Validate ECS TaskDefinition for Service1
+            // Validate ECS TaskDefinitions: one for WebApp1 (Express) and one for Service1 (Fargate).
             var taskDefinitions = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::TaskDefinition");
-            Assert.Single(taskDefinitions);
-            var service1TaskDef = taskDefinitions[0];
+            Assert.Equal(2, taskDefinitions.Count);
+            var service1TaskDef = taskDefinitions.First(td => td.LogicalId.Contains("Service1"));
 
             // Validate Service1 TaskDefinition has ConnectionStrings__Cache environment variable
             var service1EnvFnJoin = AssertElementExistsAtPath(cfTemplateDoc, $"Resources/{service1TaskDef.LogicalId}/Properties/ContainerDefinitions/{{Name=Container-Service1}}/Environment/{{Name=ConnectionStrings__Cache}}/Value/Fn::Join");
@@ -1479,8 +1498,9 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             var expressGatewayServices = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::ExpressGatewayService");
             Assert.Single(expressGatewayServices);
 
-            // Validate WebApp1 has ConnectionStrings__Cache environment variable
-            var webApp1EnvFnJoin = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/PrimaryContainer/Environment/{Name=ConnectionStrings__Cache}/Value/Fn::Join");
+            // WebApp1's container now lives on its own task definition; its environment variables are set there.
+            var webApp1TaskDef = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::TaskDefinition").First(td => td.LogicalId.Contains("WebApp1"));
+            var webApp1EnvFnJoin = AssertElementExistsAtPath(webApp1TaskDef.Resource, "Properties/ContainerDefinitions/{Name=Main}/Environment/{Name=ConnectionStrings__Cache}/Value/Fn::Join");
             var webApp1EnvParts = webApp1EnvFnJoin.EnumerateArray().ToList();
             Assert.Equal(2, webApp1EnvParts.Count);
             Assert.Equal("", webApp1EnvParts[0].GetString());
@@ -1499,10 +1519,10 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             var webApp1DependsOnArray = webApp1DependsOn.EnumerateArray().Select(e => e.GetString()).ToList();
             Assert.Contains(elastiCache.LogicalId, webApp1DependsOnArray);
 
-            // Validate ECS TaskDefinition for Service1
+            // Validate ECS TaskDefinitions: one for WebApp1 (Express) and one for Service1 (Fargate).
             var taskDefinitions = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::TaskDefinition");
-            Assert.Single(taskDefinitions);
-            var service1TaskDef = taskDefinitions[0];
+            Assert.Equal(2, taskDefinitions.Count);
+            var service1TaskDef = taskDefinitions.First(td => td.LogicalId.Contains("Service1"));
 
             // Validate Service1 TaskDefinition has ConnectionStrings__Cache environment variable
             var service1EnvFnJoin = AssertElementExistsAtPath(cfTemplateDoc, $"Resources/{service1TaskDef.LogicalId}/Properties/ContainerDefinitions/{{Name=Container-Service1}}/Environment/{{Name=ConnectionStrings__Cache}}/Value/Fn::Join");
@@ -1596,10 +1616,13 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
         {
             AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1");
 
-            var myStaticVar = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/PrimaryContainer/Environment/{Name=MY_STATIC_VAR}/Value");
+            // Environment variables are now set on the container in WebApp1's task definition.
+            var webApp1TaskDef = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::TaskDefinition").First(td => td.LogicalId.Contains("WebApp1"));
+
+            var myStaticVar = AssertElementExistsAtPath(webApp1TaskDef.Resource, "Properties/ContainerDefinitions/{Name=Main}/Environment/{Name=MY_STATIC_VAR}/Value");
             Assert.Equal("static-value", myStaticVar.GetString());
 
-            var anotherVar = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/PrimaryContainer/Environment/{Name=ANOTHER_VAR}/Value");
+            var anotherVar = AssertElementExistsAtPath(webApp1TaskDef.Resource, "Properties/ContainerDefinitions/{Name=Main}/Environment/{Name=ANOTHER_VAR}/Value");
             Assert.Equal("another-value", anotherVar.GetString());
 
             return Task.CompletedTask;
@@ -1651,12 +1674,15 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
         {
             AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp2");
 
+            // Environment variables are now set on the container in WebApp2's task definition.
+            var webApp2TaskDef = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::TaskDefinition").First(td => td.LogicalId.Contains("WebApp2"));
+
             // Validate the explicit WithEnvironment var is present
-            var customVar = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp2/Properties/PrimaryContainer/Environment/{Name=MY_CUSTOM_VAR}/Value");
+            var customVar = AssertElementExistsAtPath(webApp2TaskDef.Resource, "Properties/ContainerDefinitions/{Name=Main}/Environment/{Name=MY_CUSTOM_VAR}/Value");
             Assert.Equal("custom-value", customVar.GetString());
 
             // Validate the WithReference-derived env var is also present
-            var webApp1Ref = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp2/Properties/PrimaryContainer/Environment/{Name=services__WebApp1__https__0}/Value/Fn::Join");
+            var webApp1Ref = AssertElementExistsAtPath(webApp2TaskDef.Resource, "Properties/ContainerDefinitions/{Name=Main}/Environment/{Name=services__WebApp1__https__0}/Value/Fn::Join");
             AssertJsonEquals("""
             [
              "",
@@ -1936,11 +1962,12 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             Assert.Single(agentRuntimes);
             var agentRuntimeLogicalId = agentRuntimes[0].LogicalId;
 
-            // The referencing consumer (WebApp1) receives the runtime ARN as an environment variable
-            // keyed by the standard reference convention: AWS:Resources:AgentCoreAgent:AgentRuntimeArn
-            // which is delivered as AWS__Resources__AgentCoreAgent__AgentRuntimeArn.
-            var arnEnvVar = AssertElementExistsAtPath(cfTemplateDoc,
-                "Resources/ProjectWebApp1/Properties/PrimaryContainer/Environment/{Name=AWS__Resources__AgentCoreAgent__AgentRuntimeArn}/Value");
+            // The referencing consumer (WebApp1) receives the runtime ARN as an environment variable on its
+            // task definition container, keyed by the standard reference convention:
+            // AWS:Resources:AgentCoreAgent:AgentRuntimeArn delivered as AWS__Resources__AgentCoreAgent__AgentRuntimeArn.
+            var webApp1TaskDef = GetResourcesOfType(cfTemplateDoc, "AWS::ECS::TaskDefinition").First(td => td.LogicalId.Contains("WebApp1"));
+            var arnEnvVar = AssertElementExistsAtPath(webApp1TaskDef.Resource,
+                "Properties/ContainerDefinitions/{Name=Main}/Environment/{Name=AWS__Resources__AgentCoreAgent__AgentRuntimeArn}/Value");
 
             // The value is a Fn::GetAtt against the runtime's AgentRuntimeArn attribute.
             var getAtt = AssertElementExistsAtPath(arnEnvVar, "Fn::GetAtt");
@@ -1948,12 +1975,13 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             Assert.Equal(agentRuntimeLogicalId, getAtt[0].GetString());
             Assert.Equal("AgentRuntimeArn", getAtt[1].GetString());
 
-            // The consumer (WebApp1, an Express service) is assigned a default task role wired into TaskRoleArn.
+            // The consumer (WebApp1, an Express service) is assigned a default task role wired into the task
+            // definition's TaskRoleArn.
             var iamRoles = GetResourcesOfType(cfTemplateDoc, "AWS::IAM::Role");
             var taskRole = iamRoles.FirstOrDefault(r => r.LogicalId.Contains("DefaultTaskRole"));
             Assert.False(string.IsNullOrEmpty(taskRole.LogicalId), "A default task role should be created for the referencing service");
 
-            var taskRoleArn = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/TaskRoleArn");
+            var taskRoleArn = AssertElementExistsAtPath(webApp1TaskDef.Resource, "Properties/TaskRoleArn");
             var taskRoleArnGetAtt = AssertElementExistsAtPath(taskRoleArn, "Fn::GetAtt");
             Assert.Equal(taskRole.LogicalId, taskRoleArnGetAtt[0].GetString());
 

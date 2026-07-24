@@ -12,7 +12,6 @@ using Amazon.CDK.AWS.Lambda;
 using Aspire.Hosting.AWS.Deployment;
 using Aspire.Hosting.AWS.Lambda;
 using Xunit;
-using static Amazon.CDK.AWS.ECS.CfnExpressGatewayService;
 
 namespace Aspire.Hosting.AWS.UnitTests.Deployment;
 
@@ -20,37 +19,117 @@ namespace Aspire.Hosting.AWS.UnitTests.Deployment;
 public class ApplyDefaultsTests
 {
     [Fact]
+    public void ApplyCfnExpressGatewayServiceTaskDefinitionDefaults_AppliesAllDefaults()
+    {
+        // Arrange
+        var environment = CreateProviderAndEnvironment();
+        var props = new FargateTaskDefinitionProps();
+
+        // Act
+        environment.DefaultsProvider.ApplyCfnExpressGatewayServiceTaskDefinitionDefaults(props);
+
+        // Assert
+        Assert.Equal(1024, props.Cpu);
+        Assert.Equal(2048, props.MemoryLimitMiB);
+        Assert.NotNull(props.ExecutionRole);
+        Assert.Equal(environment.DefaultsProvider.GetDefaultECSExpressExecutionRole(), props.ExecutionRole);
+    }
+
+    [Fact]
+    public void ApplyCfnExpressGatewayServiceTaskDefinitionDefaults_OverrideDefaults()
+    {
+        // Arrange
+        var environment = CreateProviderAndEnvironment();
+        var existingExecutionRole = environment.DefaultsProvider.CreateDefaultECSTaskRole("my-execution-role");
+        var props = new FargateTaskDefinitionProps
+        {
+            Cpu = 512,
+            MemoryLimitMiB = 1024,
+            ExecutionRole = existingExecutionRole
+        };
+
+        // Act
+        environment.DefaultsProvider.ApplyCfnExpressGatewayServiceTaskDefinitionDefaults(props);
+
+        // Assert
+        Assert.Equal(512, props.Cpu);
+        Assert.Equal(1024, props.MemoryLimitMiB);
+        Assert.Equal(existingExecutionRole, props.ExecutionRole);
+    }
+
+    [Fact]
+    public void ApplyCfnExpressGatewayServiceContainerDefinitionDefaults_AppliesAllDefaults()
+    {
+        // Arrange
+        var environment = CreateProviderAndEnvironment();
+        var props = new ContainerDefinitionProps
+        {
+            Image = ContainerImage.FromRegistry("nginx")
+        };
+
+        // Act
+        environment.DefaultsProvider.ApplyCfnExpressGatewayServiceContainerDefinitionDefaults("test-project", props);
+
+        // Assert
+        Assert.NotNull(props.Logging);
+        Assert.NotNull(props.PortMappings);
+        Assert.Single(props.PortMappings);
+        Assert.Equal(8080, props.PortMappings[0].ContainerPort);
+        // ECS Fargate Express requires the Main container's port mapping to be a named TCP port.
+        Assert.Equal("http", props.PortMappings[0].Name);
+        Assert.Equal(Protocol.TCP, props.PortMappings[0].Protocol);
+    }
+
+    [Fact]
+    public void ApplyCfnExpressGatewayServiceContainerDefinitionDefaults_OverrideDefaults()
+    {
+        // Arrange
+        var environment = CreateProviderAndEnvironment();
+        var customLogging = LogDrivers.AwsLogs(new AwsLogDriverProps
+        {
+            StreamPrefix = "custom-prefix"
+        });
+        var props = new ContainerDefinitionProps
+        {
+            Image = ContainerImage.FromRegistry("nginx"),
+            Logging = customLogging,
+            PortMappings = new[] { new PortMapping { ContainerPort = 3000, Name = "custom-http", Protocol = Protocol.TCP } }
+        };
+
+        // Act
+        environment.DefaultsProvider.ApplyCfnExpressGatewayServiceContainerDefinitionDefaults("test-project", props);
+
+        // Assert
+        Assert.Equal(customLogging, props.Logging);
+        Assert.Single(props.PortMappings);
+        Assert.Equal(3000, props.PortMappings[0].ContainerPort);
+        Assert.Equal("custom-http", props.PortMappings[0].Name);
+        Assert.Equal(Protocol.TCP, props.PortMappings[0].Protocol);
+
+    [Fact]
     public void ApplyCfnExpressGatewayServiceDefaults_AppliesAllDefaults()
     {
         // Arrange
         var environment = CreateProviderAndEnvironment();
         var props = new CfnExpressGatewayServiceProps
         {
-            PrimaryContainer = new ExpressGatewayContainerProperty()
+            TaskDefinitionArn = "arn:aws:ecs:us-west-2:123456789012:task-definition/my-task:1"
         };
 
         // Act
         environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(props);
 
         // Assert
-        Assert.NotNull(props.Cluster);
-        Assert.Equal("1024", props.Cpu);
-        Assert.Equal("2048", props.Memory);
-        Assert.NotNull(props.ExecutionRoleArn);
         Assert.NotNull(props.InfrastructureRoleArn);
-
-        var primaryContainer = props.PrimaryContainer as ExpressGatewayContainerProperty;
-        Assert.NotNull(primaryContainer);
-        Assert.Equal(8080, primaryContainer.ContainerPort);
-
-        var expectedClusterName = environment.DefaultsProvider.GetDefaultECSCluster().ClusterName;
-        Assert.Equal(expectedClusterName, props.Cluster);
-
-        var expectedExecutionRoleArn = environment.DefaultsProvider.GetDefaultECSExpressExecutionRole().RoleArn;
-        Assert.Equal(expectedExecutionRoleArn, props.ExecutionRoleArn);
-
         var expectedInfrastructureRoleArn = environment.DefaultsProvider.GetDefaultECSExpressInfrastructureRole().RoleArn;
         Assert.Equal(expectedInfrastructureRoleArn, props.InfrastructureRoleArn);
+
+        var networkConfiguration = props.NetworkConfiguration as CfnExpressGatewayService.ExpressGatewayServiceNetworkConfigurationProperty;
+        Assert.NotNull(networkConfiguration);
+        Assert.NotNull(networkConfiguration.SecurityGroups);
+        Assert.NotEmpty((string[])networkConfiguration.SecurityGroups);
+        Assert.NotNull(networkConfiguration.Subnets);
+        Assert.NotEmpty((string[])networkConfiguration.Subnets);
     }
 
     [Fact]
@@ -58,38 +137,26 @@ public class ApplyDefaultsTests
     {
         // Arrange
         var environment = CreateProviderAndEnvironment();
-        var existingCluster = "my-existing-cluster";
-        var existingCpu = "512";
-        var existingMemory = "1024";
-        var existingPort = 3000;
-        var existingExecutionRoleArn = "arn:aws:iam::123456789012:role/my-execution-role";
         var existingInfrastructureRoleArn = "arn:aws:iam::123456789012:role/my-infrastructure-role";
-
-        var primaryContainer = new ExpressGatewayContainerProperty
+        var existingNetworkConfiguration = new CfnExpressGatewayService.ExpressGatewayServiceNetworkConfigurationProperty
         {
-            ContainerPort = existingPort
+            SecurityGroups = new[] { "sg-12345" },
+            Subnets = new[] { "subnet-12345" }
         };
 
         var props = new CfnExpressGatewayServiceProps
         {
-            Memory = existingMemory,
-            Cpu = existingCpu,
-            Cluster = existingCluster,
-            PrimaryContainer = primaryContainer,
-            ExecutionRoleArn = existingExecutionRoleArn,
+            TaskDefinitionArn = "arn:aws:ecs:us-west-2:123456789012:task-definition/my-task:1",
             InfrastructureRoleArn = existingInfrastructureRoleArn,
+            NetworkConfiguration = existingNetworkConfiguration
         };
 
         // Act
         environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(props);
 
         // Assert
-        Assert.Equal(existingCluster, props.Cluster);
-        Assert.Equal(existingCpu, props.Cpu);
-        Assert.Equal(existingMemory, props.Memory);
-        Assert.Equal(existingPort, primaryContainer!.ContainerPort);
-        Assert.Equal(existingExecutionRoleArn, props.ExecutionRoleArn);
         Assert.Equal(existingInfrastructureRoleArn, props.InfrastructureRoleArn);
+        Assert.Equal(existingNetworkConfiguration, props.NetworkConfiguration);
     }
 
 

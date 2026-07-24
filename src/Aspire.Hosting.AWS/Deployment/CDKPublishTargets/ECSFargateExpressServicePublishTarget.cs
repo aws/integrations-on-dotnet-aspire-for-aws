@@ -4,7 +4,6 @@
 #pragma warning disable ASPIREAWSPUBLISHERS001
 using Amazon.CDK;
 using Amazon.CDK.AWS.EC2;
-using Amazon.CDK.AWS.Ecr.Assets;
 using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.IAM;
 using Aspire.Hosting.ApplicationModel;
@@ -12,7 +11,6 @@ using Aspire.Hosting.AWS.Deployment.CDKDefaults;
 using Aspire.Hosting.AWS.Deployment.Services;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
-using static Amazon.CDK.AWS.ECS.CfnExpressGatewayService;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
 namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
@@ -34,39 +32,59 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
 
         var imageTarballPath = await imageBuilder.CreateTarballImageAsync(projectResource, cancellationToken);
 
-        var asset = new TarballImageAsset(environment.CDKStack, $"ContainerTarBall-{projectResource.Name}", new TarballImageAssetProps
-        {
-            TarballFile = imageTarballPath
-        });
-
-        var primaryContainer = new ExpressGatewayContainerProperty
-        {
-            Image = asset.ImageUri
-        };
-
-        var fargateServiceProps = new CfnExpressGatewayServiceProps
-        {
-            PrimaryContainer = primaryContainer,
-            ServiceName = projectResource.Name
-        };
-        publishAnnotation.Config.PropsCfnExpressGatewayServicePropsCallback?.Invoke(CreatePublishTargetContext(environment), fargateServiceProps);
-        environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(fargateServiceProps);
+        // Create the task definition that describes the container(s) run by the Express service. The
+        // Express service points at this task definition via its TaskDefinitionArn property (rather than
+        // the inline PrimaryContainer property), giving parity with the other ECS Fargate publish targets.
+        var fargateTaskDefinitionProps = new FargateTaskDefinitionProps();
+        publishAnnotation.Config.PropsFargateTaskDefinitionCallback?.Invoke(CreatePublishTargetContext(environment), fargateTaskDefinitionProps);
+        environment.DefaultsProvider.ApplyCfnExpressGatewayServiceTaskDefinitionDefaults(fargateTaskDefinitionProps);
 
         // Assign a default task role when the user hasn't supplied one so the application's own AWS calls
         // run under a controllable role. Only the integration-created role is exposed to reference hooks
         // (via ReferenceTaskRole) so a user-supplied role is never mutated.
         IRole? defaultTaskRole = null;
-        if (string.IsNullOrEmpty(fargateServiceProps.TaskRoleArn))
+        if (fargateTaskDefinitionProps.TaskRole == null)
         {
             defaultTaskRole = environment.DefaultsProvider.CreateDefaultECSTaskRole(projectResource.Name);
-            fargateServiceProps.TaskRoleArn = defaultTaskRole.RoleArn;
+            fargateTaskDefinitionProps.TaskRole = defaultTaskRole;
         }
 
-        var referencePoints = new CfnExpressGatewayServicePropsConnectionPoints(
-            fargateServiceProps,
-            environment.DefaultsProvider.GetDefaultECSClusterSecurityGroup(),
-            defaultTaskRole);
-        ProcessRelationShips(referencePoints, projectResource, environment);
+        var taskDef = new FargateTaskDefinition(environment.CDKStack, $"TaskDefinition-{projectResource.Name}", fargateTaskDefinitionProps);
+        publishAnnotation.Config.ConstructFargateTaskDefinitionCallback?.Invoke(CreatePublishTargetContext(environment), taskDef);
+
+        // Create the container definition. Environment variables from Aspire references are wired onto the
+        // container, and the shared cluster security group / default task role are exposed to the reference
+        // hooks via the connection points.
+        var containerDefinitionProps = new ContainerDefinitionProps
+        {
+            ContainerName = "Main", // The application container is required to be named "Main" for ECS Fargate Express Service.
+            Image = ContainerImage.FromTarball(imageTarballPath),
+            Environment = new Dictionary<string, string>()
+        };
+        ProcessRelationShips(new ExpressServiceContainerConnectionPoints(
+                containerDefinitionProps,
+                environment.DefaultsProvider.GetDefaultECSClusterSecurityGroup(),
+                defaultTaskRole),
+            projectResource, environment);
+
+        publishAnnotation.Config.PropsContainerDefinitionCallback?.Invoke(CreatePublishTargetContext(environment), containerDefinitionProps);
+
+        if (containerDefinitionProps.ContainerName != "Main")
+            throw new InvalidOperationException("ECS Fargate Express requires the application container to be named \"Main\".");
+
+        environment.DefaultsProvider.ApplyCfnExpressGatewayServiceContainerDefinitionDefaults(projectResource.Name, containerDefinitionProps);
+
+        var containerDefinition = taskDef.AddContainer($"Container-{projectResource.Name}", containerDefinitionProps);
+        publishAnnotation.Config.ConstructContainerDefinitionCallback?.Invoke(CreatePublishTargetContext(environment), containerDefinition);
+
+        // Create the Express Gateway service pointing at the task definition.
+        var fargateServiceProps = new CfnExpressGatewayServiceProps
+        {
+            TaskDefinitionArn = taskDef.TaskDefinitionArn,
+            ServiceName = projectResource.Name
+        };
+        publishAnnotation.Config.PropsCfnExpressGatewayServicePropsCallback?.Invoke(CreatePublishTargetContext(environment), fargateServiceProps);
+        environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(fargateServiceProps);
 
         var fargateService = new CfnExpressGatewayService(environment.CDKStack, $"Project-{projectResource.Name}", fargateServiceProps);
         publishAnnotation.Config.ConstructCfnExpressGatewayServiceCallback?.Invoke(CreatePublishTargetContext(environment), fargateService);
@@ -114,43 +132,12 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
 }
 
 [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
-internal class CfnExpressGatewayServicePropsConnectionPoints(CfnExpressGatewayServiceProps props, ISecurityGroup securityGroup, IRole? taskRole = null) : AbstractCDKConstructConnectionPoints
+internal class ExpressServiceContainerConnectionPoints(ContainerDefinitionProps props, ISecurityGroup securityGroup, IRole? taskRole = null) : AbstractCDKConstructConnectionPoints
 {
     public override IDictionary<string, string>? EnvironmentVariables
     {
-        get
-        {
-            var primaryContainer = props.PrimaryContainer as ExpressGatewayContainerProperty;
-            if (primaryContainer == null)
-                throw new InvalidDataException("PrimaryContainer must be set in CfnExpressGatewayServiceProps and of type ExpressGatewayContainerProperty");
-
-            var existingKvp = primaryContainer.Environment as IKeyValuePairProperty[] ?? [];
-
-            var environmentVariables = new Dictionary<string, string>();
-            foreach (var kvp in existingKvp)
-            {
-                environmentVariables[kvp.Name] = kvp.Value;
-            }
-
-            return environmentVariables;
-        }
-        set
-        {
-            var primaryContainer = props.PrimaryContainer as ExpressGatewayContainerProperty;
-            if (primaryContainer == null)
-                throw new InvalidDataException("PrimaryContainer must be set in CfnExpressGatewayServiceProps and of type ExpressGatewayContainerProperty");
-
-            var list = new List<IKeyValuePairProperty>();
-            if (value != null)
-            {
-                foreach (var kvp in value)
-                {
-                    list.Add(new KeyValuePairProperty { Name = kvp.Key, Value = kvp.Value });
-                }
-            }
-
-            primaryContainer.Environment = list.ToArray();
-        }
+        get => props.Environment ?? new Dictionary<string, string>();
+        set => props.Environment = value ?? new Dictionary<string, string>();
     }
 
     public override ISecurityGroup? ReferenceSecurityGroup => securityGroup;

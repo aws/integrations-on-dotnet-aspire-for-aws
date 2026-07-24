@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "[Breaking Change] ECS Fargate Express Service deployment now uses a TaskDefinition construct instead of the PrimaryContainer construct when generating the CDK stack. This change is required for future work of adding OpenTelemetry support where the side car container will need to be added to the TaskDefinition."
+      ]
+    }
+  ]
+}

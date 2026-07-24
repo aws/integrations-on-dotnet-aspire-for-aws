@@ -31,35 +31,65 @@ public partial class CDKDefaultsProvider
     public virtual double? ECSFargateExpressContainerPort => 8080;
 
     /// <summary>
+    /// Gets the name given to the default container port mapping. ECS Fargate Express requires the primary
+    /// ("Main") container to have a named TCP port mapping.
+    /// </summary>
+    /// <remarks>
+    /// Default is "http".
+    /// </remarks>
+    public virtual string ECSFargateExpressContainerPortName => "http";
+
+    /// <summary>
+    /// Applies default values to the Fargate task definition used by an ECS Express Gateway service, if they
+    /// are not already set. The Express service points at this task definition via its TaskDefinitionArn
+    /// property, so container-hosting settings such as CPU, memory, and the execution role live here.
+    /// </summary>
+    /// <param name="props">The Fargate task definition properties to which default values will be applied.</param>
+    protected internal virtual void ApplyCfnExpressGatewayServiceTaskDefinitionDefaults(FargateTaskDefinitionProps props)
+    {
+        if (props.Cpu == null)
+            props.Cpu = ECSFargateExpressCpu;
+        if (props.MemoryLimitMiB == null)
+            props.MemoryLimitMiB = ECSFargateExpressMiB;
+        if (props.ExecutionRole == null)
+            props.ExecutionRole = GetDefaultECSExpressExecutionRole();
+    }
+
+    /// <summary>
+    /// Applies default values to the container definition run by an ECS Express Gateway service's task
+    /// definition, if they are not already set. This adds awslogs logging and the default container port.
+    /// </summary>
+    /// <param name="projectName">The name of the project, used to create the log stream prefix.</param>
+    /// <param name="props">The container definition properties to which default values will be applied.</param>
+    protected internal virtual void ApplyCfnExpressGatewayServiceContainerDefinitionDefaults(string projectName, ContainerDefinitionProps props)
+    {
+        if (props.Logging == null)
+            props.Logging = CreateECSFargateServiceLogDriver(projectName);
+
+        if (props.PortMappings == null || props.PortMappings.Length == 0)
+        {
+            // ECS Fargate Express requires the Main container to expose a named TCP port mapping.
+            props.PortMappings = new[]
+            {
+                new PortMapping
+                {
+                    ContainerPort = ECSFargateExpressContainerPort ?? 8080,
+                    Name = ECSFargateExpressContainerPortName,
+                    Protocol = Protocol.TCP
+                }
+            };
+        }
+    }
+
+    /// <summary>
     /// Applies default values to the specified properties for configuring an AWS CloudFormation Express Gateway
-    /// service, if they are not already set.
+    /// service, if they are not already set. Container-hosting settings (CPU, memory, image, execution role,
+    /// container port) live on the task definition; this method only sets the service-level defaults.
     /// </summary>
     /// <param name="props">The properties object to which default values will be applied. Properties that are null or empty will be set to
     /// recommended defaults for an Express Gateway service.</param>
-    /// <exception cref="InvalidDataException">Thrown if the <paramref name="props"/>.PrimaryContainer property is not set or is not of type <see
-    /// cref="CfnExpressGatewayService.ExpressGatewayContainerProperty"/>.</exception>
     protected internal virtual void ApplyCfnExpressGatewayServiceDefaults(CfnExpressGatewayServiceProps props)
     {
-        if (props.Cluster == null)
-            props.Cluster = GetDefaultECSCluster().ClusterName;
-        if (string.IsNullOrEmpty(props.Cpu))
-            props.Cpu = ECSFargateExpressCpu.ToString();
-        if (string.IsNullOrEmpty(props.Memory))
-            props.Memory = ECSFargateExpressMiB.ToString();
-
-        var primaryContainer = props.PrimaryContainer as CfnExpressGatewayService.ExpressGatewayContainerProperty;
-        if (primaryContainer == null)
-            throw new InvalidDataException("PrimaryContainer must be set and of type ExpressGatewayContainerProperty.");
-
-        if (!primaryContainer.ContainerPort.HasValue)
-            primaryContainer.ContainerPort = ECSFargateExpressContainerPort;
-
-        if (string.IsNullOrEmpty(props.ExecutionRoleArn))
-        {
-            var role = GetDefaultECSExpressExecutionRole();
-            props.ExecutionRoleArn = role.RoleArn;
-        }
-
         if (string.IsNullOrEmpty(props.InfrastructureRoleArn))
         {
             var role = GetDefaultECSExpressInfrastructureRole();
@@ -79,5 +109,5 @@ public partial class CDKDefaultsProvider
                 Subnets = GetDefaultVpc().PublicSubnets.Select(s => s.SubnetId).ToArray()
             };
         }
-    }    
+    }
 }
