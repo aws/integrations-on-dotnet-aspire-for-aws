@@ -68,6 +68,10 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
             projectResource, environment);
 
         publishAnnotation.Config.PropsContainerDefinitionCallback?.Invoke(CreatePublishTargetContext(environment), containerDefinitionProps);
+
+        if (containerDefinitionProps.ContainerName != "Main")
+            throw new InvalidOperationException("ECS Fargate Express requires the application container to be named \"Main\".");
+
         environment.DefaultsProvider.ApplyCfnExpressGatewayServiceContainerDefinitionDefaults(projectResource.Name, containerDefinitionProps);
 
         var containerDefinition = taskDef.AddContainer($"Container-{projectResource.Name}", containerDefinitionProps);
