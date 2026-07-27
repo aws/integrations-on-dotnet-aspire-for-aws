@@ -82,7 +82,7 @@ public static class LambdaExtensions
                                         .ToArray();
             if (projectFiles.Length != 1)
             {
-                throw new DistributedApplicationException($"Path to Lambda project could not be determined. The directory '{projectPath}' must contain a single .csproj file.");
+                throw new DistributedApplicationException($"Path to Lambda project could not be determined. The directory '{projectPath}' must contain a single project file (*.csproj or *.fsproj).");
             }
 
             return projectFiles[0];

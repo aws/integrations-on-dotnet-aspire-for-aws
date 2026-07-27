@@ -10,7 +10,7 @@ The mechanism is the **Aspire Type System (ATS)**. An integration author annotat
 the Aspire CLI scans the built assembly, generates a TypeScript SDK (`aspire.mts`) from those annotations, and
 the Node.js AppHost calls the generated fluent wrappers. Each call is proxied back to the running .NET host over
 JSON-RPC (`invokeCapability`). The .NET code is still what executes — the TypeScript layer is a generated,
-strongly typed faÃ§ade over it.
+strongly typed facade over it.
 
 Only the AppHost authoring language changes. The Lambda functions, containers, and AWS resources remain .NET
 based; the polyglot support is about letting a Node.js AppHost *orchestrate* them.
