@@ -11,6 +11,7 @@ Provides extension methods and resources definition for a .NET Aspire AppHost to
 * [Deployment to AWS (Preview)](#deployment-to-aws-preview)
 * [Integrating Amazon DynamoDB Local](#integrating-amazon-dynamodb-local)
 * [Local Development with AgentCore (Experimental)](#local-development-with-agentcore-experimental)
+* [Using a Node.js (TypeScript) AppHost](#using-a-nodejs-typescript-apphost)
 
 ## Prerequisites
 
@@ -532,6 +533,78 @@ When the Aspire AppHost starts, each `AddAgentCoreRuntime` call:
 3. Optionally starts a **Memory Emulator** for short-term memory
 
 The Aspire dashboard shows clickable URLs for each emulator alongside your agent resource.
+
+## Using a Node.js (TypeScript) AppHost
+
+.NET Aspire supports authoring the AppHost in TypeScript/Node.js instead of C#. `Aspire.Hosting.AWS` exposes its
+features to a Node.js AppHost through the Aspire Type System (ATS): the Aspire CLI generates a TypeScript SDK
+from the package and your `apphost.mts` calls the generated methods, which are proxied back to the .NET code.
+Only the AppHost authoring language changes — the Lambda functions and AWS resources remain .NET based.
+
+Declare the package in `aspire.config.json`:
+
+```json
+{
+  "appHost": { "path": "apphost.mts", "language": "typescript/nodejs" },
+  "packages": {
+    "Aspire.Hosting.AWS": ""
+  }
+}
+```
+
+Then use the generated fluent API from `apphost.mts`:
+
+```ts
+import { createBuilder, Method, APIGatewayType } from './.aspire/modules/aspire.mjs';
+
+const builder = await createBuilder();
+
+const sdkConfig = await builder.addAWSSDKConfig().withRegion('us-west-2');
+
+const dynamoDBLocal = await builder.addAWSDynamoDBLocal('DynamoDBLocal');
+
+// Executable-model Lambda (handler is the assembly name); reference DynamoDB Local and the SDK config.
+await builder
+    .addAWSLambdaFunction('ToUpperFunction', './ToUpperFunctionExecutable', 'ToUpperFunctionExecutable')
+    .withAWSSDKConfigReference(sdkConfig)
+    .withDynamoDBLocalReference(dynamoDBLocal);
+
+// Class-library-model Lambda (handler is "Assembly::Type::Method"), fronted by the API Gateway emulator.
+const add = await builder
+    .addAWSLambdaFunction('AddFunction', './CalculatorFunctions',
+        'CalculatorFunctions::CalculatorFunctions.Functions::Add')
+    .withAWSSDKConfigReference(sdkConfig);
+
+await builder.addAWSAPIGatewayEmulator('APIGatewayEmulator', APIGatewayType.HttpV2)
+    .withAPIGatewayLambdaReference(add, Method.Get, '/add/{x}/{y}');
+
+await builder.build().run();
+```
+
+### Supported features and method-name differences
+
+The generated TypeScript methods use camelCase versions of the C# method names. A few methods are exported under
+**different names** in TypeScript because the C# names would collide with each other or with core Aspire (most
+notably every AWS `WithReference` overload — core Aspire owns the `withReference` name in polyglot AppHosts, so
+the AWS reference methods are given distinct, stable names instead).
+
+| Feature | C# API | TypeScript (polyglot) method | Notes |
+| --- | --- | --- | --- |
+| AWS SDK configuration | `AddAWSSDKConfig` / `WithProfile` / `WithSdkValidation` | `addAWSSDKConfig` / `withProfile` / `withSdkValidation` | Same names (camelCase). |
+| Set the region | `WithRegion(RegionEndpoint)` | `withRegion(systemName: string)` | Takes a region **string** such as `"us-west-2"` (the `RegionEndpoint` overload is C#-only). |
+| Reference the SDK config | `WithReference(IAWSSDKConfig)` | **`withAWSSDKConfigReference`** | Renamed to avoid colliding with the core `withReference`. |
+| DynamoDB Local | `AddAWSDynamoDBLocal` | `addAWSDynamoDBLocal` | Same name. |
+| Reference DynamoDB Local | `WithReference(IResourceBuilder<DynamoDBLocalResource>)` | **`withDynamoDBLocalReference`** | Renamed to avoid colliding with the core `withReference`. |
+| Add a Lambda function | `AddAWSLambdaFunction<TProject>(name, handler, options?)` | `addAWSLambdaFunction(name, projectPath, handler, options?)` | The generic type parameter is replaced by a **project path string** (the `.csproj` file or its directory). Supports both the executable and class library programming models via the handler string. |
+| Lambda service emulator | `AddAWSLambdaServiceEmulator` | `addAWSLambdaServiceEmulator` | Same name. |
+| API Gateway emulator | `AddAWSAPIGatewayEmulator` | `addAWSAPIGatewayEmulator` | Same name. |
+| Route a Lambda via API Gateway | `WithReference(lambda, Method, path)` | **`withAPIGatewayLambdaReference`** | Renamed to avoid colliding with the core `withReference`. |
+| SQS event source | `WithSQSEventSource(queueUrl, options?)` | `withSQSEventSource(queueUrl, options?)` | Only the **queue URL string** overload is exported; the CDK-construct and CloudFormation overloads are C#-only. |
+| DynamoDB Streams event source | `WithDynamoDBStreamsEventSource(tableName, options?)` | `withDynamoDBStreamsEventSource(tableName, options?)` | Only the **table name string** overload is exported; the CDK-construct and CloudFormation overloads are C#-only. |
+
+Lambda function `LogFormat` / `ApplicationLogLevel` options are passed as strings (e.g. `"JSON"`, `"DEBUG"`) from
+TypeScript. A runnable end-to-end example lives in the repository's `playground/NodeAppHost` folder, and the
+full design is documented in [docs/polyglot-design.md](https://github.com/aws/integrations-on-dotnet-aspire-for-aws/blob/main/docs/polyglot-design.md).
 
 ## Feedback & contributing
 

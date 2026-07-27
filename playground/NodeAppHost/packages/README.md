@@ -1,0 +1,1 @@
+This folder is used for storing NuGet packages of the current NuGet packages in this repo. That way the Node.js based AppHost can easily be built and test on the current inflight code. The NuGet package versions use the format 100.0.<Seconds since 2020>.

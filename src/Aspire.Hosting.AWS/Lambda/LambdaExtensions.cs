@@ -31,8 +31,68 @@ public static class LambdaExtensions
     public static IResourceBuilder<LambdaProjectResource> AddAWSLambdaFunction<TLambdaProject>(this IDistributedApplicationBuilder builder, string name, string lambdaHandler, LambdaFunctionOptions? options = null) where TLambdaProject : IProjectMetadata, new()
     {
         options ??= new LambdaFunctionOptions();
-        var metadata = new TLambdaProject();
+        return AddAWSLambdaFunctionCore(builder, name, lambdaHandler, new TLambdaProject(), options);
+    }
 
+    /// <summary>
+    /// Add a Lambda function as an Aspire resource using the path to the project file. This is the entry point used by
+    /// non-.NET (polyglot) AppHosts, which cannot call the generic <see cref="AddAWSLambdaFunction{TLambdaProject}"/> overload.
+    /// </summary>
+    /// <param name="builder"></param>
+    /// <param name="name">Aspire resource name</param>
+    /// <param name="projectPath">The path to the .NET project. This can be the path to the .csproj file or the directory containing it, and may be relative to the AppHost directory.</param>
+    /// <param name="lambdaHandler">Lambda function handler</param>
+    /// <param name="options">Options for configuring the Lambda function.</param>
+    /// <returns></returns>
+    [AspireExport("addAWSLambdaFunction")]
+    internal static IResourceBuilder<LambdaProjectResource> AddAWSLambdaFunctionForPolyglot(this IDistributedApplicationBuilder builder, string name, string projectPath, string lambdaHandler, LambdaFunctionPolyglotOptions? options = null)
+    {
+        var functionOptions = new LambdaFunctionOptions();
+        if (!string.IsNullOrEmpty(options?.LogFormat))
+        {
+            functionOptions.LogFormat = Amazon.Lambda.LogFormat.FindValue(options.LogFormat);
+        }
+        if (!string.IsNullOrEmpty(options?.ApplicationLogLevel))
+        {
+            functionOptions.ApplicationLogLevel = Amazon.Lambda.ApplicationLogLevel.FindValue(options.ApplicationLogLevel);
+        }
+
+        // suppressBuild: false so Aspire builds the project as part of `dotnet run`. Unlike the class library
+        // wrapper project (which is pre-built by LambdaBeforeStartEventHandler), a polyglot project is not built ahead of time.
+        return AddAWSLambdaFunctionCore(builder, name, lambdaHandler, new LambdaProjectMetadata(ResolvePolyglotProjectPath(builder, projectPath), suppressBuild: false), functionOptions);
+    }
+
+    /// <summary>
+    /// Resolves the project path supplied by a polyglot AppHost to an absolute .csproj file path. The generic
+    /// <see cref="AddAWSLambdaFunction{TLambdaProject}"/> receives this from the generated Projects metadata, but polyglot
+    /// AppHosts pass a path (relative to the AppHost directory) that can point at either the .csproj file or its directory.
+    /// This mirrors how the core Aspire polyglot project entry points resolve their paths.
+    /// </summary>
+    private static string ResolvePolyglotProjectPath(IDistributedApplicationBuilder builder, string projectPath)
+    {
+        if (!Path.IsPathRooted(projectPath))
+        {
+            projectPath = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, projectPath));
+        }
+
+        if (Directory.Exists(projectPath))
+        {
+            var projectFiles = Directory.GetFiles(projectPath, "*.csproj")
+                                        .Concat(Directory.GetFiles(projectPath, "*.fsproj"))
+                                        .ToArray();
+            if (projectFiles.Length != 1)
+            {
+                throw new DistributedApplicationException($"Path to Lambda project could not be determined. The directory '{projectPath}' must contain a single .csproj file.");
+            }
+
+            return projectFiles[0];
+        }
+
+        return projectPath;
+    }
+
+    private static IResourceBuilder<LambdaProjectResource> AddAWSLambdaFunctionCore(IDistributedApplicationBuilder builder, string name, string lambdaHandler, IProjectMetadata metadata, LambdaFunctionOptions options)
+    {
         IResourceBuilder<LambdaProjectResource> resource;
         // The Lambda function handler for a Class Library contains "::".
         // This is an example of a class library function handler "WebCalculatorFunctions::WebCalculatorFunctions.Functions::AddFunctionHandler".
@@ -43,13 +103,13 @@ public static class LambdaExtensions
             var project = new LambdaProjectResource(name);
             resource = builder.AddResource(project)
                 .WithAnnotation(new LaunchProfileAnnotation($"{Constants.LaunchSettingsNodePrefix}{name}"))
-                .WithAnnotation(new TLambdaProject());
+                .WithAnnotation(metadata);
         }
         else
         {
             var project = new LambdaProjectResource(name);
             resource = builder.AddResource(project)
-                            .WithAnnotation(new TLambdaProject());
+                            .WithAnnotation(metadata);
         }
 
         ExecutableResource? serviceEmulator = null;
@@ -138,6 +198,7 @@ public static class LambdaExtensions
     /// <param name="options">The options to configure the emulator with.</param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException">Thrown if the Lambda service emulator has already been added.</exception>
+    [AspireExport]
     public static IResourceBuilder<LambdaEmulatorResource> AddAWSLambdaServiceEmulator(this IDistributedApplicationBuilder builder, LambdaEmulatorOptions? options = null)
     {
         options ??= new LambdaEmulatorOptions();

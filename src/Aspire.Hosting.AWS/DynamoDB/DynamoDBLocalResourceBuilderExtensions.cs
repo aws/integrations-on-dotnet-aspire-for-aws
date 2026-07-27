@@ -17,6 +17,7 @@ public static class DynamoDBLocalResourceBuilderExtensions
     /// <param name="options">Optional: Options that can be set for configuring the instance of DynamoDB Local.</param>
     /// <returns></returns>
     /// <exception cref="DistributedApplicationException"></exception>
+    [AspireExport]
     public static IResourceBuilder<DynamoDBLocalResource> AddAWSDynamoDBLocal(this IDistributedApplicationBuilder builder,
         string name, DynamoDBLocalOptions? options = null)
     {
@@ -66,6 +67,7 @@ public static class DynamoDBLocalResourceBuilderExtensions
     /// <param name="dynamoDBLocalResourceBuilder"></param>
     /// <returns></returns>
     /// <exception cref="DistributedApplicationException"></exception>
+    [AspireExport("withDynamoDBLocalReference")]
     public static IResourceBuilder<TDestination> WithReference<TDestination>(this IResourceBuilder<TDestination> builder, IResourceBuilder<DynamoDBLocalResource> dynamoDBLocalResourceBuilder)
         where TDestination : IResourceWithEnvironment
     {      

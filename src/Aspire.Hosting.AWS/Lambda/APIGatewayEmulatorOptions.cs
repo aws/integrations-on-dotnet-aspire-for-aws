@@ -5,6 +5,7 @@ namespace Aspire.Hosting.AWS.Lambda;
 /// <summary>
 /// Options that can be added to the API Gateway emulator resource.
 /// </summary>
+[AspireDto]
 public class APIGatewayEmulatorOptions
 {
     public APIGatewayEmulatorOptions()

@@ -1,0 +1,12 @@
+{
+  "appHost": {
+    "path": "apphost.mts",
+    "language": "typescript/nodejs"
+  },
+  "sdk": {
+    "version": "13.4.6"
+  },
+  "packages": {
+    "Aspire.Hosting.AWS": "100.0.0"
+  }
+}

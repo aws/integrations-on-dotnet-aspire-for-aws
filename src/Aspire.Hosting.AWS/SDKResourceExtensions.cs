@@ -16,6 +16,7 @@ public static class SDKResourceExtensions
     /// </summary>
     /// <param name="builder">The <see cref="IDistributedApplicationBuilder"/> instance.</param>
     /// <returns></returns>
+    [AspireExport]
     public static IAWSSDKConfig AddAWSSDKConfig(this IDistributedApplicationBuilder builder)
     {
         var config = new AWSSDKConfig();
@@ -29,6 +30,7 @@ public static class SDKResourceExtensions
     /// <param name="config">An <see cref="IAWSSDKConfig"/> instance.</param>
     /// <param name="profile">The name of the AWS credential profile.</param>
     /// <returns></returns>
+    [AspireExport]
     public static IAWSSDKConfig WithProfile(this IAWSSDKConfig config, string profile)
     {
         config.Profile = profile;
@@ -47,10 +49,23 @@ public static class SDKResourceExtensions
     }
 
     /// <summary>
+    /// Assign the region for the IAWSSDKConfig using the region's system name, for example "us-west-2".
+    /// </summary>
+    /// <param name="config">An <see cref="IAWSSDKConfig"/> instance.</param>
+    /// <param name="systemName">The AWS region system name, for example "us-west-2".</param>
+    [AspireExport("withRegion")]
+    public static IAWSSDKConfig WithRegion(this IAWSSDKConfig config, string systemName)
+    {
+        config.Region = RegionEndpoint.GetBySystemName(systemName);
+        return config;
+    }
+
+    /// <summary>
     /// Set validation preference for profile in sdk.
     /// </summary>
     /// <param name="config">An <see cref="IAWSSDKConfig"/> instance.</param>
     /// <param name="sdkValidationEnabled">option for toggle sdk validation</param>
+    [AspireExport]
     public static IAWSSDKConfig WithSdkValidation(this IAWSSDKConfig config, bool sdkValidationEnabled)
     {
         config.SDKValidationEnabled = sdkValidationEnabled;
@@ -64,6 +79,7 @@ public static class SDKResourceExtensions
     /// <param name="builder">An <see cref="IResourceBuilder{T}"/> for <see cref="IResourceWithEnvironment"/></param>
     /// <param name="awsSdkConfig">The AWS SDK configuration</param>
     /// <returns></returns>
+    [AspireExport("withAWSSDKConfigReference")]
     public static IResourceBuilder<TDestination> WithReference<TDestination>(this IResourceBuilder<TDestination> builder, IAWSSDKConfig awsSdkConfig)
         where TDestination : IResourceWithEnvironment
     {

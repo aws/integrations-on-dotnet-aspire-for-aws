@@ -27,6 +27,7 @@ public static class DynamoDBStreamsEventSourceExtensions
     /// <param name="tableName">The name of the DynamoDB table to read stream records from.</param>
     /// <param name="options">Optional configuration for the event source.</param>
     /// <returns></returns>
+    [AspireExport("withDynamoDBStreamsEventSource")]
     public static IResourceBuilder<LambdaProjectResource> WithDynamoDBStreamsEventSource(this IResourceBuilder<LambdaProjectResource> lambdaFunction, string tableName, DynamoDBStreamsEventSourceOptions? options = null)
     {
         return WithDynamoDBStreamsEventSource(lambdaFunction, () => ValueTask.FromResult(tableName), options, tableName: tableName);
