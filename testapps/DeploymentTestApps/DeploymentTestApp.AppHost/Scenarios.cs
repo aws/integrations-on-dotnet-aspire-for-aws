@@ -28,9 +28,9 @@ namespace DeploymentTestApp.AppHost
             var webApp1 = builder.AddProject<Projects.DeploymentTestApps_WebApp1>("WebApp1")
                 .PublishAsECSFargateExpressService(new PublishECSFargateExpressServiceConfig
                 {
-                    PropsCfnExpressGatewayServicePropsCallback = (context, props) =>
+                    PropsFargateTaskDefinitionCallback = (context, props) =>
                     {
-                        props.Memory = "4096";
+                        props.MemoryLimitMiB = 4096;
                     }
                 })
                 .WithExternalHttpEndpoints();

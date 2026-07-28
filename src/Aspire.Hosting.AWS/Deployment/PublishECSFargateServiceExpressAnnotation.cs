@@ -18,6 +18,26 @@ internal class PublishECSFargateServiceExpressAnnotation : IAWSPublishTargetAnno
 public class PublishECSFargateExpressServiceConfig
 {
     /// <summary>
+    /// Callback to modify the properties used to construct the Fargate Task Definition
+    /// </summary>
+    public PublishCallback<FargateTaskDefinitionProps>? PropsFargateTaskDefinitionCallback { get; set; }
+
+    /// <summary>
+    /// Callback to modify the constructed Fargate Task Definition
+    /// </summary>
+    public PublishCallback<FargateTaskDefinition>? ConstructFargateTaskDefinitionCallback { get; set; }
+
+    /// <summary>
+    /// Callback to modify the properties used to construct the Container Definition
+    /// </summary>
+    public PublishCallback<ContainerDefinitionProps>? PropsContainerDefinitionCallback { get; set; }
+
+    /// <summary>
+    /// Callback to modify the constructed Container Definition
+    /// </summary>
+    public PublishCallback<ContainerDefinition>? ConstructContainerDefinitionCallback { get; set; }
+
+    /// <summary>
     /// Callback to modify the properties used to construct the CfnExpressGatewayService
     /// </summary>
     public PublishCallback<CfnExpressGatewayServiceProps>? PropsCfnExpressGatewayServicePropsCallback { get; set; }
