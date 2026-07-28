@@ -90,6 +90,9 @@ public partial class CDKDefaultsProvider
     /// recommended defaults for an Express Gateway service.</param>
     protected internal virtual void ApplyCfnExpressGatewayServiceDefaults(CfnExpressGatewayServiceProps props)
     {
+        if (string.IsNullOrEmpty(props.Cluster))
+            props.Cluster = GetDefaultECSCluster().ClusterName;
+
         if (string.IsNullOrEmpty(props.InfrastructureRoleArn))
         {
             var role = GetDefaultECSExpressInfrastructureRole();

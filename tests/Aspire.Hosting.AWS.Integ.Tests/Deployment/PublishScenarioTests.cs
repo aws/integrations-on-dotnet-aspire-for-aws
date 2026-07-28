@@ -566,6 +566,16 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             // Validate WebApp1 configuration
             AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1");
 
+            // Validate the Express service is pinned to the default ECS cluster. The default cluster's
+            // ClusterName resolves to a Ref to the created ECS Cluster resource.
+            var ecsCluster = Assert.Single(GetResourcesOfType(cfTemplateDoc, "AWS::ECS::Cluster"));
+            var clusterAssignment = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/Cluster");
+            AssertJsonEquals($$"""
+            {
+             "Ref": "{{ecsCluster.LogicalId}}"
+            }
+            """, clusterAssignment);
+
             // Validate WebApp1 network configuration references subnets
             var subnetAssignment = AssertElementExistsAtPath(cfTemplateDoc, "Resources/ProjectWebApp1/Properties/NetworkConfiguration/Subnets");
             Assert.Equal(JsonValueKind.Array, subnetAssignment.ValueKind);

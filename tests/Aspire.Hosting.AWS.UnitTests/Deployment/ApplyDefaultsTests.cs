@@ -170,6 +170,8 @@ public class ApplyDefaultsTests
         environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(props);
 
         // Assert
+        Assert.Equal(environment.DefaultsProvider.GetDefaultECSCluster().ClusterName, props.Cluster);
+
         Assert.NotNull(props.InfrastructureRoleArn);
         var expectedInfrastructureRoleArn = environment.DefaultsProvider.GetDefaultECSExpressInfrastructureRole().RoleArn;
         Assert.Equal(expectedInfrastructureRoleArn, props.InfrastructureRoleArn);
@@ -194,9 +196,12 @@ public class ApplyDefaultsTests
             Subnets = new[] { "subnet-12345" }
         };
 
+        var existingCluster = "my-existing-cluster";
+
         var props = new CfnExpressGatewayServiceProps
         {
             TaskDefinitionArn = "arn:aws:ecs:us-west-2:123456789012:task-definition/my-task:1",
+            Cluster = existingCluster,
             InfrastructureRoleArn = existingInfrastructureRoleArn,
             NetworkConfiguration = existingNetworkConfiguration
         };
@@ -205,6 +210,7 @@ public class ApplyDefaultsTests
         environment.DefaultsProvider.ApplyCfnExpressGatewayServiceDefaults(props);
 
         // Assert
+        Assert.Equal(existingCluster, props.Cluster);
         Assert.Equal(existingInfrastructureRoleArn, props.InfrastructureRoleArn);
         Assert.Equal(existingNetworkConfiguration, props.NetworkConfiguration);
     }
