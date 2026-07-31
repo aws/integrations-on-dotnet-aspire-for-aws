@@ -12,7 +12,7 @@ namespace Aspire.Hosting.AWS.Lambda;
 /// <summary>
 /// Aspire resource representing a Lambda function.
 /// </summary>
-public class LambdaProjectResource : ProjectResource
+public class LambdaProjectResource : ProjectResource, ILambdaFunctionResource
 {
     /// <summary>
     /// Creates an instance of LambdaProjectResource.
@@ -54,6 +54,12 @@ public class LambdaProjectResource : ProjectResource
     /// A reference to an instance of DynamoDB local that the Lambda function can use. This is set when the WithReference extension method is used on the project.
     /// </summary>
     internal IResourceBuilder<DynamoDBLocalResource>? DynamoDBLocalInstance { get; set; }
+
+    IResourceBuilder<DynamoDBLocalResource>? ILambdaFunctionResource.DynamoDBLocalInstance
+    {
+        get => DynamoDBLocalInstance;
+        set => DynamoDBLocalInstance = value;
+    }
 
     private async Task BuildLambdaDeploymentBundle(PipelineStepContext ctx)
     {

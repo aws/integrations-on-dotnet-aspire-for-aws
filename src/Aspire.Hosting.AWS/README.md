@@ -533,6 +533,67 @@ When the Aspire AppHost starts, each `AddAgentCoreRuntime` call:
 
 The Aspire dashboard shows clickable URLs for each emulator alongside your agent resource.
 
+## Using Python Lambda Functions
+
+`Aspire.Hosting.AWS` supports running **Python Lambda functions** locally alongside your
+.NET services via `AddAWSPythonLambdaFunction`. The function runs as a native process
+using the [AWS Lambda Runtime Interface Client](https://github.com/aws/aws-lambda-python-runtime-interface-client)
+(`awslambdaric`) and is wired to the same Lambda service emulator and API Gateway emulator
+used by .NET Lambda functions.
+
+### Prerequisites
+
+- Python 3.11 or later installed on the machine running `aspire run`
+- A virtual environment (`.venv`) in the Lambda project directory with `awslambdaric` installed:
+
+```bash
+cd MyPythonLambda/
+python3 -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install awslambdaric boto3  # add whatever your function needs
+```
+
+### Adding a Python Lambda function
+
+```csharp
+var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.USWest2);
+var dynamoDBLocal = builder.AddAWSDynamoDBLocal("DynamoDBLocal");
+
+// appDirectory is relative to the AppHost project directory (or absolute).
+// Aspire picks up .venv/bin/python automatically when present.
+var fn = builder.AddAWSPythonLambdaFunction(
+        name: "ToUpperFunction",
+        appDirectory: "../MyPythonLambda",
+        handler: "main.handler")        // module.function
+    .WithReference(awsSdkConfig)
+    .WithReference(dynamoDBLocal);      // injects AWS_ENDPOINT_URL_DYNAMODB
+
+builder.AddAWSAPIGatewayEmulator("APIGatewayEmulator", APIGatewayType.HttpV2)
+    .WithReference(fn, Method.Post, "/to-upper");
+```
+
+### What Aspire injects
+
+| Environment variable | Value |
+|---|---|
+| `AWS_LAMBDA_RUNTIME_API` | `host:port/<functionName>` — points the process at the emulator |
+| `_HANDLER` | The `handler` argument passed to `AddAWSPythonLambdaFunction` |
+| `AWS_LAMBDA_FUNCTION_NAME` | The `name` argument |
+| `AWS_ENDPOINT_URL_DYNAMODB` | DynamoDB Local endpoint (when `WithReference(dynamoDBLocal)` is used) |
+| `AWS_REGION` / credentials | Injected when `WithReference(awsSdkConfig)` is used |
+
+### SQS and DynamoDB Streams event sources
+
+The same `WithSQSEventSource` and `WithDynamoDBStreamsEventSource` overloads that work
+for .NET Lambda functions are also available on `PythonLambdaFunctionResource`:
+
+```csharp
+fn.WithSQSEventSource("https://sqs.us-east-1.amazonaws.com/123456/MyQueue");
+fn.WithDynamoDBStreamsEventSource("MyTable");
+```
+
+A runnable end-to-end example lives in `playground/PythonLambda/`.
+
 ## Feedback & contributing
 
 https://github.com/aws/integrations-on-dotnet-aspire-for-aws

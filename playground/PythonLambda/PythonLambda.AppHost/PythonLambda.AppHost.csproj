@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<Sdk Name="Aspire.AppHost.Sdk" Version="$(AspireSdkVersion)" />
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+		<IsAspireHost>true</IsAspireHost>
+		<NoWarn>$(NoWarn);CS8002</NoWarn> <!-- AWS CDK packages are not signed -->
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" IsAspireProjectResource="false" />
+		<PackageReference Include="Aspire.Hosting.AppHost" />
+	</ItemGroup>
+
+</Project>

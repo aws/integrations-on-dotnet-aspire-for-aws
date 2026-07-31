@@ -29,7 +29,21 @@ public static class DynamoDBStreamsEventSourceExtensions
     /// <returns></returns>
     public static IResourceBuilder<LambdaProjectResource> WithDynamoDBStreamsEventSource(this IResourceBuilder<LambdaProjectResource> lambdaFunction, string tableName, DynamoDBStreamsEventSourceOptions? options = null)
     {
-        return WithDynamoDBStreamsEventSource(lambdaFunction, () => ValueTask.FromResult(tableName), options, tableName: tableName);
+        return WithDynamoDBStreamsEventSourceCore(lambdaFunction, () => ValueTask.FromResult(tableName), options, tableName: tableName);
+    }
+
+    /// <summary>
+    /// Add a DynamoDB Streams event source to a Python Lambda function. This feature emulates adding a DynamoDB Streams event source to a Lambda function when deployed to AWS.
+    /// A separate sub resource will be added to the .NET Aspire application that polls the DynamoDB stream. As records
+    /// are received from the stream the Lambda function will be invoked with the records.
+    /// </summary>
+    /// <param name="lambdaFunction">The Python Lambda function to add the event source to.</param>
+    /// <param name="tableName">The name of the DynamoDB table to read stream records from.</param>
+    /// <param name="options">Optional configuration for the event source.</param>
+    /// <returns></returns>
+    public static IResourceBuilder<PythonLambdaFunctionResource> WithDynamoDBStreamsEventSource(this IResourceBuilder<PythonLambdaFunctionResource> lambdaFunction, string tableName, DynamoDBStreamsEventSourceOptions? options = null)
+    {
+        return WithDynamoDBStreamsEventSourceCore(lambdaFunction, () => ValueTask.FromResult(tableName), options, tableName: tableName);
     }
 
     /// <summary>
@@ -55,7 +69,7 @@ public static class DynamoDBStreamsEventSourceExtensions
 
             return resolvedTableName;
         };
-        return WithDynamoDBStreamsEventSource(lambdaFunction, resolver, options, tableName);
+        return WithDynamoDBStreamsEventSourceCore(lambdaFunction, resolver, options, tableName);
     }
 
     /// <summary>
@@ -80,10 +94,11 @@ public static class DynamoDBStreamsEventSourceExtensions
             return tableName;
         };
 
-        return WithDynamoDBStreamsEventSource(lambdaFunction, resolver, options, tableNameCfnOutputReference.Name);
+        return WithDynamoDBStreamsEventSourceCore(lambdaFunction, resolver, options, tableNameCfnOutputReference.Name);
     }
 
-    private static IResourceBuilder<LambdaProjectResource> WithDynamoDBStreamsEventSource(IResourceBuilder<LambdaProjectResource> lambdaFunction, Func<ValueTask<string>> tableNameResolver, DynamoDBStreamsEventSourceOptions? options = null, string? tableName = null)
+    private static IResourceBuilder<T> WithDynamoDBStreamsEventSourceCore<T>(IResourceBuilder<T> lambdaFunction, Func<ValueTask<string>> tableNameResolver, DynamoDBStreamsEventSourceOptions? options = null, string? tableName = null)
+        where T : IResource, ILambdaFunctionResource
     {
         var lambdaName = lambdaFunction.Resource.Name;
         var resourceName = !string.IsNullOrEmpty(options?.ResourceName)
@@ -95,7 +110,7 @@ public static class DynamoDBStreamsEventSourceExtensions
         resourceName = EnsureResourceNameLength(resourceName, lambdaName, tableName);
 
         var dynamoDBStreamsEventSourceResource = lambdaFunction.ApplicationBuilder.AddResource(new DynamoDBStreamsEventSourceResource(resourceName))
-                                    .WithParentRelationship(lambdaFunction)
+                                    .WithParentRelationship((IResourceBuilder<IResource>)(object)lambdaFunction)
                                     .ExcludeFromManifest();
 
         dynamoDBStreamsEventSourceResource.WithArgs(context =>
@@ -121,11 +136,12 @@ public static class DynamoDBStreamsEventSourceExtensions
             var dynamoDBStreamsEventConfig = DynamoDBStreamsEventSourceResource.CreateDynamoDBStreamsEventConfig(resolvedTableName, lambdaFunction.Resource.Name, lambdaEmulatorAnnotation.LambdaRuntimeEndpoint.Url, options, awsSdkConfig);
             context.EnvironmentVariables[DynamoDBStreamsEventSourceResource.DYNAMODB_STREAMS_EVENT_CONFIG_ENV_VAR] = dynamoDBStreamsEventConfig;
 
-            if (lambdaFunction.Resource.DynamoDBLocalInstance != null)
+            var ddbLocalInstance = ((ILambdaFunctionResource)lambdaFunction.Resource).DynamoDBLocalInstance;
+            if (ddbLocalInstance != null)
             {
                 // If the Lambda function has a reference to a DynamoDB local instance, then set the AWS_ENDPOINT_URL_DYNAMODB and AWS_ENDPOINT_URL_DYNAMODB_STREAMS environment variables to the endpoint of the DynamoDB local container.
                 // This will allow the DynamoDB Streams event source to connect to the DynamoDB local instance when polling for stream records.
-                var dynamoDBLocalEndpoint = lambdaFunction.Resource.DynamoDBLocalInstance.GetEndpoint("http");
+                var dynamoDBLocalEndpoint = ddbLocalInstance.GetEndpoint("http");
                 context.EnvironmentVariables["AWS_ENDPOINT_URL_DYNAMODB"] = dynamoDBLocalEndpoint;
                 context.EnvironmentVariables["AWS_ENDPOINT_URL_DYNAMODB_STREAMS"] = dynamoDBLocalEndpoint;
             }

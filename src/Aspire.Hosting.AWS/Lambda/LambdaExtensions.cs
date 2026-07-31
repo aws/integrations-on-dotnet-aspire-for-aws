@@ -130,7 +130,134 @@ public static class LambdaExtensions
     }
 
     /// <summary>
-    /// Add the Lambda service emulator resource. The <see cref="AddAWSLambdaFunction"/> method will automatically add the Lambda service emulator if it hasn't
+    /// Add a Python Lambda function as an Aspire resource. The function is launched via the
+    /// AWS Lambda Runtime Interface Client (<c>python -m awslambdaric</c>) and connected to
+    /// the Lambda service emulator, enabling fully local end-to-end development.
+    /// </summary>
+    /// <param name="builder">The distributed application builder.</param>
+    /// <param name="name">Aspire resource name.</param>
+    /// <param name="appDirectory">
+    /// Path to the directory containing the Python Lambda source code. May be relative to the
+    /// AppHost project directory. A <c>.venv</c> virtual environment in this directory is used
+    /// if present; otherwise the system <c>python3</c> executable is used.
+    /// </param>
+    /// <param name="handler">
+    /// The Lambda function handler in <c>module.function</c> format, for example
+    /// <c>main.handler</c> for a <c>handler</c> function inside <c>main.py</c>.
+    /// </param>
+    /// <param name="options">Optional options to configure the Lambda function.</param>
+    /// <returns>A resource builder for the Python Lambda function.</returns>
+    public static IResourceBuilder<PythonLambdaFunctionResource> AddAWSPythonLambdaFunction(
+        this IDistributedApplicationBuilder builder,
+        string name,
+        string appDirectory,
+        string handler,
+        LambdaFunctionOptions? options = null)
+    {
+        options ??= new LambdaFunctionOptions();
+
+        if (!Path.IsPathRooted(appDirectory))
+        {
+            appDirectory = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, appDirectory));
+        }
+
+        var executablePath = ResolvePythonExecutable(appDirectory);
+        var resource = new PythonLambdaFunctionResource(name, executablePath, appDirectory);
+
+        var resourceBuilder = builder.AddResource(resource)
+            .WithArgs("-m", "awslambdaric");
+
+        ExecutableResource? serviceEmulator = null;
+        if (builder.ExecutionContext.IsRunMode)
+        {
+            serviceEmulator = AddOrGetLambdaServiceEmulatorResource(builder);
+            resourceBuilder.WithParentRelationship(serviceEmulator);
+        }
+
+        resourceBuilder.WithEnvironment(context =>
+        {
+            if (context.ExecutionContext.IsPublishMode || serviceEmulator == null)
+                return;
+
+            var serviceRuntimeAPIEndpoint = serviceEmulator.GetEndpoint("http");
+
+            if (!serviceEmulator.TryGetLastAnnotation<LambdaEmulatorAnnotation>(out var lambdaEmulatorAnnotation) || lambdaEmulatorAnnotation == null)
+            {
+                return;
+            }
+
+            var apiPath = $"{serviceRuntimeAPIEndpoint.Host}:{serviceRuntimeAPIEndpoint.Port}/{name}";
+            context.EnvironmentVariables["AWS_EXECUTION_ENV"] = $"aspire.hosting.aws#{SdkUtilities.GetAssemblyVersion()}";
+            context.EnvironmentVariables["AWS_LAMBDA_RUNTIME_API"] = apiPath;
+            context.EnvironmentVariables["AWS_LAMBDA_FUNCTION_NAME"] = name;
+            context.EnvironmentVariables["_HANDLER"] = handler;
+
+            context.EnvironmentVariables["AWS_LAMBDA_LOG_FORMAT"] = options.LogFormat.Value;
+            context.EnvironmentVariables["AWS_LAMBDA_LOG_LEVEL"] = options.ApplicationLogLevel.Value;
+
+            var serviceEmulatorEndpoint = serviceEmulator.GetEndpoint("https");
+            if (!serviceEmulatorEndpoint.Exists)
+            {
+                serviceEmulatorEndpoint = serviceEmulator.GetEndpoint("http");
+            }
+
+            var lambdaEmulatorEndpoint = $"{serviceEmulatorEndpoint.Scheme}://{serviceEmulatorEndpoint.Host}:{serviceEmulatorEndpoint.Port}/?function={Uri.EscapeDataString(name)}";
+
+            resourceBuilder.WithAnnotation(new ResourceCommandAnnotation(
+                name: "LambdaEmulator",
+                displayName: "Lambda Service Emulator",
+                updateState: context =>
+                {
+                    if (string.Equals(context.ResourceSnapshot.State?.Text, KnownResourceStates.Running))
+                    {
+                        return ResourceCommandState.Enabled;
+                    }
+                    return ResourceCommandState.Disabled;
+                },
+                executeCommand: context =>
+                {
+                    var startInfo = new ProcessStartInfo
+                    {
+                        UseShellExecute = true,
+                        FileName = lambdaEmulatorEndpoint
+                    };
+                    Process.Start(startInfo);
+
+                    return Task.FromResult(CommandResults.Success());
+                },
+                displayDescription: "Open the Lambda service emulator configured for this Lambda function",
+                parameter: null,
+                confirmationMessage: null,
+                iconName: "Bug",
+                iconVariant: IconVariant.Filled,
+                isHighlighted: true)
+            );
+        });
+
+        resourceBuilder.WithAnnotation(new LambdaFunctionAnnotation(handler));
+
+        return resourceBuilder;
+    }
+
+    /// <summary>
+    /// Resolves the Python executable to use for a Lambda function in the given directory.
+    /// Prefers <c>.venv/bin/python</c> (Unix) or <c>.venv\Scripts\python.exe</c> (Windows)
+    /// inside <paramref name="appDirectory"/>; falls back to system python3/python.
+    /// </summary>
+    private static string ResolvePythonExecutable(string appDirectory)
+    {
+        var venvPython = OperatingSystem.IsWindows()
+            ? Path.Combine(appDirectory, ".venv", "Scripts", "python.exe")
+            : Path.Combine(appDirectory, ".venv", "bin", "python");
+
+        if (File.Exists(venvPython))
+        {
+            return venvPython;
+        }
+
+        return OperatingSystem.IsWindows() ? "python" : "python3";
+    }
+
     /// already been added. This method only needs to be called if the emulator needs to be customized with the <see cref="LambdaEmulatorOptions"/>. If
     /// this method is called it must be called only once and before any <see cref="AddAWSLambdaFunction"/> calls.
     /// </summary>

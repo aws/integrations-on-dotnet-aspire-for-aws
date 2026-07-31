@@ -34,7 +34,21 @@ public static class SQSEventSourceExtensions
     /// <exception cref="InvalidOperationException"></exception>
     public static IResourceBuilder<LambdaProjectResource> WithSQSEventSource(this IResourceBuilder<LambdaProjectResource> lambdaFunction, string queueUrl, SQSEventSourceOptions? options = null)
     {
-        return WithSQSEventSource(lambdaFunction, () => ValueTask.FromResult(queueUrl), options, queueName: null);
+        return WithSQSEventSourceCore(lambdaFunction, () => ValueTask.FromResult(queueUrl), options, queueName: null);
+    }
+
+    /// <summary>
+    /// Add an SQS event source to a Python Lambda function. This feature emulates adding an SQS event source to a Lambda function when deployed to AWS.
+    /// A separate sub resource will be added to the .NET Aspire application that polls the SQS queue. As messages
+    /// are received from the queue the Lambda function will be invoked with the messages.
+    /// </summary>
+    /// <param name="lambdaFunction">The Python Lambda function to add the event source to.</param>
+    /// <param name="queueUrl">The queue url for an SQS queue that will be polled for messages.</param>
+    /// <param name="options">Optional configuration for the event source.</param>
+    /// <returns></returns>
+    public static IResourceBuilder<PythonLambdaFunctionResource> WithSQSEventSource(this IResourceBuilder<PythonLambdaFunctionResource> lambdaFunction, string queueUrl, SQSEventSourceOptions? options = null)
+    {
+        return WithSQSEventSourceCore(lambdaFunction, () => ValueTask.FromResult(queueUrl), options, queueName: null);
     }
 
     /// <summary>
@@ -66,7 +80,7 @@ public static class SQSEventSourceExtensions
 
             return queueUrl;
         };
-        return WithSQSEventSource(lambdaFunction, resolver, options, queueName);
+        return WithSQSEventSourceCore(lambdaFunction, resolver, options, queueName);
     }
 
     /// <summary>
@@ -97,10 +111,11 @@ public static class SQSEventSourceExtensions
             return queueUrl;
         };
 
-        return WithSQSEventSource(lambdaFunction, resolver, options, queueCfnOutputReference.Name);
+        return WithSQSEventSourceCore(lambdaFunction, resolver, options, queueCfnOutputReference.Name);
     }
 
-    private static IResourceBuilder<LambdaProjectResource> WithSQSEventSource(IResourceBuilder<LambdaProjectResource> lambdaFunction, Func<ValueTask<string>> queueUrlResolver, SQSEventSourceOptions? options = null, string? queueName = null)
+    private static IResourceBuilder<T> WithSQSEventSourceCore<T>(IResourceBuilder<T> lambdaFunction, Func<ValueTask<string>> queueUrlResolver, SQSEventSourceOptions? options = null, string? queueName = null)
+        where T : IResource, ILambdaFunctionResource
     {
         var lambdaName = lambdaFunction.Resource.Name;
         var resourceName = !string.IsNullOrEmpty(options?.ResourceName)
@@ -112,7 +127,7 @@ public static class SQSEventSourceExtensions
         resourceName = EnsureResourceNameLength(resourceName, lambdaName, queueName);
 
         var sqsEventSourceResource = lambdaFunction.ApplicationBuilder.AddResource(new SQSEventSourceResource(resourceName))
-                                    .WithParentRelationship(lambdaFunction)
+                                    .WithParentRelationship((IResourceBuilder<IResource>)(object)lambdaFunction)
                                     .ExcludeFromManifest();
 
         sqsEventSourceResource.WithArgs(context =>

@@ -79,6 +79,10 @@ public static class DynamoDBLocalResourceBuilderExtensions
             // Store a reference to the DDB local in case the Lambda function is using the DynamoDB stream emulator and needs to configure the stream polling to connect to the DDB local instance.
             lambdaFunction.Resource.DynamoDBLocalInstance = dynamoDBLocalResourceBuilder;
         }
+        else if (builder is IResourceBuilder<PythonLambdaFunctionResource> pythonLambdaFunction)
+        {
+            pythonLambdaFunction.Resource.DynamoDBLocalInstance = dynamoDBLocalResourceBuilder;
+        }
 
         builder.WithEnvironment(context =>
         {
