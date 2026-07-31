@@ -27,7 +27,8 @@ pip install -r requirements.txt
 
 `Aspire.Hosting.AWS` automatically uses the `.venv` in `ToUpperLambda/` when
 it starts the Lambda process. If no `.venv` is present it falls back to the
-system `python3`.
+system `python3`. If you use another folder name, call
+`.WithVirtualEnvironment("<your-venv-folder>")` on the Python Lambda resource.
 
 ### 2. Run the Aspire AppHost
 

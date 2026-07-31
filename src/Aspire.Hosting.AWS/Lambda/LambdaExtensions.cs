@@ -139,7 +139,9 @@ public static class LambdaExtensions
     /// <param name="appDirectory">
     /// Path to the directory containing the Python Lambda source code. May be relative to the
     /// AppHost project directory. A <c>.venv</c> virtual environment in this directory is used
-    /// if present; otherwise the system <c>python3</c> executable is used.
+    /// if present; otherwise the system <c>python3</c> executable is used. Use
+    /// <see cref="WithVirtualEnvironment(Aspire.Hosting.ApplicationModel.IResourceBuilder{Aspire.Hosting.AWS.Lambda.PythonLambdaFunctionResource}, string)"/>
+    /// to override the default virtual environment path.
     /// </param>
     /// <param name="handler">
     /// The Lambda function handler in <c>module.function</c> format, for example
@@ -240,19 +242,54 @@ public static class LambdaExtensions
     }
 
     /// <summary>
-    /// Resolves the Python executable to use for a Lambda function in the given directory.
-    /// Prefers <c>.venv/bin/python</c> (Unix) or <c>.venv\Scripts\python.exe</c> (Windows)
-    /// inside <paramref name="appDirectory"/>; falls back to system python3/python.
+    /// Configures a Python Lambda function to use a specific virtual environment path.
     /// </summary>
-    private static string ResolvePythonExecutable(string appDirectory)
+    /// <param name="builder">The Python Lambda function builder.</param>
+    /// <param name="virtualEnvironmentPath">
+    /// Path to the virtual environment directory. Relative paths are resolved from the
+    /// Lambda function <see cref="PythonLambdaFunctionResource.AppDirectory"/>.
+    /// </param>
+    /// <returns>The Python Lambda function builder.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="virtualEnvironmentPath"/> is null or whitespace.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the Python executable is not found in the virtual environment.</exception>
+    public static IResourceBuilder<PythonLambdaFunctionResource> WithVirtualEnvironment(
+        this IResourceBuilder<PythonLambdaFunctionResource> builder,
+        string virtualEnvironmentPath)
     {
+        if (string.IsNullOrWhiteSpace(virtualEnvironmentPath))
+        {
+            throw new ArgumentException("Virtual environment path must not be null or whitespace.", nameof(virtualEnvironmentPath));
+        }
+
+        var pythonExecutablePath = ResolvePythonExecutable(builder.Resource.AppDirectory, virtualEnvironmentPath);
+        builder.WithCommand(pythonExecutablePath);
+        return builder;
+    }
+
+    /// <summary>
+    /// Resolves the Python executable to use for a Lambda function in the given directory.
+    /// Prefers <c>.venv/bin/python</c> (Unix) or <c>.venv\Scripts\python.exe</c> (Windows),
+    /// and falls back to system python3/python for the default <c>.venv</c> path.
+    /// </summary>
+    private static string ResolvePythonExecutable(string appDirectory, string virtualEnvironmentPath = ".venv")
+    {
+        var resolvedVirtualEnvironmentPath = Path.IsPathRooted(virtualEnvironmentPath)
+            ? virtualEnvironmentPath
+            : Path.GetFullPath(Path.Combine(appDirectory, virtualEnvironmentPath));
+
         var venvPython = OperatingSystem.IsWindows()
-            ? Path.Combine(appDirectory, ".venv", "Scripts", "python.exe")
-            : Path.Combine(appDirectory, ".venv", "bin", "python");
+            ? Path.Combine(resolvedVirtualEnvironmentPath, "Scripts", "python.exe")
+            : Path.Combine(resolvedVirtualEnvironmentPath, "bin", "python");
 
         if (File.Exists(venvPython))
         {
             return venvPython;
+        }
+
+        if (!string.Equals(virtualEnvironmentPath, ".venv", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Python executable was not found in virtual environment '{resolvedVirtualEnvironmentPath}'. Expected executable at '{venvPython}'.");
         }
 
         return OperatingSystem.IsWindows() ? "python" : "python3";

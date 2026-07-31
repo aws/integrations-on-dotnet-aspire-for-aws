@@ -568,6 +568,9 @@ var fn = builder.AddAWSPythonLambdaFunction(
     .WithReference(awsSdkConfig)
     .WithReference(dynamoDBLocal);      // injects AWS_ENDPOINT_URL_DYNAMODB
 
+// Optional: use a non-default virtual environment folder name.
+fn.WithVirtualEnvironment("venv");
+
 builder.AddAWSAPIGatewayEmulator("APIGatewayEmulator", APIGatewayType.HttpV2)
     .WithReference(fn, Method.Post, "/to-upper");
 ```

@@ -97,6 +97,53 @@ public class PythonLambdaExtensionsTests
             "AppDirectory should be an absolute path after resolution.");
     }
 
+    [Fact]
+    public void WithVirtualEnvironment_UsesConfiguredVirtualEnvironmentPythonExecutable()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+        var appDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(appDir);
+        try
+        {
+            var virtualEnvironmentPath = Path.Combine(appDir, "myenv");
+            var expectedPythonPath = OperatingSystem.IsWindows()
+                ? Path.Combine(virtualEnvironmentPath, "Scripts", "python.exe")
+                : Path.Combine(virtualEnvironmentPath, "bin", "python");
+
+            Directory.CreateDirectory(Path.GetDirectoryName(expectedPythonPath)!);
+            File.WriteAllText(expectedPythonPath, string.Empty);
+
+            var lambda = builder
+                .AddAWSPythonLambdaFunction("PyFn", appDir, "main.handler")
+                .WithVirtualEnvironment("myenv");
+
+            Assert.Equal(expectedPythonPath, lambda.Resource.Command);
+        }
+        finally
+        {
+            Directory.Delete(appDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void WithVirtualEnvironment_WhenPathMissing_ThrowsInvalidOperationException()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+        var appDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(appDir);
+        try
+        {
+            var lambda = builder.AddAWSPythonLambdaFunction("PyFn", appDir, "main.handler");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => lambda.WithVirtualEnvironment("missing-venv"));
+            Assert.Contains("Python executable was not found in virtual environment", ex.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(appDir, recursive: true);
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Implements ILambdaFunctionResource
     // -----------------------------------------------------------------------
