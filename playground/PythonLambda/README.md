@@ -29,6 +29,8 @@ pip install -r requirements.txt
 it starts the Lambda process. If no `.venv` is present it falls back to the
 system `python3`. If you use another folder name, call
 `.WithVirtualEnvironment("<your-venv-folder>")` on the Python Lambda resource.
+If you need a specific interpreter for venv creation, call
+`.WithPythonExecutable("/opt/homebrew/bin/python3.12")`.
 
 ### 2. Run the Aspire AppHost
 

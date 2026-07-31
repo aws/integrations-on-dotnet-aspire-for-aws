@@ -172,7 +172,10 @@ public static class LambdaExtensions
         // Attach the default .venv annotation so LambdaBeforeStartEventHandler can
         // create the venv and install requirements.txt on first run.
         var defaultVenvPath = Path.GetFullPath(Path.Combine(appDirectory, ".venv"));
-        resourceBuilder.WithAnnotation(new PythonVirtualEnvironmentAnnotation(defaultVenvPath, createIfNotExists: true)
+        resourceBuilder.WithAnnotation(new PythonVirtualEnvironmentAnnotation(
+            defaultVenvPath,
+            createIfNotExists: true,
+            pythonExecutablePath: GetSystemPythonExecutable())
         {
             ResourceBuilder = resourceBuilder
         });
@@ -280,8 +283,15 @@ public static class LambdaExtensions
             ? virtualEnvironmentPath
             : Path.GetFullPath(Path.Combine(builder.Resource.AppDirectory, virtualEnvironmentPath));
 
+        var existingAnnotation = builder.Resource.Annotations
+            .OfType<PythonVirtualEnvironmentAnnotation>()
+            .LastOrDefault();
+
         builder.WithAnnotation(
-            new PythonVirtualEnvironmentAnnotation(resolvedVenvPath, createIfNotExists)
+            new PythonVirtualEnvironmentAnnotation(
+                resolvedVenvPath,
+                createIfNotExists,
+                existingAnnotation?.PythonExecutablePath ?? GetSystemPythonExecutable())
             {
                 ResourceBuilder = builder
             },
@@ -305,6 +315,48 @@ public static class LambdaExtensions
                 $"Expected executable at '{venvPython}'. " +
                 $"Create the virtual environment first or set createIfNotExists: true.");
         }
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Configures which Python executable is used to create the virtual environment when
+    /// <see cref="WithVirtualEnvironment(Aspire.Hosting.ApplicationModel.IResourceBuilder{Aspire.Hosting.AWS.Lambda.PythonLambdaFunctionResource}, string, bool)"/>
+    /// runs with <c>createIfNotExists: true</c>.
+    /// </summary>
+    /// <param name="builder">The Python Lambda function builder.</param>
+    /// <param name="pythonExecutablePath">
+    /// Python executable command or absolute path (for example, <c>python3</c> or
+    /// <c>/opt/homebrew/bin/python3.12</c>).
+    /// </param>
+    /// <returns>The Python Lambda function builder.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="pythonExecutablePath"/> is null or whitespace.</exception>
+    public static IResourceBuilder<PythonLambdaFunctionResource> WithPythonExecutable(
+        this IResourceBuilder<PythonLambdaFunctionResource> builder,
+        string pythonExecutablePath)
+    {
+        if (string.IsNullOrWhiteSpace(pythonExecutablePath))
+        {
+            throw new ArgumentException("Python executable path must not be null or whitespace.", nameof(pythonExecutablePath));
+        }
+
+        var existingAnnotation = builder.Resource.Annotations
+            .OfType<PythonVirtualEnvironmentAnnotation>()
+            .LastOrDefault();
+
+        var virtualEnvironmentPath = existingAnnotation?.VirtualEnvironmentPath
+            ?? Path.GetFullPath(Path.Combine(builder.Resource.AppDirectory, ".venv"));
+        var createIfNotExists = existingAnnotation?.CreateIfNotExists ?? true;
+
+        builder.WithAnnotation(
+            new PythonVirtualEnvironmentAnnotation(
+                virtualEnvironmentPath,
+                createIfNotExists,
+                pythonExecutablePath)
+            {
+                ResourceBuilder = builder
+            },
+            ResourceAnnotationMutationBehavior.Replace);
 
         return builder;
     }
@@ -335,6 +387,11 @@ public static class LambdaExtensions
                 $"Python executable was not found in virtual environment '{resolvedVirtualEnvironmentPath}'. Expected executable at '{venvPython}'.");
         }
 
+        return OperatingSystem.IsWindows() ? "python" : "python3";
+    }
+
+    private static string GetSystemPythonExecutable()
+    {
         return OperatingSystem.IsWindows() ? "python" : "python3";
     }
 

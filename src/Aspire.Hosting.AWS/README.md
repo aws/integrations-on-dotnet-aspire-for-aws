@@ -571,6 +571,9 @@ var fn = builder.AddAWSPythonLambdaFunction(
 // Optional: use a non-default virtual environment folder name.
 fn.WithVirtualEnvironment("venv");
 
+// Optional: force a specific interpreter for venv creation (for example, Python 3.12).
+fn.WithPythonExecutable("/opt/homebrew/bin/python3.12");
+
 builder.AddAWSAPIGatewayEmulator("APIGatewayEmulator", APIGatewayType.HttpV2)
     .WithReference(fn, Method.Post, "/to-upper");
 ```

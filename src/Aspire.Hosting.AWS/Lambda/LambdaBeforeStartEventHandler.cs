@@ -375,7 +375,9 @@ internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> log
 
             logger.LogInformation("Creating Python virtual environment at '{VenvPath}' for Lambda function '{ResourceName}'...", venvPath, resource.Name);
 
-            var systemPython = OperatingSystem.IsWindows() ? "python" : "python3";
+            var systemPython = string.IsNullOrWhiteSpace(venvAnnotation.PythonExecutablePath)
+                ? (OperatingSystem.IsWindows() ? "python" : "python3")
+                : venvAnnotation.PythonExecutablePath;
             var createResult = await processCommandService.RunProcessAndCaptureOutputAsync(
                 logger, systemPython, $"-m venv \"{venvPath}\"", resource.AppDirectory, cancellationToken);
 

@@ -171,6 +171,53 @@ public class PythonLambdaExtensionsTests
         }
     }
 
+    [Fact]
+    public void WithPythonExecutable_SetsExecutableOnVenvAnnotation()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+        var appDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(appDir);
+        try
+        {
+            var lambda = builder
+                .AddAWSPythonLambdaFunction("PyFn", appDir, "main.handler")
+                .WithPythonExecutable("/opt/homebrew/bin/python3.12");
+
+            Assert.True(lambda.Resource.TryGetLastAnnotation<PythonVirtualEnvironmentAnnotation>(out var annotation));
+            Assert.NotNull(annotation);
+            Assert.Equal("/opt/homebrew/bin/python3.12", annotation!.PythonExecutablePath);
+        }
+        finally
+        {
+            Directory.Delete(appDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void WithPythonExecutable_PreservesConfiguredVirtualEnvironment()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+        var appDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(appDir);
+        try
+        {
+            var lambda = builder
+                .AddAWSPythonLambdaFunction("PyFn", appDir, "main.handler")
+                .WithVirtualEnvironment("custom-venv", createIfNotExists: true)
+                .WithPythonExecutable("/opt/homebrew/bin/python3.12");
+
+            Assert.True(lambda.Resource.TryGetLastAnnotation<PythonVirtualEnvironmentAnnotation>(out var annotation));
+            Assert.NotNull(annotation);
+            Assert.True(annotation!.CreateIfNotExists);
+            Assert.EndsWith("custom-venv", annotation.VirtualEnvironmentPath, StringComparison.Ordinal);
+            Assert.Equal("/opt/homebrew/bin/python3.12", annotation.PythonExecutablePath);
+        }
+        finally
+        {
+            Directory.Delete(appDir, recursive: true);
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Implements ILambdaFunctionResource
     // -----------------------------------------------------------------------
