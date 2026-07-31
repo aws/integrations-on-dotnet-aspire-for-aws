@@ -39,6 +39,16 @@ internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> log
 
         SdkUtilities.BackgroundSDKDefaultConfigValidation(logger);
 
+        // Set up Python virtual environments for any Python Lambda functions.
+        var pythonResources = @event.Model.Resources
+            .OfType<PythonLambdaFunctionResource>()
+            .ToList();
+
+        foreach (var pythonResource in pythonResources)
+        {
+            await SetupPythonVirtualEnvironmentAsync(pythonResource, cancellationToken);
+        }
+
         // The Lambda function handler for a Class Library contains "::".
         // This is an example of a class library function handler "WebCalculatorFunctions::WebCalculatorFunctions.Functions::AddFunctionHandler".
         var classLibraryProjectPaths =
@@ -337,6 +347,71 @@ internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> log
         {
             logger.LogWarning(ex, "Error retrieving the target framework of '{projectPath}'", projectPath);
             return string.Empty;
+        }
+    }
+
+    private async Task SetupPythonVirtualEnvironmentAsync(PythonLambdaFunctionResource resource, CancellationToken cancellationToken)
+    {
+        if (!resource.TryGetLastAnnotation<PythonVirtualEnvironmentAnnotation>(out var venvAnnotation) || venvAnnotation == null)
+        {
+            return;
+        }
+
+        var venvPath = venvAnnotation.VirtualEnvironmentPath;
+        var venvPython = OperatingSystem.IsWindows()
+            ? Path.Combine(venvPath, "Scripts", "python.exe")
+            : Path.Combine(venvPath, "bin", "python");
+
+        if (!File.Exists(venvPython))
+        {
+            if (!venvAnnotation.CreateIfNotExists)
+            {
+                logger.LogError(
+                    "Python virtual environment not found at '{VenvPath}' for Lambda function '{ResourceName}'. " +
+                    "Create it manually or set createIfNotExists: true on WithVirtualEnvironment.",
+                    venvPath, resource.Name);
+                return;
+            }
+
+            logger.LogInformation("Creating Python virtual environment at '{VenvPath}' for Lambda function '{ResourceName}'...", venvPath, resource.Name);
+
+            var systemPython = OperatingSystem.IsWindows() ? "python" : "python3";
+            var createResult = await processCommandService.RunProcessAndCaptureOutputAsync(
+                logger, systemPython, $"-m venv \"{venvPath}\"", resource.AppDirectory, cancellationToken);
+
+            if (createResult.ExitCode != 0)
+            {
+                logger.LogError("Failed to create virtual environment at '{VenvPath}':\n{Output}", venvPath, createResult.Output);
+                return;
+            }
+
+            logger.LogInformation("Virtual environment created at '{VenvPath}'.", venvPath);
+        }
+
+        // Now that the venv exists, update the resource's executable to use it.
+        venvAnnotation.ResourceBuilder?.WithCommand(venvPython);
+
+        // Install requirements.txt if present.
+        var requirementsFile = Path.Combine(resource.AppDirectory, "requirements.txt");
+        if (File.Exists(requirementsFile))
+        {
+            var pip = OperatingSystem.IsWindows()
+                ? Path.Combine(venvPath, "Scripts", "pip.exe")
+                : Path.Combine(venvPath, "bin", "pip");
+
+            logger.LogInformation("Installing requirements from '{RequirementsFile}' for Lambda function '{ResourceName}'...", requirementsFile, resource.Name);
+
+            var installResult = await processCommandService.RunProcessAndCaptureOutputAsync(
+                logger, pip, $"install -r \"{requirementsFile}\"", resource.AppDirectory, cancellationToken);
+
+            if (installResult.ExitCode != 0)
+            {
+                logger.LogError("Failed to install requirements for Lambda function '{ResourceName}':\n{Output}", resource.Name, installResult.Output);
+            }
+            else
+            {
+                logger.LogInformation("Requirements installed successfully for Lambda function '{ResourceName}'.", resource.Name);
+            }
         }
     }
 }

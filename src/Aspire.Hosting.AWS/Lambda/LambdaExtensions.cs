@@ -169,6 +169,14 @@ public static class LambdaExtensions
         var resourceBuilder = builder.AddResource(resource)
             .WithArgs("-m", "awslambdaric");
 
+        // Attach the default .venv annotation so LambdaBeforeStartEventHandler can
+        // create the venv and install requirements.txt on first run.
+        var defaultVenvPath = Path.GetFullPath(Path.Combine(appDirectory, ".venv"));
+        resourceBuilder.WithAnnotation(new PythonVirtualEnvironmentAnnotation(defaultVenvPath, createIfNotExists: true)
+        {
+            ResourceBuilder = resourceBuilder
+        });
+
         ExecutableResource? serviceEmulator = null;
         if (builder.ExecutionContext.IsRunMode)
         {
@@ -242,27 +250,62 @@ public static class LambdaExtensions
     }
 
     /// <summary>
-    /// Configures a Python Lambda function to use a specific virtual environment path.
+    /// Configures a Python Lambda function to use a specific virtual environment.
     /// </summary>
     /// <param name="builder">The Python Lambda function builder.</param>
     /// <param name="virtualEnvironmentPath">
     /// Path to the virtual environment directory. Relative paths are resolved from the
     /// Lambda function <see cref="PythonLambdaFunctionResource.AppDirectory"/>.
+    /// Defaults to <c>.venv</c>.
+    /// </param>
+    /// <param name="createIfNotExists">
+    /// When <c>true</c> (the default), the virtual environment is created via
+    /// <c>python -m venv</c> if it does not already exist, and
+    /// <c>pip install -r requirements.txt</c> is run before the Lambda process starts.
+    /// Set to <c>false</c> to require the virtual environment to already exist.
     /// </param>
     /// <returns>The Python Lambda function builder.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="virtualEnvironmentPath"/> is null or whitespace.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when the Python executable is not found in the virtual environment.</exception>
     public static IResourceBuilder<PythonLambdaFunctionResource> WithVirtualEnvironment(
         this IResourceBuilder<PythonLambdaFunctionResource> builder,
-        string virtualEnvironmentPath)
+        string virtualEnvironmentPath = ".venv",
+        bool createIfNotExists = true)
     {
         if (string.IsNullOrWhiteSpace(virtualEnvironmentPath))
         {
             throw new ArgumentException("Virtual environment path must not be null or whitespace.", nameof(virtualEnvironmentPath));
         }
 
-        var pythonExecutablePath = ResolvePythonExecutable(builder.Resource.AppDirectory, virtualEnvironmentPath);
-        builder.WithCommand(pythonExecutablePath);
+        var resolvedVenvPath = Path.IsPathRooted(virtualEnvironmentPath)
+            ? virtualEnvironmentPath
+            : Path.GetFullPath(Path.Combine(builder.Resource.AppDirectory, virtualEnvironmentPath));
+
+        builder.WithAnnotation(
+            new PythonVirtualEnvironmentAnnotation(resolvedVenvPath, createIfNotExists)
+            {
+                ResourceBuilder = builder
+            },
+            ResourceAnnotationMutationBehavior.Replace);
+
+        // If the venv already exists, wire up the executable immediately.
+        // If not and createIfNotExists is true, the before-start handler will create it
+        // and update the command via WithCommand before the process launches.
+        var venvPython = OperatingSystem.IsWindows()
+            ? Path.Combine(resolvedVenvPath, "Scripts", "python.exe")
+            : Path.Combine(resolvedVenvPath, "bin", "python");
+
+        if (File.Exists(venvPython))
+        {
+            builder.WithCommand(venvPython);
+        }
+        else if (!createIfNotExists)
+        {
+            throw new InvalidOperationException(
+                $"Python executable was not found in virtual environment '{resolvedVenvPath}'. " +
+                $"Expected executable at '{venvPython}'. " +
+                $"Create the virtual environment first or set createIfNotExists: true.");
+        }
+
         return builder;
     }
 

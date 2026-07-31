@@ -117,6 +117,7 @@ public class PythonLambdaExtensionsTests
                 .AddAWSPythonLambdaFunction("PyFn", appDir, "main.handler")
                 .WithVirtualEnvironment("myenv");
 
+            // Command updated immediately when venv already exists
             Assert.Equal(expectedPythonPath, lambda.Resource.Command);
         }
         finally
@@ -126,7 +127,7 @@ public class PythonLambdaExtensionsTests
     }
 
     [Fact]
-    public void WithVirtualEnvironment_WhenPathMissing_ThrowsInvalidOperationException()
+    public void WithVirtualEnvironment_WhenPathMissing_AndCreateIfNotExistsFalse_ThrowsInvalidOperationException()
     {
         var builder = DistributedApplication.CreateBuilder();
         var appDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
@@ -135,8 +136,34 @@ public class PythonLambdaExtensionsTests
         {
             var lambda = builder.AddAWSPythonLambdaFunction("PyFn", appDir, "main.handler");
 
-            var ex = Assert.Throws<InvalidOperationException>(() => lambda.WithVirtualEnvironment("missing-venv"));
+            // createIfNotExists: false must throw immediately if venv is missing
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                lambda.WithVirtualEnvironment("missing-venv", createIfNotExists: false));
             Assert.Contains("Python executable was not found in virtual environment", ex.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(appDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void WithVirtualEnvironment_WhenPathMissing_AndCreateIfNotExistsTrue_AttachesAnnotationForDeferredSetup()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+        var appDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(appDir);
+        try
+        {
+            var lambda = builder
+                .AddAWSPythonLambdaFunction("PyFn", appDir, "main.handler")
+                .WithVirtualEnvironment("my-venv", createIfNotExists: true);
+
+            // Annotation must be present so before-start handler can create the venv
+            Assert.True(lambda.Resource.TryGetLastAnnotation<PythonVirtualEnvironmentAnnotation>(out var ann));
+            Assert.NotNull(ann);
+            Assert.True(ann!.CreateIfNotExists);
+            Assert.EndsWith("my-venv", ann.VirtualEnvironmentPath, StringComparison.Ordinal);
         }
         finally
         {

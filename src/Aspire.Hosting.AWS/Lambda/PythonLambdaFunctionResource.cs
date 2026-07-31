@@ -24,6 +24,14 @@ public class PythonLambdaFunctionResource(string name, string executablePath, st
     public string AppDirectory { get; } = appDirectory;
 
     /// <summary>
+    /// Allows the before-start handler to update the Python executable path after
+    /// the virtual environment has been created. Stored separately because
+    /// <see cref="ExecutableResource.Command"/> is read-only.
+    /// Aspire's DCP reads <see cref="Command"/> which delegates to this when set.
+    /// </summary>
+    internal string? ResolvedPythonExecutable { get; set; }
+
+    /// <summary>
     /// Reference to a DynamoDB Local instance, used by the DynamoDB Streams event-source
     /// poller to redirect DynamoDB and Streams calls to the local container.
     /// </summary>
