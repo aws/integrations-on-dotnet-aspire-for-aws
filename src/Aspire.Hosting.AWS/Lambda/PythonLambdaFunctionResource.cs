@@ -15,13 +15,19 @@ namespace Aspire.Hosting.AWS.Lambda;
 /// inside <paramref name="appDirectory"/>. If no virtual environment is found it falls back
 /// to the system <c>python3</c> / <c>python</c> executable.
 /// </remarks>
-public class PythonLambdaFunctionResource(string name, string executablePath, string appDirectory)
+public class PythonLambdaFunctionResource(string name, string executablePath, string appDirectory, string handler)
     : ExecutableResource(name, executablePath, appDirectory), ILambdaFunctionResource
 {
     /// <summary>
     /// The directory containing the Python Lambda function source code.
     /// </summary>
     public string AppDirectory { get; } = appDirectory;
+
+    /// <summary>
+    /// The Lambda handler in <c>module.function</c> format (e.g. <c>main.handler</c>).
+    /// Used by <see cref="LambdaBeforeStartEventHandler"/> to set the bootstrap argument.
+    /// </summary>
+    internal string Handler { get; } = handler;
 
     /// <summary>
     /// Allows the before-start handler to update the Python executable path after

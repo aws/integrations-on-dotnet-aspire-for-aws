@@ -225,14 +225,14 @@ public class PythonLambdaExtensionsTests
     [Fact]
     public void PythonLambdaFunctionResource_ImplementsILambdaFunctionResource()
     {
-        var resource = new PythonLambdaFunctionResource("test", "python3", Path.GetTempPath());
+        var resource = new PythonLambdaFunctionResource("test", "python3", Path.GetTempPath(), "main.handler");
         Assert.IsAssignableFrom<ILambdaFunctionResource>(resource);
     }
 
     [Fact]
     public void PythonLambdaFunctionResource_DynamoDBLocalInstance_RoundTrips_ViaInterface()
     {
-        var resource = new PythonLambdaFunctionResource("test", "python3", Path.GetTempPath());
+        var resource = new PythonLambdaFunctionResource("test", "python3", Path.GetTempPath(), "main.handler");
         var iface = (ILambdaFunctionResource)resource;
 
         Assert.Null(iface.DynamoDBLocalInstance);

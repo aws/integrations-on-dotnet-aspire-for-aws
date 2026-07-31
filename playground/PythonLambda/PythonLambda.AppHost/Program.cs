@@ -5,13 +5,13 @@ using Aspire.Hosting.AWS.Lambda;
 var builder = DistributedApplication.CreateBuilder(args);
 
 // Configure AWS SDK (region / credentials) used by the Lambda function and DynamoDB Local.
-var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.USWest2);
+var awsSdkConfig = builder.AddAWSSDKConfig()
+    .WithRegion(Amazon.RegionEndpoint.USWest2);
 
 // Start a DynamoDB Local container so the Python Lambda can persist its invocation counter.
 var dynamoDBLocal = builder.AddAWSDynamoDBLocal("DynamoDBLocal");
 
 // Register the Python Lambda function.
-// Aspire will run: python -m awslambdaric (with _HANDLER=main.handler set in the environment)
 var toUpperFunction = builder.AddAWSPythonLambdaFunction(
         name: "ToUpperFunction",
         appDirectory: "../ToUpperLambda",
