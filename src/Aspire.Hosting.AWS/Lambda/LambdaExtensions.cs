@@ -167,7 +167,7 @@ public static class LambdaExtensions
         var resource = new PythonLambdaFunctionResource(name, executablePath, appDirectory);
 
         var resourceBuilder = builder.AddResource(resource)
-            .WithArgs("-m", "awslambdaric");
+            .WithArgs("-m", "awslambdaric", handler);
 
         // Attach the default .venv annotation so LambdaBeforeStartEventHandler can
         // create the venv and install requirements.txt on first run.
