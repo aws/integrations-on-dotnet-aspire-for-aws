@@ -395,6 +395,8 @@ public static class LambdaExtensions
         return OperatingSystem.IsWindows() ? "python" : "python3";
     }
 
+    /// <summary>
+    /// Add the Lambda service emulator resource. The <see cref="AddAWSLambdaFunction"/> method will automatically add the Lambda service emulator if it hasn't
     /// already been added. This method only needs to be called if the emulator needs to be customized with the <see cref="LambdaEmulatorOptions"/>. If
     /// this method is called it must be called only once and before any <see cref="AddAWSLambdaFunction"/> calls.
     /// </summary>
