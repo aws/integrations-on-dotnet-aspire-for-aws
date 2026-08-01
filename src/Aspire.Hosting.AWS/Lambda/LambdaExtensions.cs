@@ -61,68 +61,7 @@ public static class LambdaExtensions
 
         resource.WithOpenTelemetry();
 
-        resource.WithEnvironment(context =>
-        {
-            // If we are in publishing mode we do not need to connect the Lambda emulator which is only used for local development and testing.
-            if (context.ExecutionContext.IsPublishMode || serviceEmulator == null)
-                return;
-
-            var serviceRuntimeAPIEndpoint = serviceEmulator.GetEndpoint("http");
-
-            if (!serviceEmulator.TryGetLastAnnotation<LambdaEmulatorAnnotation>(out var lambdaEmulatorAnnotation) || lambdaEmulatorAnnotation == null)
-            {
-                return;
-            }
-
-            // Add the Lambda function resource on the path so the emulator can distinguish request
-            // for each Lambda function.
-            var apiPath = $"{serviceRuntimeAPIEndpoint.Host}:{serviceRuntimeAPIEndpoint.Port}/{name}";
-            context.EnvironmentVariables["AWS_EXECUTION_ENV"] = $"aspire.hosting.aws#{SdkUtilities.GetAssemblyVersion()}";
-            context.EnvironmentVariables["AWS_LAMBDA_RUNTIME_API"] = apiPath;
-            context.EnvironmentVariables["AWS_LAMBDA_FUNCTION_NAME"] = name;
-            context.EnvironmentVariables["_HANDLER"] = lambdaHandler;
-
-            context.EnvironmentVariables["AWS_LAMBDA_LOG_FORMAT"] = options.LogFormat.Value;
-            context.EnvironmentVariables["AWS_LAMBDA_LOG_LEVEL"] = options.ApplicationLogLevel.Value;
-
-            var serviceEmulatorEndpoint = serviceEmulator.GetEndpoint("https");
-            if (!serviceEmulatorEndpoint.Exists)
-            {
-                serviceEmulatorEndpoint = serviceEmulator.GetEndpoint("http");
-            }
-
-            var lambdaEmulatorEndpoint = $"{serviceEmulatorEndpoint.Scheme}://{serviceEmulatorEndpoint.Host}:{serviceEmulatorEndpoint.Port}/?function={Uri.EscapeDataString(name)}";
-            
-            resource.WithAnnotation(new ResourceCommandAnnotation(
-                name: "LambdaEmulator",
-                displayName: "Lambda Service Emulator",
-                updateState: context =>
-                {
-                    if (string.Equals(context.ResourceSnapshot.State?.Text, KnownResourceStates.Running))
-                    {
-                        return ResourceCommandState.Enabled;
-                    }
-                    return ResourceCommandState.Disabled;
-                },
-                executeCommand: context =>
-                {
-                    var startInfo = new ProcessStartInfo
-                    {
-                        UseShellExecute = true,
-                        FileName = lambdaEmulatorEndpoint
-                    };
-                    Process.Start(startInfo);
-
-                    return Task.FromResult(CommandResults.Success());
-                },
-                displayDescription: "Open the Lambda service emulator configured for this Lambda function",
-                parameter: null,
-                confirmationMessage: null,
-                iconName: "Bug",
-                iconVariant: IconVariant.Filled,
-                isHighlighted: true)
-            );
-        });
+        ConfigureLambdaEmulatorEnvironment(resource, serviceEmulator, name, lambdaHandler, options);
 
         resource.WithAnnotation(new LambdaFunctionAnnotation(lambdaHandler));
         
@@ -187,8 +126,31 @@ public static class LambdaExtensions
             resourceBuilder.WithParentRelationship(serviceEmulator);
         }
 
-        resourceBuilder.WithEnvironment(context =>
+        ConfigureLambdaEmulatorEnvironment(resourceBuilder, serviceEmulator, name, handler, options);
+
+        resourceBuilder.WithAnnotation(new LambdaFunctionAnnotation(handler));
+
+        return resourceBuilder;
+    }
+
+    /// <summary>
+    /// Wires up the Lambda service emulator connection for a Lambda function resource: injects the
+    /// runtime env vars (<c>AWS_LAMBDA_RUNTIME_API</c>, <c>_HANDLER</c>, etc.) and registers the
+    /// "open Lambda Test Tool UI" resource command. Shared by <see cref="AddAWSLambdaFunction"/> and
+    /// <see cref="AddAWSPythonLambdaFunction"/> since both need identical wiring, differing only in
+    /// the resource builder type and the handler string.
+    /// </summary>
+    private static void ConfigureLambdaEmulatorEnvironment<T>(
+        IResourceBuilder<T> resource,
+        ExecutableResource? serviceEmulator,
+        string name,
+        string handler,
+        LambdaFunctionOptions options)
+        where T : IResourceWithEnvironment
+    {
+        resource.WithEnvironment(context =>
         {
+            // If we are in publishing mode we do not need to connect the Lambda emulator which is only used for local development and testing.
             if (context.ExecutionContext.IsPublishMode || serviceEmulator == null)
                 return;
 
@@ -199,6 +161,8 @@ public static class LambdaExtensions
                 return;
             }
 
+            // Add the Lambda function resource on the path so the emulator can distinguish request
+            // for each Lambda function.
             var apiPath = $"{serviceRuntimeAPIEndpoint.Host}:{serviceRuntimeAPIEndpoint.Port}/{name}";
             context.EnvironmentVariables["AWS_EXECUTION_ENV"] = $"aspire.hosting.aws#{SdkUtilities.GetAssemblyVersion()}";
             context.EnvironmentVariables["AWS_LAMBDA_RUNTIME_API"] = apiPath;
@@ -216,7 +180,7 @@ public static class LambdaExtensions
 
             var lambdaEmulatorEndpoint = $"{serviceEmulatorEndpoint.Scheme}://{serviceEmulatorEndpoint.Host}:{serviceEmulatorEndpoint.Port}/?function={Uri.EscapeDataString(name)}";
 
-            resourceBuilder.WithAnnotation(new ResourceCommandAnnotation(
+            resource.WithAnnotation(new ResourceCommandAnnotation(
                 name: "LambdaEmulator",
                 displayName: "Lambda Service Emulator",
                 updateState: context =>
@@ -246,10 +210,6 @@ public static class LambdaExtensions
                 isHighlighted: true)
             );
         });
-
-        resourceBuilder.WithAnnotation(new LambdaFunctionAnnotation(handler));
-
-        return resourceBuilder;
     }
 
     /// <summary>
