@@ -7,8 +7,8 @@ using Aspire.Hosting.AWS.Lambda;
 namespace Aspire.Hosting.AWS.Lambda;
 
 /// <summary>
-/// Aspire resource representing a Python Lambda function, run locally via the
-/// AWS Lambda Runtime Interface Client (<c>awslambdaric</c>).
+/// Aspire resource representing a Python Lambda function, run locally via Aspire's
+/// pure-Python Lambda Runtime API bootstrap (see <see cref="LambdaBeforeStartEventHandler"/>).
 /// </summary>
 /// <remarks>
 /// The resource launches the Python executable found in the <c>.venv</c> virtual environment

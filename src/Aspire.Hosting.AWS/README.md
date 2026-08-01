@@ -536,21 +536,28 @@ The Aspire dashboard shows clickable URLs for each emulator alongside your agent
 ## Using Python Lambda Functions
 
 `Aspire.Hosting.AWS` supports running **Python Lambda functions** locally alongside your
-.NET services via `AddAWSPythonLambdaFunction`. The function runs as a native process
-using the [AWS Lambda Runtime Interface Client](https://github.com/aws/aws-lambda-python-runtime-interface-client)
-(`awslambdaric`) and is wired to the same Lambda service emulator and API Gateway emulator
+.NET services via `AddAWSPythonLambdaFunction`. The function runs as a native process using
+Aspire's own pure-Python Lambda Runtime API bootstrap — a small stdlib `http.client`
+implementation — and is wired to the same Lambda service emulator and API Gateway emulator
 used by .NET Lambda functions.
+
+We initially targeted the [AWS Lambda Runtime Interface Client](https://github.com/aws/aws-lambda-python-runtime-interface-client)
+(`awslambdaric`), but its runtime loop is implemented as a Linux-only C extension
+(`runtime_client`), so it can't run locally on macOS. Aspire instead generates a small
+pure-Python bootstrap script (implementing the same Lambda Runtime API invocation loop against
+the emulator) and runs the handler with that, which works identically on macOS and Linux.
 
 ### Prerequisites
 
 - Python 3.11 or later installed on the machine running `aspire run`
-- A virtual environment (`.venv`) in the Lambda project directory with `awslambdaric` installed:
+- A virtual environment (`.venv`) in the Lambda project directory with your function's
+  dependencies installed:
 
 ```bash
 cd MyPythonLambda/
 python3 -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install awslambdaric boto3  # add whatever your function needs
+pip install boto3  # add whatever your function needs
 ```
 
 ### Adding a Python Lambda function

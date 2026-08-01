@@ -130,9 +130,10 @@ public static class LambdaExtensions
     }
 
     /// <summary>
-    /// Add a Python Lambda function as an Aspire resource. The function is launched via the
-    /// AWS Lambda Runtime Interface Client (<c>python -m awslambdaric</c>) and connected to
-    /// the Lambda service emulator, enabling fully local end-to-end development.
+    /// Add a Python Lambda function as an Aspire resource. The function is launched via Aspire's
+    /// pure-Python Lambda Runtime API bootstrap (a stdlib <c>http.client</c> implementation, used
+    /// instead of <c>awslambdaric</c> because its C extension is Linux-only) and connected to
+    /// the Lambda service emulator, enabling fully local end-to-end development on macOS and Linux.
     /// </summary>
     /// <param name="builder">The distributed application builder.</param>
     /// <param name="name">Aspire resource name.</param>
