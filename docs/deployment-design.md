@@ -1,8 +1,8 @@
-# AWS Deployment Design for .NET Aspire
+# AWS Deployment Design for Aspire
 
 ## Overview
 
-The AWS deployment system for .NET Aspire transforms Aspire AppHost resources into AWS CDK constructs, which are then synthesized into CloudFormation templates and deployed to AWS. This document describes the architecture and design patterns used in the deployment system.
+The AWS deployment system for Aspire transforms Aspire AppHost resources into AWS CDK constructs, which are then synthesized into CloudFormation templates and deployed to AWS. This document describes the architecture and design patterns used in the deployment system.
 
 ## Table of Contents
 
@@ -1457,7 +1457,7 @@ CDKDefaultsProvider and then override the defaults property using the new defaul
 
 ## Summary
 
-The AWS deployment system for .NET Aspire provides a flexible, extensible architecture for transforming Aspire resources into AWS infrastructure:
+The AWS deployment system for Aspire provides a flexible, extensible architecture for transforming Aspire resources into AWS infrastructure:
 
 1. **Environment Setup**: Use `AddAWSCDKEnvironment()` to configure deployment with versioned defaults
 2. **Custom Stacks**: Provide your own CDK Stack to define custom infrastructure

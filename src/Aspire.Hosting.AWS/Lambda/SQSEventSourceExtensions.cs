@@ -24,7 +24,7 @@ public static class SQSEventSourceExtensions
 
     /// <summary>
     /// Add an SQS event source to a Lambda function. This feature emulates adding an SQS event source to a Lambda function when deployed to AWS. 
-    /// A separate sub resource will be added to the .NET Aspire application that polls the SQS queue. As messages 
+    /// A separate sub resource will be added to the Aspire application that polls the SQS queue. As messages 
     /// are received from the queue the Lambda function will be invoked with the messages.
     /// </summary>
     /// <param name="lambdaFunction">The Lambda function to add the event source to.</param>
@@ -39,7 +39,7 @@ public static class SQSEventSourceExtensions
 
     /// <summary>
     /// Add an SQS event source to a Lambda function. This feature emulates adding an SQS event source to a Lambda function when deployed to AWS. 
-    /// A separate sub resource will be added to the .NET Aspire application that polls the SQS queue. As messages 
+    /// A separate sub resource will be added to the Aspire application that polls the SQS queue. As messages 
     /// are received from the queue the Lambda function will be invoked with the messages.
     /// </summary>
     /// <param name="lambdaFunction">The Lambda function to add the event source to.</param>
@@ -71,7 +71,7 @@ public static class SQSEventSourceExtensions
 
     /// <summary>
     /// Add an SQS event source to a Lambda function. This feature emulates adding an SQS event source to a Lambda function when deployed to AWS. 
-    /// A separate sub resource will be added to the .NET Aspire application that polls the SQS queue. As messages 
+    /// A separate sub resource will be added to the Aspire application that polls the SQS queue. As messages 
     /// are received from the queue the Lambda function will be invoked with the messages.
     /// </summary>
     /// <param name="lambdaFunction">The Lambda function to add the event source to.</param>

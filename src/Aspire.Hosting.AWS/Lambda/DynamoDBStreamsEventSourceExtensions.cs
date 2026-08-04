@@ -20,7 +20,7 @@ public static class DynamoDBStreamsEventSourceExtensions
 
     /// <summary>
     /// Add a DynamoDB Streams event source to a Lambda function. This feature emulates adding a DynamoDB Streams event source to a Lambda function when deployed to AWS.
-    /// A separate sub resource will be added to the .NET Aspire application that polls the DynamoDB stream. As records
+    /// A separate sub resource will be added to the Aspire application that polls the DynamoDB stream. As records
     /// are received from the stream the Lambda function will be invoked with the records.
     /// </summary>
     /// <param name="lambdaFunction">The Lambda function to add the event source to.</param>
@@ -34,7 +34,7 @@ public static class DynamoDBStreamsEventSourceExtensions
 
     /// <summary>
     /// Add a DynamoDB Streams event source to a Lambda function. This feature emulates adding a DynamoDB Streams event source to a Lambda function when deployed to AWS.
-    /// A separate sub resource will be added to the .NET Aspire application that polls the DynamoDB stream. As records
+    /// A separate sub resource will be added to the Aspire application that polls the DynamoDB stream. As records
     /// are received from the stream the Lambda function will be invoked with the records.
     /// </summary>
     /// <param name="lambdaFunction">The Lambda function to add the event source to.</param>
@@ -60,7 +60,7 @@ public static class DynamoDBStreamsEventSourceExtensions
 
     /// <summary>
     /// Add a DynamoDB Streams event source to a Lambda function. This feature emulates adding a DynamoDB Streams event source to a Lambda function when deployed to AWS.
-    /// A separate sub resource will be added to the .NET Aspire application that polls the DynamoDB stream. As records
+    /// A separate sub resource will be added to the Aspire application that polls the DynamoDB stream. As records
     /// are received from the stream the Lambda function will be invoked with the records.
     /// </summary>
     /// <param name="lambdaFunction">The Lambda function to add the event source to.</param>
