@@ -9,7 +9,8 @@ namespace Aspire.Hosting.AWS.Lambda;
 /// Resource representing the Lambda Runtime API service emulator.
 /// </summary>
 /// <param name="name">Aspire resource name</param>
-public class LambdaEmulatorResource(string name) : ExecutableResource(name, 
+[AspireExport]
+public class LambdaEmulatorResource(string name) : ExecutableResource(name,
         "dotnet",
         Environment.CurrentDirectory
         )

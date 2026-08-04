@@ -24,6 +24,7 @@ public static class APIGatewayExtensions
     /// <param name="apiGatewayType">The type of API Gateway API. For example Rest, HttpV1 or HttpV2</param>
     /// <param name="options">The options to configure the emulator with.</param>
     /// <returns></returns>
+    [AspireExport]
     public static IResourceBuilder<APIGatewayEmulatorResource> AddAWSAPIGatewayEmulator(this IDistributedApplicationBuilder builder, string name, APIGatewayType apiGatewayType, APIGatewayEmulatorOptions? options = null)
     {
         options ??= new APIGatewayEmulatorOptions();
@@ -85,6 +86,7 @@ public static class APIGatewayExtensions
     /// <param name="httpMethod">The HTTP method the Lambda function should be called for.</param>
     /// <param name="path">The resource path the Lambda function should be called for.</param>
     /// <returns></returns>
+    [AspireExport("withAPIGatewayLambdaReference")]
     public static IResourceBuilder<APIGatewayEmulatorResource> WithReference(this IResourceBuilder<APIGatewayEmulatorResource> builder, IResourceBuilder<LambdaProjectResource> lambda, Method httpMethod, string path)
     {
         LambdaEmulatorAnnotation? lambdaEmulatorAnnotation = null;

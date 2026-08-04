@@ -8,6 +8,7 @@ namespace Aspire.Hosting.AWS.DynamoDB;
 /// Options that can be set for configuring the instance of DynamoDB local.
 /// </summary>
 [DebuggerDisplay("Type = {GetType().Name,nq}, Registry = {Registry}, Image = {Image}, Tag = {Tag}, LocalStorageDirectory = {LocalStorageDirectory}, SharedDb = {SharedDb}, DisableDynamoDBLocalTelemetry = {DisableDynamoDBLocalTelemetry}, DelayTransientStatuses = {DelayTransientStatuses}")]
+[AspireDto]
 public class DynamoDBLocalOptions
 {
     /// <summary>

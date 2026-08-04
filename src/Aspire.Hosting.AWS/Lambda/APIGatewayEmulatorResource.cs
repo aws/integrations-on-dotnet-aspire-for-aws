@@ -10,7 +10,8 @@ namespace Aspire.Hosting.AWS.Lambda;
 /// Resource representing the Amazon API Gateway emulator.
 /// </summary>
 /// <param name="name">Aspire resource name</param>
-public class APIGatewayEmulatorResource(string name, APIGatewayType apiGatewayType) : ExecutableResource(name, 
+[AspireExport]
+public class APIGatewayEmulatorResource(string name, APIGatewayType apiGatewayType) : ExecutableResource(name,
         "dotnet",
         Environment.CurrentDirectory
         )

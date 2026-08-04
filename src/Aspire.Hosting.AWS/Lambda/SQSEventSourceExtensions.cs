@@ -32,6 +32,7 @@ public static class SQSEventSourceExtensions
     /// <param name="options">Optional configuration for the event source.</param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
+    [AspireExport("withSQSEventSource")]
     public static IResourceBuilder<LambdaProjectResource> WithSQSEventSource(this IResourceBuilder<LambdaProjectResource> lambdaFunction, string queueUrl, SQSEventSourceOptions? options = null)
     {
         return WithSQSEventSource(lambdaFunction, () => ValueTask.FromResult(queueUrl), options, queueName: null);

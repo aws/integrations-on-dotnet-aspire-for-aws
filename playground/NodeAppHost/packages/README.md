@@ -1,0 +1,1 @@
+This folder stores locally packed NuGet packages from this repo so the Node.js-based AppHost can build and test against in-flight code. Package versions use the format `100.0.<seconds-since-2020>`.

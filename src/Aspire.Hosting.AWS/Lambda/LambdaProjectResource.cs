@@ -12,6 +12,7 @@ namespace Aspire.Hosting.AWS.Lambda;
 /// <summary>
 /// Aspire resource representing a Lambda function.
 /// </summary>
+[AspireExport]
 public class LambdaProjectResource : ProjectResource
 {
     /// <summary>
