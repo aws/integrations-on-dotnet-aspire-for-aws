@@ -22,9 +22,14 @@ const outputDir = join(scriptDir, 'packages');
 
 // aspire.config.json requests "Aspire.Hosting.AWS": "100.0.0", which NuGet treats as the range [100.0.0, ) and
 // resolves to the LOWEST matching version. So the local feed must contain exactly ONE 100.0.* package — the
-// freshly packed one. Clear the feed first so a previous (lower) dev version is not restored instead.
-rmSync(outputDir, { recursive: true, force: true });
+// freshly packed one. Clear out previously packed .nupkg files first so a previous (lower) dev version is not
+// restored instead. We delete only the packages (not the whole folder) so the checked-in README.md is preserved.
 mkdirSync(outputDir, { recursive: true });
+for (const entry of readdirSync(outputDir)) {
+    if (entry.endsWith('.nupkg')) {
+        rmSync(join(outputDir, entry), { force: true });
+    }
+}
 
 // Seconds since 2020-01-01T00:00:00Z. 1577836800 is that instant in Unix seconds.
 const seconds = Math.floor(Date.now() / 1000) - 1577836800;
