@@ -87,6 +87,25 @@ public static class APIGatewayExtensions
     /// <returns></returns>
     public static IResourceBuilder<APIGatewayEmulatorResource> WithReference(this IResourceBuilder<APIGatewayEmulatorResource> builder, IResourceBuilder<LambdaProjectResource> lambda, Method httpMethod, string path)
     {
+        return AddAPIGatewayLambdaRoute(builder, lambda.Resource, httpMethod, path);
+    }
+
+    /// <summary>
+    /// Add a reference for a Python Lambda function to be called by the API Gateway emulator for a particular HTTP method and resource path. The resource path can use 
+    /// variables like "/customer/{id}" or wild card paths like "/admin/{proxy+}".
+    /// </summary>
+    /// <param name="builder"></param>
+    /// <param name="lambda">The Python Lambda resource to add to the API Gateway emulator</param>
+    /// <param name="httpMethod">The HTTP method the Lambda function should be called for.</param>
+    /// <param name="path">The resource path the Lambda function should be called for.</param>
+    /// <returns></returns>
+    public static IResourceBuilder<APIGatewayEmulatorResource> WithReference(this IResourceBuilder<APIGatewayEmulatorResource> builder, IResourceBuilder<PythonLambdaFunctionResource> lambda, Method httpMethod, string path)
+    {
+        return AddAPIGatewayLambdaRoute(builder, lambda.Resource, httpMethod, path);
+    }
+
+    private static IResourceBuilder<APIGatewayEmulatorResource> AddAPIGatewayLambdaRoute(IResourceBuilder<APIGatewayEmulatorResource> builder, IResource lambdaResource, Method httpMethod, string path)
+    {
         LambdaEmulatorAnnotation? lambdaEmulatorAnnotation = null;
         if (builder.ApplicationBuilder.Resources.FirstOrDefault(x => x.TryGetLastAnnotation<LambdaEmulatorAnnotation>(out lambdaEmulatorAnnotation)) == null ||
             lambdaEmulatorAnnotation == null)
@@ -98,12 +117,13 @@ public static class APIGatewayExtensions
 
         builder.WithEnvironment(context =>
         {
-            var envName = "APIGATEWAY_EMULATOR_ROUTE_CONFIG_" + lambda.Resource.Name;
-            var config = new RouteConfig(lambda.Resource.Name, lambdaEmulatorAnnotation.LambdaRuntimeEndpoint.Url, httpMethod, path);
+            var envName = "APIGATEWAY_EMULATOR_ROUTE_CONFIG_" + lambdaResource.Name;
+            var config = new RouteConfig(lambdaResource.Name, lambdaEmulatorAnnotation.LambdaRuntimeEndpoint.Url, httpMethod, path);
             var configJson = JsonSerializer.Serialize(config);
             context.EnvironmentVariables[envName] = configJson;
         });
 
         return builder;
     }
+
 }

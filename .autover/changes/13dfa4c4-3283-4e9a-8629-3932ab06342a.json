@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Minor",
+      "ChangelogMessages": [
+        "Add support for Python Lambda functions in local e2e development via AddAWSPythonLambdaFunction"
+      ]
+    }
+  ]
+}

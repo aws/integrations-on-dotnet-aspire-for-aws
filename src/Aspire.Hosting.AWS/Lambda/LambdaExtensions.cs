@@ -61,6 +61,93 @@ public static class LambdaExtensions
 
         resource.WithOpenTelemetry();
 
+        ConfigureLambdaEmulatorEnvironment(resource, serviceEmulator, name, lambdaHandler, options);
+
+        resource.WithAnnotation(new LambdaFunctionAnnotation(lambdaHandler));
+        
+        return resource;
+    }
+
+    /// <summary>
+    /// Add a Python Lambda function as an Aspire resource. The function is launched via Aspire's
+    /// pure-Python Lambda Runtime API bootstrap (a stdlib <c>http.client</c> implementation, used
+    /// instead of <c>awslambdaric</c> because its C extension is Linux-only) and connected to
+    /// the Lambda service emulator, enabling fully local end-to-end development on macOS and Linux.
+    /// </summary>
+    /// <param name="builder">The distributed application builder.</param>
+    /// <param name="name">Aspire resource name.</param>
+    /// <param name="appDirectory">
+    /// Path to the directory containing the Python Lambda source code. May be relative to the
+    /// AppHost project directory. A <c>.venv</c> virtual environment in this directory is used
+    /// if present; otherwise the system <c>python3</c> executable is used. Use
+    /// <see cref="WithVirtualEnvironment(Aspire.Hosting.ApplicationModel.IResourceBuilder{Aspire.Hosting.AWS.Lambda.PythonLambdaFunctionResource}, string)"/>
+    /// to override the default virtual environment path.
+    /// </param>
+    /// <param name="handler">
+    /// The Lambda function handler in <c>module.function</c> format, for example
+    /// <c>main.handler</c> for a <c>handler</c> function inside <c>main.py</c>.
+    /// </param>
+    /// <param name="options">Optional options to configure the Lambda function.</param>
+    /// <returns>A resource builder for the Python Lambda function.</returns>
+    public static IResourceBuilder<PythonLambdaFunctionResource> AddAWSPythonLambdaFunction(
+        this IDistributedApplicationBuilder builder,
+        string name,
+        string appDirectory,
+        string handler,
+        LambdaFunctionOptions? options = null)
+    {
+        options ??= new LambdaFunctionOptions();
+
+        if (!Path.IsPathRooted(appDirectory))
+        {
+            appDirectory = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, appDirectory));
+        }
+
+        var executablePath = ResolvePythonExecutable(appDirectory);
+        var resource = new PythonLambdaFunctionResource(name, executablePath, appDirectory, handler);
+
+        var resourceBuilder = builder.AddResource(resource);
+
+        // Attach the default .venv annotation so LambdaBeforeStartEventHandler can
+        // create the venv and install requirements.txt on first run.
+        var defaultVenvPath = Path.GetFullPath(Path.Combine(appDirectory, ".venv"));
+        resourceBuilder.WithAnnotation(new PythonVirtualEnvironmentAnnotation(
+            defaultVenvPath,
+            createIfNotExists: true,
+            pythonExecutablePath: GetSystemPythonExecutable())
+        {
+            ResourceBuilder = resourceBuilder
+        });
+
+        ExecutableResource? serviceEmulator = null;
+        if (builder.ExecutionContext.IsRunMode)
+        {
+            serviceEmulator = AddOrGetLambdaServiceEmulatorResource(builder);
+            resourceBuilder.WithParentRelationship(serviceEmulator);
+        }
+
+        ConfigureLambdaEmulatorEnvironment(resourceBuilder, serviceEmulator, name, handler, options);
+
+        resourceBuilder.WithAnnotation(new LambdaFunctionAnnotation(handler));
+
+        return resourceBuilder;
+    }
+
+    /// <summary>
+    /// Wires up the Lambda service emulator connection for a Lambda function resource: injects the
+    /// runtime env vars (<c>AWS_LAMBDA_RUNTIME_API</c>, <c>_HANDLER</c>, etc.) and registers the
+    /// "open Lambda Test Tool UI" resource command. Shared by <see cref="AddAWSLambdaFunction"/> and
+    /// <see cref="AddAWSPythonLambdaFunction"/> since both need identical wiring, differing only in
+    /// the resource builder type and the handler string.
+    /// </summary>
+    private static void ConfigureLambdaEmulatorEnvironment<T>(
+        IResourceBuilder<T> resource,
+        ExecutableResource? serviceEmulator,
+        string name,
+        string handler,
+        LambdaFunctionOptions options)
+        where T : IResourceWithEnvironment
+    {
         resource.WithEnvironment(context =>
         {
             // If we are in publishing mode we do not need to connect the Lambda emulator which is only used for local development and testing.
@@ -80,7 +167,7 @@ public static class LambdaExtensions
             context.EnvironmentVariables["AWS_EXECUTION_ENV"] = $"aspire.hosting.aws#{SdkUtilities.GetAssemblyVersion()}";
             context.EnvironmentVariables["AWS_LAMBDA_RUNTIME_API"] = apiPath;
             context.EnvironmentVariables["AWS_LAMBDA_FUNCTION_NAME"] = name;
-            context.EnvironmentVariables["_HANDLER"] = lambdaHandler;
+            context.EnvironmentVariables["_HANDLER"] = handler;
 
             context.EnvironmentVariables["AWS_LAMBDA_LOG_FORMAT"] = options.LogFormat.Value;
             context.EnvironmentVariables["AWS_LAMBDA_LOG_LEVEL"] = options.ApplicationLogLevel.Value;
@@ -92,7 +179,7 @@ public static class LambdaExtensions
             }
 
             var lambdaEmulatorEndpoint = $"{serviceEmulatorEndpoint.Scheme}://{serviceEmulatorEndpoint.Host}:{serviceEmulatorEndpoint.Port}/?function={Uri.EscapeDataString(name)}";
-            
+
             resource.WithAnnotation(new ResourceCommandAnnotation(
                 name: "LambdaEmulator",
                 displayName: "Lambda Service Emulator",
@@ -123,10 +210,149 @@ public static class LambdaExtensions
                 isHighlighted: true)
             );
         });
+    }
 
-        resource.WithAnnotation(new LambdaFunctionAnnotation(lambdaHandler));
-        
-        return resource;
+    /// <summary>
+    /// Configures a Python Lambda function to use a specific virtual environment.
+    /// </summary>
+    /// <param name="builder">The Python Lambda function builder.</param>
+    /// <param name="virtualEnvironmentPath">
+    /// Path to the virtual environment directory. Relative paths are resolved from the
+    /// Lambda function <see cref="PythonLambdaFunctionResource.AppDirectory"/>.
+    /// Defaults to <c>.venv</c>.
+    /// </param>
+    /// <param name="createIfNotExists">
+    /// When <c>true</c> (the default), the virtual environment is created via
+    /// <c>python -m venv</c> if it does not already exist, and
+    /// <c>pip install -r requirements.txt</c> is run before the Lambda process starts.
+    /// Set to <c>false</c> to require the virtual environment to already exist.
+    /// </param>
+    /// <returns>The Python Lambda function builder.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="virtualEnvironmentPath"/> is null or whitespace.</exception>
+    public static IResourceBuilder<PythonLambdaFunctionResource> WithVirtualEnvironment(
+        this IResourceBuilder<PythonLambdaFunctionResource> builder,
+        string virtualEnvironmentPath = ".venv",
+        bool createIfNotExists = true)
+    {
+        if (string.IsNullOrWhiteSpace(virtualEnvironmentPath))
+        {
+            throw new ArgumentException("Virtual environment path must not be null or whitespace.", nameof(virtualEnvironmentPath));
+        }
+
+        var resolvedVenvPath = Path.IsPathRooted(virtualEnvironmentPath)
+            ? virtualEnvironmentPath
+            : Path.GetFullPath(Path.Combine(builder.Resource.AppDirectory, virtualEnvironmentPath));
+
+        var existingAnnotation = builder.Resource.Annotations
+            .OfType<PythonVirtualEnvironmentAnnotation>()
+            .LastOrDefault();
+
+        builder.WithAnnotation(
+            new PythonVirtualEnvironmentAnnotation(
+                resolvedVenvPath,
+                createIfNotExists,
+                existingAnnotation?.PythonExecutablePath ?? GetSystemPythonExecutable())
+            {
+                ResourceBuilder = builder
+            },
+            ResourceAnnotationMutationBehavior.Replace);
+
+        // If the venv already exists, wire up the executable immediately.
+        // If not and createIfNotExists is true, the before-start handler will create it
+        // and update the command via WithCommand before the process launches.
+        var venvPython = OperatingSystem.IsWindows()
+            ? Path.Combine(resolvedVenvPath, "Scripts", "python.exe")
+            : Path.Combine(resolvedVenvPath, "bin", "python");
+
+        if (File.Exists(venvPython))
+        {
+            builder.WithCommand(venvPython);
+        }
+        else if (!createIfNotExists)
+        {
+            throw new InvalidOperationException(
+                $"Python executable was not found in virtual environment '{resolvedVenvPath}'. " +
+                $"Expected executable at '{venvPython}'. " +
+                $"Create the virtual environment first or set createIfNotExists: true.");
+        }
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Configures which Python executable is used to create the virtual environment when
+    /// <see cref="WithVirtualEnvironment(Aspire.Hosting.ApplicationModel.IResourceBuilder{Aspire.Hosting.AWS.Lambda.PythonLambdaFunctionResource}, string, bool)"/>
+    /// runs with <c>createIfNotExists: true</c>.
+    /// </summary>
+    /// <param name="builder">The Python Lambda function builder.</param>
+    /// <param name="pythonExecutablePath">
+    /// Python executable command or absolute path (for example, <c>python3</c> or
+    /// <c>/opt/homebrew/bin/python3.12</c>).
+    /// </param>
+    /// <returns>The Python Lambda function builder.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="pythonExecutablePath"/> is null or whitespace.</exception>
+    public static IResourceBuilder<PythonLambdaFunctionResource> WithPythonExecutable(
+        this IResourceBuilder<PythonLambdaFunctionResource> builder,
+        string pythonExecutablePath)
+    {
+        if (string.IsNullOrWhiteSpace(pythonExecutablePath))
+        {
+            throw new ArgumentException("Python executable path must not be null or whitespace.", nameof(pythonExecutablePath));
+        }
+
+        var existingAnnotation = builder.Resource.Annotations
+            .OfType<PythonVirtualEnvironmentAnnotation>()
+            .LastOrDefault();
+
+        var virtualEnvironmentPath = existingAnnotation?.VirtualEnvironmentPath
+            ?? Path.GetFullPath(Path.Combine(builder.Resource.AppDirectory, ".venv"));
+        var createIfNotExists = existingAnnotation?.CreateIfNotExists ?? true;
+
+        builder.WithAnnotation(
+            new PythonVirtualEnvironmentAnnotation(
+                virtualEnvironmentPath,
+                createIfNotExists,
+                pythonExecutablePath)
+            {
+                ResourceBuilder = builder
+            },
+            ResourceAnnotationMutationBehavior.Replace);
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Resolves the Python executable to use for a Lambda function in the given directory.
+    /// Prefers <c>.venv/bin/python</c> (Unix) or <c>.venv\Scripts\python.exe</c> (Windows),
+    /// and falls back to system python3/python for the default <c>.venv</c> path.
+    /// </summary>
+    private static string ResolvePythonExecutable(string appDirectory, string virtualEnvironmentPath = ".venv")
+    {
+        var resolvedVirtualEnvironmentPath = Path.IsPathRooted(virtualEnvironmentPath)
+            ? virtualEnvironmentPath
+            : Path.GetFullPath(Path.Combine(appDirectory, virtualEnvironmentPath));
+
+        var venvPython = OperatingSystem.IsWindows()
+            ? Path.Combine(resolvedVirtualEnvironmentPath, "Scripts", "python.exe")
+            : Path.Combine(resolvedVirtualEnvironmentPath, "bin", "python");
+
+        if (File.Exists(venvPython))
+        {
+            return venvPython;
+        }
+
+        if (!string.Equals(virtualEnvironmentPath, ".venv", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Python executable was not found in virtual environment '{resolvedVirtualEnvironmentPath}'. Expected executable at '{venvPython}'.");
+        }
+
+        return OperatingSystem.IsWindows() ? "python" : "python3";
+    }
+
+    private static string GetSystemPythonExecutable()
+    {
+        return OperatingSystem.IsWindows() ? "python" : "python3";
     }
 
     /// <summary>
