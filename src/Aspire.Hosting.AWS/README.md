@@ -1,6 +1,6 @@
 # Aspire.Hosting.AWS library
 
-Provides extension methods and resources definition for a .NET Aspire AppHost to configure the AWS SDK for .NET and AWS application resources.
+Provides extension methods and resources definition for a Aspire AppHost to configure the AWS SDK for .NET and AWS application resources.
 
 ## Features
 
@@ -11,6 +11,7 @@ Provides extension methods and resources definition for a .NET Aspire AppHost to
 * [Deployment to AWS (Preview)](#deployment-to-aws-preview)
 * [Integrating Amazon DynamoDB Local](#integrating-amazon-dynamodb-local)
 * [Local Development with AgentCore (Experimental)](#local-development-with-agentcore-experimental)
+* [Using a Node.js (TypeScript) AppHost](#using-a-nodejs-typescript-apphost)
 
 ## Prerequisites
 
@@ -180,11 +181,11 @@ builder.AddProject<Projects.Frontend>("Frontend")
 
 ## Integrating AWS Lambda Local Development
 
-You can develop and test AWS Lambda functions locally within your .NET Aspire application. This enables testing Lambda functions alongside other application resources during development.
+You can develop and test AWS Lambda functions locally within your Aspire application. This enables testing Lambda functions alongside other application resources during development.
 
 ### Adding Lambda Functions
 
-To add a Lambda function to your .NET Aspire AppHost, use the `AddAWSLambdaFunction` method. The method supports both executable Lambda functions and class library Lambda functions:
+To add a Lambda function to your Aspire AppHost, use the `AddAWSLambdaFunction` method. The method supports both executable Lambda functions and class library Lambda functions:
 
 ```csharp
 var awsConfig = builder.AddAWSSDKConfig()
@@ -211,7 +212,7 @@ The lambdaHandler parameter specifies the Lambda handler in different formats de
 - For class library projects: use the format `{assembly}::{type}::{method}`.
 
 ### Amazon Lambda Test Tool Automatic Installation
-When adding Lambda functions to your .NET Aspire application, the integration automatically manages the installation and updates of the [`Amazon.Lambda.TestTool`](https://github.com/aws/aws-lambda-dotnet/tree/master/Tools/LambdaTestTool-v2). This tool is needed for local Lambda function emulation.
+When adding Lambda functions to your Aspire application, the integration automatically manages the installation and updates of the [`Amazon.Lambda.TestTool`](https://github.com/aws/aws-lambda-dotnet/tree/master/Tools/LambdaTestTool-v2). This tool is needed for local Lambda function emulation.
 
 You can customize the tool installation behavior by calling `AddAWSLambdaServiceEmulator` before any `AddAWSLambdaFunction` calls:
 
@@ -235,7 +236,7 @@ The `LambdaEmulatorOptions` provide the following customization:
 
 ### API Gateway Local Emulation
 
-To add an API Gateaway emulator to your .NET Aspire AppHost, use the `AddAWSAPIGatewayEmulator` method. 
+To add an API Gateaway emulator to your Aspire AppHost, use the `AddAWSAPIGatewayEmulator` method. 
 
 ```csharp
 // Add Lambda functions
@@ -290,7 +291,7 @@ By combining the [ASP.NET Core bridge library](https://github.com/aws/aws-lambda
 
 > **Note**: This feature is currently in preview and subject to change based on feedback. We encourage you to try it out and share your feedback!
 
-The AWS deployment feature for .NET Aspire enables you to deploy your Aspire applications directly to AWS. The deployment system transforms your Aspire AppHost resources into AWS CDK constructs, which are then synthesized into CloudFormation templates and deployed to your AWS account. This provides a seamless path from local development to cloud deployment.
+The AWS deployment feature for Aspire enables you to deploy your Aspire applications directly to AWS. The deployment system transforms your Aspire AppHost resources into AWS CDK constructs, which are then synthesized into CloudFormation templates and deployed to your AWS account. This provides a seamless path from local development to cloud deployment.
 
 For comprehensive documentation including advanced scenarios, implementation details, and architectural guidance, see the [Deployment Design Document](../../docs/deployment-design.md).
 
@@ -418,7 +419,7 @@ When resources are connected with `WithReference()`, the system automatically:
 * Attaches resources to the same VPC when required (e.g., for ElastiCache)
 * Sets up security groups to allow network access between resources
 
-Your application code can access the referenced resource using the standard .NET Aspire configuration patterns - no AWS-specific code required.
+Your application code can access the referenced resource using the standard Aspire configuration patterns - no AWS-specific code required.
 
 ### Advanced Scenarios
 
@@ -433,9 +434,9 @@ The design document provides detailed examples and implementation guidance for t
 
 ## Integrating Amazon DynamoDB Local
 
-Amazon DynamoDB provides a [local version of DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocalHistory.html) for development and testing that is distributed as a container. With version 9.1.0 of the Aspire.Hosting.AWS package, you can easily integrate the DynamoDB local container with your .NET Aspire project. This enables seamless transition between DynamoDB Local for development and the production DynamoDB service in AWS, without requiring any code changes in your application.
+Amazon DynamoDB provides a [local version of DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocalHistory.html) for development and testing that is distributed as a container. With version 9.1.0 of the Aspire.Hosting.AWS package, you can easily integrate the DynamoDB local container with your Aspire project. This enables seamless transition between DynamoDB Local for development and the production DynamoDB service in AWS, without requiring any code changes in your application.
 
-To get started in the .NET Aspire AppHost, call the `AddAWSDynamoDBLocal` method to add DynamoDB local as a resource to the .NET Aspire application.
+To get started in the Aspire AppHost, call the `AddAWSDynamoDBLocal` method to add DynamoDB local as a resource to the Aspire application.
 
 ```csharp
 var builder = DistributedApplication.CreateBuilder(args);
@@ -444,7 +445,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 var localDynamoDB = builder.AddAWSDynamoDBLocal("DynamoDBLocal");
 ```
 
-For each .NET project in the .NET Aspire application using DynamoDB, add a reference to the DynamoDB local resource.
+For each .NET project in the Aspire application using DynamoDB, add a reference to the DynamoDB local resource.
 
 ```csharp
 // Reference DynamoDB local in project
@@ -461,9 +462,9 @@ The `AWS_ENDPOINT_URL_DYNAMODB` environment variable overrides other config se
 
 ### Options for DynamoDB Local
 
-When the `AddAWSDynamoDBLocal` method is called, any data and table definitions are stored in memory by default. This means that every time the .NET Aspire application is started, DynamoDB local is initiated with a fresh instance with no tables or data. The `AddAWSDynamoDBLocal` method takes in an optional `DynamoDBLocalOptions` object that exposes the [options](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.UsageNotes.html) that are available for DynamoDB local.
+When the `AddAWSDynamoDBLocal` method is called, any data and table definitions are stored in memory by default. This means that every time the Aspire application is started, DynamoDB local is initiated with a fresh instance with no tables or data. The `AddAWSDynamoDBLocal` method takes in an optional `DynamoDBLocalOptions` object that exposes the [options](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.UsageNotes.html) that are available for DynamoDB local.
 
-If you want the tables and data to persist between .NET Aspire debug sessions, set the `LocalStorageDirectory` property on the `DynamoDBLocalOptions` object to a local folder where the data will be persisted. The `AddAWSDynamoDBLocal` method will take care of mounting the local directory to the container and configuring the DynamoDB local process to use the mount point.
+If you want the tables and data to persist between Aspire debug sessions, set the `LocalStorageDirectory` property on the `DynamoDBLocalOptions` object to a local folder where the data will be persisted. The `AddAWSDynamoDBLocal` method will take care of mounting the local directory to the container and configuring the DynamoDB local process to use the mount point.
 
 ## Local Development with AgentCore (Experimental)
 
@@ -532,6 +533,78 @@ When the Aspire AppHost starts, each `AddAgentCoreRuntime` call:
 3. Optionally starts a **Memory Emulator** for short-term memory
 
 The Aspire dashboard shows clickable URLs for each emulator alongside your agent resource.
+
+## Using a Node.js (TypeScript) AppHost
+
+.NET Aspire supports authoring the AppHost in TypeScript/Node.js instead of C#. `Aspire.Hosting.AWS` exposes its
+features to a Node.js AppHost through the Aspire Type System (ATS): the Aspire CLI generates a TypeScript SDK
+from the package and your `apphost.mts` calls the generated methods, which are proxied back to the .NET code.
+Only the AppHost authoring language changes — the Lambda functions and AWS resources remain .NET based.
+
+Declare the package in `aspire.config.json`:
+
+```json
+{
+  "appHost": { "path": "apphost.mts", "language": "typescript/nodejs" },
+  "packages": {
+    "Aspire.Hosting.AWS": ""
+  }
+}
+```
+
+Then use the generated fluent API from `apphost.mts`:
+
+```ts
+import { createBuilder, Method, APIGatewayType } from './.aspire/modules/aspire.mjs';
+
+const builder = await createBuilder();
+
+const sdkConfig = await builder.addAWSSDKConfig().withRegion('us-west-2');
+
+const dynamoDBLocal = await builder.addAWSDynamoDBLocal('DynamoDBLocal');
+
+// Executable-model Lambda (handler is the assembly name); reference DynamoDB Local and the SDK config.
+await builder
+    .addAWSLambdaFunction('ToUpperFunction', './ToUpperFunctionExecutable', 'ToUpperFunctionExecutable')
+    .withAWSSDKConfigReference(sdkConfig)
+    .withDynamoDBLocalReference(dynamoDBLocal);
+
+// Class-library-model Lambda (handler is "Assembly::Type::Method"), fronted by the API Gateway emulator.
+const add = await builder
+    .addAWSLambdaFunction('AddFunction', './CalculatorFunctions',
+        'CalculatorFunctions::CalculatorFunctions.Functions::Add')
+    .withAWSSDKConfigReference(sdkConfig);
+
+await builder.addAWSAPIGatewayEmulator('APIGatewayEmulator', APIGatewayType.HttpV2)
+    .withAPIGatewayLambdaReference(add, Method.Get, '/add/{x}/{y}');
+
+await builder.build().run();
+```
+
+### Supported features and method-name differences
+
+The generated TypeScript methods use camelCase versions of the C# method names. A few methods are exported under
+**different names** in TypeScript because the C# names would collide with each other or with core Aspire (most
+notably every AWS `WithReference` overload — core Aspire owns the `withReference` name in polyglot AppHosts, so
+the AWS reference methods are given distinct, stable names instead).
+
+| Feature | C# API | TypeScript (polyglot) method | Notes |
+| --- | --- | --- | --- |
+| AWS SDK configuration | `AddAWSSDKConfig` / `WithProfile` / `WithSdkValidation` | `addAWSSDKConfig` / `withProfile` / `withSdkValidation` | Same names (camelCase). |
+| Set the region | `WithRegion(RegionEndpoint)` | `withRegion(systemName: string)` | Takes a region **string** such as `"us-west-2"` (the `RegionEndpoint` overload is C#-only). |
+| Reference the SDK config | `WithReference(IAWSSDKConfig)` | **`withAWSSDKConfigReference`** | Renamed to avoid colliding with the core `withReference`. |
+| DynamoDB Local | `AddAWSDynamoDBLocal` | `addAWSDynamoDBLocal` | Same name. |
+| Reference DynamoDB Local | `WithReference(IResourceBuilder<DynamoDBLocalResource>)` | **`withDynamoDBLocalReference`** | Renamed to avoid colliding with the core `withReference`. |
+| Add a Lambda function | `AddAWSLambdaFunction<TProject>(name, handler, options?)` | `addAWSLambdaFunction(name, projectPath, handler, options?)` | The generic type parameter is replaced by a **project path string** (the `.csproj` file or its directory). Supports both the executable and class library programming models via the handler string. |
+| Lambda service emulator | `AddAWSLambdaServiceEmulator` | `addAWSLambdaServiceEmulator` | Same name. |
+| API Gateway emulator | `AddAWSAPIGatewayEmulator` | `addAWSAPIGatewayEmulator` | Same name. |
+| Route a Lambda via API Gateway | `WithReference(lambda, Method, path)` | **`withAPIGatewayLambdaReference`** | Renamed to avoid colliding with the core `withReference`. |
+| SQS event source | `WithSQSEventSource(queueUrl, options?)` | `withSQSEventSource(queueUrl, options?)` | Only the **queue URL string** overload is exported; the CDK-construct and CloudFormation overloads are C#-only. |
+| DynamoDB Streams event source | `WithDynamoDBStreamsEventSource(tableName, options?)` | `withDynamoDBStreamsEventSource(tableName, options?)` | Only the **table name string** overload is exported; the CDK-construct and CloudFormation overloads are C#-only. |
+
+Lambda function `LogFormat` / `ApplicationLogLevel` options are passed as strings (e.g. `"JSON"`, `"DEBUG"`) from
+TypeScript. A runnable end-to-end example lives in the repository's `playground/NodeAppHost` folder, and the
+full design is documented in [docs/polyglot-design.md](https://github.com/aws/integrations-on-dotnet-aspire-for-aws/blob/main/docs/polyglot-design.md).
 
 ## Feedback & contributing
 

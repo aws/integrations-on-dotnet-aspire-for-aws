@@ -1,3 +1,10 @@
+## Release 2026-08-04
+
+### Aspire.Hosting.AWS (13.6.0)
+* [Breaking Change] ECS Fargate Express Service deployment now uses a TaskDefinition construct instead of the PrimaryContainer construct when generating the CDK stack. This change is required for future work of adding OpenTelemetry support where the side car container will need to be added to the TaskDefinition.
+* Updated Amazon.CDK.Lib dependency from 2.235.0 to 2.262.0
+* Add support for Aspire.Hosting.AWS features for Node.js based Aspire AppHost
+
 ## Release 2026-07-09
 
 ### Aspire.Hosting.AWS (13.5.0)

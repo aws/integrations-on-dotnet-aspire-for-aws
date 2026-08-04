@@ -20,13 +20,14 @@ public static class DynamoDBStreamsEventSourceExtensions
 
     /// <summary>
     /// Add a DynamoDB Streams event source to a Lambda function. This feature emulates adding a DynamoDB Streams event source to a Lambda function when deployed to AWS.
-    /// A separate sub resource will be added to the .NET Aspire application that polls the DynamoDB stream. As records
+    /// A separate sub resource will be added to the Aspire application that polls the DynamoDB stream. As records
     /// are received from the stream the Lambda function will be invoked with the records.
     /// </summary>
     /// <param name="lambdaFunction">The Lambda function to add the event source to.</param>
     /// <param name="tableName">The name of the DynamoDB table to read stream records from.</param>
     /// <param name="options">Optional configuration for the event source.</param>
     /// <returns></returns>
+    [AspireExport("withDynamoDBStreamsEventSource")]
     public static IResourceBuilder<LambdaProjectResource> WithDynamoDBStreamsEventSource(this IResourceBuilder<LambdaProjectResource> lambdaFunction, string tableName, DynamoDBStreamsEventSourceOptions? options = null)
     {
         return WithDynamoDBStreamsEventSource(lambdaFunction, () => ValueTask.FromResult(tableName), options, tableName: tableName);
@@ -34,7 +35,7 @@ public static class DynamoDBStreamsEventSourceExtensions
 
     /// <summary>
     /// Add a DynamoDB Streams event source to a Lambda function. This feature emulates adding a DynamoDB Streams event source to a Lambda function when deployed to AWS.
-    /// A separate sub resource will be added to the .NET Aspire application that polls the DynamoDB stream. As records
+    /// A separate sub resource will be added to the Aspire application that polls the DynamoDB stream. As records
     /// are received from the stream the Lambda function will be invoked with the records.
     /// </summary>
     /// <param name="lambdaFunction">The Lambda function to add the event source to.</param>
@@ -60,7 +61,7 @@ public static class DynamoDBStreamsEventSourceExtensions
 
     /// <summary>
     /// Add a DynamoDB Streams event source to a Lambda function. This feature emulates adding a DynamoDB Streams event source to a Lambda function when deployed to AWS.
-    /// A separate sub resource will be added to the .NET Aspire application that polls the DynamoDB stream. As records
+    /// A separate sub resource will be added to the Aspire application that polls the DynamoDB stream. As records
     /// are received from the stream the Lambda function will be invoked with the records.
     /// </summary>
     /// <param name="lambdaFunction">The Lambda function to add the event source to.</param>

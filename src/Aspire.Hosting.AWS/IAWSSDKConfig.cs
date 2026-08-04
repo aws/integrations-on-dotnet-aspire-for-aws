@@ -8,6 +8,7 @@ namespace Aspire.Hosting.AWS;
 /// <summary>
 /// Configuration used to construct service client from the AWS SDK for .NET.
 /// </summary>
+[AspireExport]
 public interface IAWSSDKConfig
 {
     /// <summary>

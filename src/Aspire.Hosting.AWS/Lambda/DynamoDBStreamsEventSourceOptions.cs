@@ -5,6 +5,7 @@ namespace Aspire.Hosting.AWS.Lambda;
 /// <summary>
 /// Optional settings for configuring a DynamoDB Streams event source for a Lambda function.
 /// </summary>
+[AspireDto]
 public class DynamoDBStreamsEventSourceOptions
 {
     /// <summary>

@@ -1,14 +1,14 @@
-## Integrations with .NET Aspire for AWS
+## Integrations with Aspire for AWS
 
-This repositry contains the integrations with [.NET Aspire](https://github.com/dotnet/aspire) for AWS. The AWS integrations focus on provisioning and working with AWS application resources in development environment. Making the dev inner loop of iterating over application code with AWS resource seamless without having to leave the development environment.
+This repositry contains the integrations with [Aspire](https://github.com/dotnet/aspire) for AWS. The AWS integrations focus on provisioning and working with AWS application resources in development environment. Making the dev inner loop of iterating over application code with AWS resource seamless without having to leave the development environment.
 
-For introduction on using AWS and Aspire checkout the [Building .NET Applications Across Clouds with .NET Aspire](https://www.youtube.com/watch?v=yVgr6cRYOPk) talk as part of .NET Conf 2024.
+For introduction on using AWS and Aspire checkout the [Building .NET Applications Across Clouds with Aspire](https://www.youtube.com/watch?v=yVgr6cRYOPk) talk as part of .NET Conf 2024.
 
 [![image](./resources/dotnetconf-2024-session.jpg)](https://www.youtube.com/watch?v=yVgr6cRYOPk)
 
 ## Integrations
 
-The following are the list of AWS integrations currently supported for .NET Aspire.
+The following are the list of AWS integrations currently supported for Aspire.
 
 ### Aspire.Hosting.AWS
 
@@ -30,7 +30,7 @@ Check out the package's [README](./src/Aspire.Hosting.AWS/README.md) for a deepe
 
 > **Note**: This feature is currently in preview and subject to change based on feedback. We encourage you to try it out and share your feedback!
 
-The AWS deployment feature for .NET Aspire enables you to deploy your Aspire applications directly to AWS. The deployment system transforms your Aspire AppHost resources into AWS CDK constructs, which are then synthesized into CloudFormation templates and deployed to your AWS account. This provides a seamless path from local development to cloud deployment.
+The AWS deployment feature for Aspire enables you to deploy your Aspire applications directly to AWS. The deployment system transforms your Aspire AppHost resources into AWS CDK constructs, which are then synthesized into CloudFormation templates and deployed to your AWS account. This provides a seamless path from local development to cloud deployment.
 
 For comprehensive documentation including advanced scenarios, implementation details, and architectural guidance, see the [Deployment Design Document](./docs/deployment-design.md).
 
@@ -158,7 +158,7 @@ When resources are connected with `WithReference()`, the system automatically:
 * Attaches resources to the same VPC when required (e.g., for ElastiCache)
 * Sets up security groups to allow network access between resources
 
-Your application code can access the referenced resource using the standard .NET Aspire configuration patterns - no AWS-specific code required.
+Your application code can access the referenced resource using the standard Aspire configuration patterns - no AWS-specific code required.
 
 ### Advanced Scenarios
 
