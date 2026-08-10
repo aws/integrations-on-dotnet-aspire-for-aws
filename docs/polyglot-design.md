@@ -2,7 +2,7 @@
 
 ## Overview
 
-.NET Aspire supports authoring the AppHost in TypeScript/Node.js instead of C#. This document describes how the
+Aspire supports authoring the AppHost in TypeScript/Node.js instead of C#. This document describes how the
 `Aspire.Hosting.AWS` integration exposes its features to a Node.js AppHost, the design decisions behind that
 exposure, and the constraints those decisions work around.
 
