@@ -26,20 +26,20 @@ jobs:
     steps:
       # Assume an AWS Role that provides access to the Access Token
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 #v4
+        uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b #v4
         with:
           role-to-assume: ${{ secrets.RELEASE_WORKFLOW_ACCESS_TOKEN_ROLE_ARN }}
           aws-region: us-west-2
       # Retrieve the per-repo deploy key + FG PAT from Secrets Manager
       - name: Retrieve secrets from AWS Secrets Manager
-        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        uses: aws-actions/aws-secretsmanager-get-secrets@v3
         with:
           secret-ids: |
             DEPLOY_KEY, prod/devops/integrations-on-dotnet-aspire-for-aws-deploy-key
             FG_PAT, prod/devops/integrations-on-dotnet-aspire-for-aws-fg-pat
       # Checkout a full clone of the repo using the deploy key (push runs over SSH)
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.0
         with:
           ref: dev
           fetch-depth: 0
@@ -106,7 +106,7 @@ jobs:
     steps:
       # Checkout a full clone of the repo using the deploy key (push runs over SSH)
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.0
         with:
           ref: releases/next-release
           fetch-depth: 0
