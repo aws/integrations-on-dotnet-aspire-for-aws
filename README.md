@@ -1,6 +1,6 @@
 ## Integrations with Aspire for AWS
 
-This repositry contains the integrations with [Aspire](https://github.com/dotnet/aspire) for AWS. The AWS integrations focus on provisioning and working with AWS application resources in development environment. Making the dev inner loop of iterating over application code with AWS resource seamless without having to leave the development environment.
+This repository contains integrations with [Aspire](https://github.com/dotnet/aspire) for AWS. The AWS integrations focus on provisioning and working with AWS application resources in development environment. Making the dev inner loop of iterating over application code with AWS resource seamless without having to leave the development environment.
 
 For introduction on using AWS and Aspire checkout the [Building .NET Applications Across Clouds with Aspire](https://www.youtube.com/watch?v=yVgr6cRYOPk) talk as part of .NET Conf 2024.
 
@@ -187,4 +187,3 @@ We welcome community contributions and pull requests. See [CONTRIBUTING](https:/
 ## License
 
 This library is licensed under the MIT-0 License. See the LICENSE file.
-
