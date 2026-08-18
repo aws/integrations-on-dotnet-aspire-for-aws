@@ -57,6 +57,8 @@ public static class LambdaExtensions
             functionOptions.ApplicationLogLevel = Amazon.Lambda.ApplicationLogLevel.FindValue(options.ApplicationLogLevel);
         }
 
+        functionOptions.DisableOpenTelemetry = options?.DisableOpenTelemetry ?? false;
+
         // suppressBuild: false so Aspire builds the project as part of `dotnet run`. Unlike the class library
         // wrapper project (which is pre-built by LambdaBeforeStartEventHandler), a polyglot project is not built ahead of time.
         return AddAWSLambdaFunctionCore(builder, name, lambdaHandler, new LambdaProjectMetadata(ResolvePolyglotProjectPath(builder, projectPath), suppressBuild: false), functionOptions);
@@ -119,7 +121,10 @@ public static class LambdaExtensions
             resource.WithParentRelationship(serviceEmulator);
         }
 
-        resource.WithOpenTelemetry();
+        if (!options.DisableOpenTelemetry)
+        {
+            resource.WithOpenTelemetry();
+        }
 
         resource.WithEnvironment(context =>
         {

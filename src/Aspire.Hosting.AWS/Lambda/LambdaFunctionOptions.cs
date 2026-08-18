@@ -18,4 +18,10 @@ public class LambdaFunctionOptions
     /// The minimum log level captured from the Lambda function. Default log level is INFO.
     /// </summary>
     public Amazon.Lambda.ApplicationLogLevel ApplicationLogLevel { get; set; } = Amazon.Lambda.ApplicationLogLevel.INFO;
+
+    /// <summary>
+    /// Disables the automatic OpenTelemetry (OTLP exporter) wiring for this Lambda function. Useful when no collector
+    /// is listening, for example integration tests using DistributedApplicationTestingBuilder. Default is false.
+    /// </summary>
+    public bool DisableOpenTelemetry { get; set; }
 }

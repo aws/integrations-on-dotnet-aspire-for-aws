@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Minor",
+      "ChangelogMessages": [
+        "Add DisableOpenTelemetry option to AddAWSLambdaFunction to opt out of automatic OTLP exporter wiring"
+      ]
+    }
+  ]
+}

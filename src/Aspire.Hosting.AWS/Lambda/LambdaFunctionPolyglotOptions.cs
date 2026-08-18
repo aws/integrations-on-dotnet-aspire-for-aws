@@ -22,4 +22,9 @@ internal sealed class LambdaFunctionPolyglotOptions
     /// Default log level is INFO.
     /// </summary>
     public string? ApplicationLogLevel { get; set; }
+
+    /// <summary>
+    /// Disables the automatic OpenTelemetry (OTLP exporter) wiring for this Lambda function. Default is false.
+    /// </summary>
+    public bool DisableOpenTelemetry { get; set; }
 }
