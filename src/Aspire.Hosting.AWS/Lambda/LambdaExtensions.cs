@@ -102,15 +102,18 @@ public static class LambdaExtensions
             // we want to configure the Aspire resource to use a Launch Setting Profile that will be able to run the class library Lambda function.
             var project = new LambdaProjectResource(name);
             resource = builder.AddResource(project)
-                .WithAnnotation(new LaunchProfileAnnotation($"{Constants.LaunchSettingsNodePrefix}{name}"))
-                .WithAnnotation(metadata);
+                .WithAnnotation(new LaunchProfileAnnotation($"{Constants.LaunchSettingsNodePrefix}{name}"));
         }
         else
         {
             var project = new LambdaProjectResource(name);
-            resource = builder.AddResource(project)
-                            .WithAnnotation(metadata);
+            resource = builder.AddResource(project);
         }
+
+        // Wrap the IProjectMetadata with the LambdaProjectMetadata so that the project path can be changed in the LambdaBeforeStartEventHandler
+        // if it creates a wrapper project for class libraries. If the IProjectMetadata was replaced when the project path was changed, then
+        // the WithProjectDefaults will trigger an exception about the metadata being replaced.
+        resource.WithAnnotation(new LambdaProjectMetadata(metadata.ProjectPath, suppressBuild: metadata.SuppressBuild));
 
         ExecutableResource? serviceEmulator = null;
         if (builder.ExecutionContext.IsRunMode)
