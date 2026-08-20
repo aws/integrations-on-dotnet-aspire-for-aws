@@ -42,20 +42,20 @@ jobs:
           aws-region: us-west-2
       # Retrieve the per-repo deploy key from Secrets Manager (push to main runs over SSH).
       - name: Retrieve secrets from AWS Secrets Manager
-        uses: aws-actions/aws-secretsmanager-get-secrets@v3
+        uses: aws-actions/aws-secretsmanager-get-secrets@2cb1a461cbd4865ac4299648312e4704c646cd53 #v3
         with:
           secret-ids: |
             DEPLOY_KEY, prod/devops/integrations-on-dotnet-aspire-for-aws-deploy-key
       # Full clone of the trunk using the deploy key.
       - name: Checkout
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
         with:
           ref: main
           fetch-depth: '0'
           ssh-key: ${{ env.DEPLOY_KEY }}
       # .NET 9 is needed for AutoVer.
       - name: Setup .NET 9.0
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 #v5
         with:
           dotnet-version: 9.0.x
       - name: Install AutoVer
@@ -106,6 +106,10 @@ jobs:
       # publish immediately (hold=false) or wait at the gate (hold=true).
       - name: Start pipeline
         if: steps.freeze.outputs.frozen == 'false'
+        env:
+          # Route the workflow input through an env var instead of interpolating
+          # ${{ github.* }} directly into the shell, to avoid script injection.
+          HOLD: ${{ github.event.inputs.hold }}
         run: |
           aws codepipeline start-pipeline-execution --name "$PIPELINE_NAME" --region "$AWS_REGION" \
-            --variables name=HOLD,value=${{ github.event.inputs.hold }}
+            --variables "name=HOLD,value=$HOLD"
