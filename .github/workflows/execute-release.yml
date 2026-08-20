@@ -1,0 +1,111 @@
+# Manually triggered to cut a release. Bumps the version and changelog in place on
+# the trunk (no release PR), commits to the trunk, then starts the CodePipeline.
+# Replaces "Create Release PR" + "Sync 'dev' and 'main'". The pipeline creates the
+# git tag and GitHub Release after a successful publish, so this workflow does not
+# push a tag.
+name: Execute Release
+
+# Dispatch from the trunk (main). Check "hold" to stage the release at the pipeline
+# Hold gate for a timed go-ahead instead of publishing right away.
+on:
+  workflow_dispatch:
+    inputs:
+      hold:
+        description: "Stage at the Hold gate for a timed go-ahead (do not auto-publish)"
+        type: boolean
+        default: false
+      OVERRIDE_VERSION:
+        description: "Override Version"
+        type: string
+        required: false
+
+permissions:
+  id-token: write
+  contents: write
+
+env:
+  # The CodePipeline to start. The target account is the one the assumed role lives in.
+  PIPELINE_NAME: integrations-on-dotnet-aspire-for-aws
+  AWS_REGION: us-west-2
+  INPUT_OVERRIDE_VERSION: ${{ github.event.inputs.OVERRIDE_VERSION }}
+
+jobs:
+  execute-release:
+    name: Execute Release
+    runs-on: ubuntu-latest
+    steps:
+      # Assume an AWS role that can read the deploy key and start the pipeline.
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b #v4
+        with:
+          role-to-assume: ${{ secrets.RELEASE_WORKFLOW_ACCESS_TOKEN_ROLE_ARN }}
+          aws-region: us-west-2
+      # Retrieve the per-repo deploy key from Secrets Manager (push to main runs over SSH).
+      - name: Retrieve secrets from AWS Secrets Manager
+        uses: aws-actions/aws-secretsmanager-get-secrets@v3
+        with:
+          secret-ids: |
+            DEPLOY_KEY, prod/devops/integrations-on-dotnet-aspire-for-aws-deploy-key
+      # Full clone of the trunk using the deploy key.
+      - name: Checkout
+        uses: actions/checkout@v7.0.0
+        with:
+          ref: main
+          fetch-depth: '0'
+          ssh-key: ${{ env.DEPLOY_KEY }}
+      # .NET 9 is needed for AutoVer.
+      - name: Setup .NET 9.0
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 9.0.x
+      - name: Install AutoVer
+        run: dotnet tool install --global AutoVer --version 0.0.24
+      - name: Setup Git User
+        run: |
+          git config --global user.email "github-aws-sdk-dotnet-automation@amazon.com"
+          git config --global user.name "aws-sdk-dotnet-automation"
+      # Bump the version from the change files (or an explicit override).
+      - name: Increment Version
+        run: autover version
+        if: env.INPUT_OVERRIDE_VERSION == ''
+      - name: Increment Version (override)
+        run: autover version --use-version "$INPUT_OVERRIDE_VERSION"
+        if: env.INPUT_OVERRIDE_VERSION != ''
+      - name: Update Changelog
+        run: autover changelog
+      # Commit version + changelog straight to the trunk. No release PR, and no tag
+      # push here: the pipeline tags and creates the GitHub Release after publish.
+      - name: Commit version and changelog
+        run: |
+          version=$(autover changelog --release-name)
+          git add -A
+          git commit -m "chore: release $version"
+          git push origin HEAD:main
+      # Switch identities: assume the pipeline account's Execute Release role (GitHub OIDC)
+      # so the pipeline calls below run same-account. The role above (release-workflow) only
+      # reads the deploy key; this one only starts this pipeline.
+      - name: Configure AWS Credentials for the pipeline account
+        uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b #v4
+        with:
+          role-to-assume: ${{ secrets.EXECUTE_RELEASE_ROLE_ARN }}
+          aws-region: us-west-2
+      # Freeze-aware: if the pipeline's Release-stage transition is disabled (re:Invent
+      # or a staging embargo), do not start the pipeline.
+      - name: Check pipeline is not frozen
+        id: freeze
+        run: |
+          enabled=$(aws codepipeline get-pipeline-state --name "$PIPELINE_NAME" --region "$AWS_REGION" \
+            --query "stageStates[?stageName=='Release'].inboundTransitionState.enabled | [0]" --output text)
+          if [ "$enabled" = "False" ]; then
+            echo "Release stage transition is disabled (frozen); skipping pipeline start."
+            echo "frozen=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "frozen=false" >> "$GITHUB_OUTPUT"
+          fi
+      # Start the pipeline, passing HOLD so the auto-approve Lambda knows whether to
+      # publish immediately (hold=false) or wait at the gate (hold=true).
+      - name: Start pipeline
+        if: steps.freeze.outputs.frozen == 'false'
+        run: |
+          aws codepipeline start-pipeline-execution --name "$PIPELINE_NAME" --region "$AWS_REGION" \
+            --variables name=HOLD,value=${{ github.event.inputs.hold }}
