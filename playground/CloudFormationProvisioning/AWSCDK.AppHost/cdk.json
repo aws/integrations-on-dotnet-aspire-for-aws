@@ -1,5 +1,5 @@
 {
-  "app": "dotnet run -- --publisher manifest --output-path ./aspire-manifest.json",
+  "app": "aspire do publish-manifest --output-path ./aspire-manifest.json",
   "watch": {
     "include": [
       "**"

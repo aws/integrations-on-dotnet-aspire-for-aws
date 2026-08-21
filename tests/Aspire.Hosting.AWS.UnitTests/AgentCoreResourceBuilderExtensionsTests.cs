@@ -245,7 +245,7 @@ public class AgentCoreResourceBuilderExtensionsTests
     {
         var result = new Dictionary<string, string>();
         var runContext = new DistributedApplicationExecutionContext(
-            new DistributedApplicationExecutionContextOptions(DistributedApplicationOperation.Run) { ServiceProvider = services });
+            new DistributedApplicationExecutionContextOptions(DistributedApplicationOperation.Run) { Services = services });
 
         foreach (var callback in resource.Annotations.OfType<EnvironmentCallbackAnnotation>())
         {

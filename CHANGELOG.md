@@ -1,3 +1,9 @@
+## Release 2026-08-21
+
+### Aspire.Hosting.AWS (13.7.0)
+* Update to version Aspire 13.5
+* The AddAWSLambdaFunction method now uses Aspire 13.5's new WithProjectDefaults method to configure LambdaProject subclasses with the same defaults that AddProject applies to the base Project type
+
 ## Release 2026-08-04
 
 ### Aspire.Hosting.AWS (13.6.0)

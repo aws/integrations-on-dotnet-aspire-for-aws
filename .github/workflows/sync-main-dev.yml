@@ -8,16 +8,15 @@ on:
   pull_request:
     types: [closed]
 
-permissions: 
-  contents: write
-  id-token: write
-
 jobs:
-  # This job will check if the PR was successfully merged, it's source branch is `releases/next-release` and target branch is `dev`. 
-  # This indicates that the merged PR was the `Release PR`. 
+  # This job will check if the PR was successfully merged, it's source branch is `releases/next-release` and target branch is `dev`.
+  # This indicates that the merged PR was the `Release PR`.
   # This job will synchronize `dev` and `main`, create a GitHub Release and delete the `releases/next-release` branch.
   sync-dev-and-main:
     name: Sync dev and main
+    permissions:
+      contents: write   # push to main, create GitHub Release, delete branch
+      id-token: write   # assume AWS role via OIDC
     if: |
       github.event.pull_request.merged == true &&
       github.event.pull_request.head.ref == 'releases/next-release' &&
@@ -26,27 +25,27 @@ jobs:
     steps:
       # Assume an AWS Role that provides access to the Access Token
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 #v4
+        uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b #v4
         with:
           role-to-assume: ${{ secrets.RELEASE_WORKFLOW_ACCESS_TOKEN_ROLE_ARN }}
           aws-region: us-west-2
       # Retrieve the per-repo deploy key + FG PAT from Secrets Manager
       - name: Retrieve secrets from AWS Secrets Manager
-        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        uses: aws-actions/aws-secretsmanager-get-secrets@2cb1a461cbd4865ac4299648312e4704c646cd53 #v3.0.1
         with:
           secret-ids: |
             DEPLOY_KEY, prod/devops/integrations-on-dotnet-aspire-for-aws-deploy-key
             FG_PAT, prod/devops/integrations-on-dotnet-aspire-for-aws-fg-pat
       # Checkout a full clone of the repo using the deploy key (push runs over SSH)
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
         with:
           ref: dev
           fetch-depth: 0
           ssh-key: ${{ env.DEPLOY_KEY }}
       # Install .NET8 which is needed for AutoVer
       - name: Setup .NET 9.0
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 #v5.4.0
         with:
           dotnet-version: 9.0.x
       # Install AutoVer which is needed to retrieve information about the current release.
@@ -98,6 +97,8 @@ jobs:
   # This job will delete the tag created by AutoVer and the release branch.
   clean-up-closed-release:
     name: Clean up closed release
+    permissions:
+      contents: write   # delete the release tag and branch
     if: |
       github.event.pull_request.merged == false &&
       github.event.pull_request.head.ref == 'releases/next-release' &&
@@ -106,13 +107,13 @@ jobs:
     steps:
       # Checkout a full clone of the repo using the deploy key (push runs over SSH)
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
         with:
           ref: releases/next-release
           fetch-depth: 0
       # Install .NET8 which is needed for AutoVer
       - name: Setup .NET 9.0
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 #v5.4.0
         with:
           dotnet-version: 9.0.x
       # Install AutoVer which is needed to retrieve information about the current release.

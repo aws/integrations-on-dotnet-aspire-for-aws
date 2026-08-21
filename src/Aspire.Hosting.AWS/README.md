@@ -1,6 +1,6 @@
 # Aspire.Hosting.AWS library
 
-Provides extension methods and resources definition for a Aspire AppHost to configure the AWS SDK for .NET and AWS application resources.
+Provides extension methods and resources definition for an Aspire AppHost to configure the AWS SDK for .NET and AWS application resources.
 
 ## Features
 
@@ -536,7 +536,7 @@ The Aspire dashboard shows clickable URLs for each emulator alongside your agent
 
 ## Using a Node.js (TypeScript) AppHost
 
-.NET Aspire supports authoring the AppHost in TypeScript/Node.js instead of C#. `Aspire.Hosting.AWS` exposes its
+Aspire supports authoring the AppHost in TypeScript/Node.js instead of C#. `Aspire.Hosting.AWS` exposes its
 features to a Node.js AppHost through the Aspire Type System (ATS): the Aspire CLI generates a TypeScript SDK
 from the package and your `apphost.mts` calls the generated methods, which are proxied back to the .NET code.
 Only the AppHost authoring language changes — the Lambda functions and AWS resources remain .NET based.
