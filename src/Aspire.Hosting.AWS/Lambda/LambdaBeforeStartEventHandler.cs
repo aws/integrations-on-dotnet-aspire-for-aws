@@ -140,12 +140,14 @@ internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> log
                         continue;
                     }
 
-                    projectResource.Annotations.Remove(projectMetadata);
-
                     var projectPath =
                         ProjectUtilities.CreateExecutableWrapperProject(projectMetadata.ProjectPath, lambdaFunctionAnnotation.Handler, targetFramework);
 
-                    projectResource.Annotations.Add(new LambdaProjectMetadata(projectPath));
+                    if (projectMetadata is not LambdaProjectMetadata lambdaProjectMetadata)
+                    {
+                        throw new InvalidOperationException("Expected projectMetadata to be of type LambdaProjectMetadata. This was most likely an internal coding bug in the Add AddAWSLambdaFunction method.");
+                    }
+                    lambdaProjectMetadata.ProjectPath = projectPath;
 
                     var projectName = new FileInfo(projectPath).Name;
                     var workingDirectory = Directory.GetParent(projectPath)!.FullName;
@@ -343,7 +345,7 @@ internal class LambdaBeforeStartEventHandler(ILogger<LambdaEmulatorResource> log
 
 internal sealed class LambdaProjectMetadata(string projectPath, bool suppressBuild = true) : IProjectMetadata
 {
-    public string ProjectPath { get; } = projectPath;
+    public string ProjectPath { get; internal set; } = projectPath;
 
     // For the class library wrapper project the wrapper is already built explicitly before DCP starts it,
     // so SuppressBuild defaults to true. Setting SuppressBuild=true causes Aspire to pass --no-build to
