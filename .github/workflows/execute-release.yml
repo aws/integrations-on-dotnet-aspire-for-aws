@@ -81,12 +81,6 @@ jobs:
           git add -A
           git commit -m "chore: release $version"
           git push origin HEAD:main
-      # Capture the AutoVer tag (with any same-day collision suffix) here, where git
-      # history is available. The pipeline has no .git, so it relies on this value to
-      # tag + create the GitHub Release after a successful publish.
-      - name: Read release tag
-        id: meta
-        run: echo "TAG=$(autover changelog --tag-name)" >> "$GITHUB_OUTPUT"
       # Switch identities: assume the pipeline account's Execute Release role (GitHub OIDC)
       # so the pipeline calls below run same-account. The role above (release-workflow) only
       # reads the deploy key; this one only starts this pipeline.
@@ -113,10 +107,9 @@ jobs:
       - name: Start pipeline
         if: steps.freeze.outputs.frozen == 'false'
         env:
-          # Route workflow/step values through env vars instead of interpolating
-          # ${{ ... }} directly into the shell, to avoid script injection.
+          # Route the workflow input through an env var instead of interpolating
+          # ${{ github.* }} directly into the shell, to avoid script injection.
           HOLD: ${{ github.event.inputs.hold }}
-          RELEASE_TAG: ${{ steps.meta.outputs.TAG }}
         run: |
           aws codepipeline start-pipeline-execution --name "$PIPELINE_NAME" --region "$AWS_REGION" \
-            --variables "name=HOLD,value=$HOLD" "name=RELEASE_TAG,value=$RELEASE_TAG"
+            --variables "name=HOLD,value=$HOLD"
