@@ -13,9 +13,9 @@ phases:
       - dotnet dev-certs https --trust || dotnet dev-certs https
   build:
     commands:
-      - dotnet test --verbosity normal integrations-on-dotnet-aspire-for-aws.sln --configuration Release --logger "console;verbosity=detailed" --logger trx --results-directory ./testresults
+      - dotnet test --verbosity normal integrations-on-aspire-for-aws.sln --configuration Release --logger "console;verbosity=detailed" --logger trx --results-directory ./testresults
 reports:
-    integrations-on-dotnet-aspire-for-aws-tests:
+    integrations-on-aspire-for-aws-tests:
         file-format: VisualStudioTrx
         files:
             - '**/*'

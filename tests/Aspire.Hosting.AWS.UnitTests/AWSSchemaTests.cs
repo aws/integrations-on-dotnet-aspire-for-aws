@@ -2,6 +2,7 @@
 
 using Amazon;
 using Json.Schema;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Xunit;
 using Xunit.Abstractions;
@@ -85,14 +86,14 @@ public class AWSSchemaTests(ITestOutputHelper output)
 
     private static void AssertValid(string manifestText)
     {
-        var manifestJson = JsonNode.Parse(manifestText);
+        var manifestJson = JsonDocument.Parse(manifestText);
         var schema = GetSchema();
-        var results = schema.Evaluate(manifestJson);
+        var results = schema.Evaluate(manifestJson.RootElement);
 
         if (!results.IsValid)
         {
-            var errorMessages = results.Details.Where(x => x.HasErrors).SelectMany(e => e.Errors!).Select(e => e.Value);
-            Assert.True(results.IsValid, string.Join(Environment.NewLine, errorMessages ?? ["Schema failed validation with no errors"]));
+            var errorMessages = results.Details?.Where(x => x.Errors?.Count > 0).SelectMany(e => e.Errors!).Select(e => e.Value);
+            Assert.True(results.IsValid, string.Join(Environment.NewLine, errorMessages ?? new[] { "Schema failed validation with no errors" }));
         }
     }
 }

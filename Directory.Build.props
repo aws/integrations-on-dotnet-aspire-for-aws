@@ -15,6 +15,12 @@
     <RepositoryUrl>https://github.com/aws/integrations-on-dotnet-aspire-for-aws</RepositoryUrl>
     <PackageIcon>icon.png</PackageIcon>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+	
+	<!-- 
+	Warning ASPIRE010 is about pushing users to always run the AppHost via the aspire cli. But the AppHost in this solution are 
+	often meant for debugging and unit/integ testing. The aspire cli is generally not used for these.
+	-->
+	<NoWarn>$(NoWarn);ASPIRE010</NoWarn>
   </PropertyGroup>
   
 </Project>
