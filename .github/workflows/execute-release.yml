@@ -141,11 +141,7 @@ jobs:
           aws codepipeline start-pipeline-execution --name "$PIPELINE_NAME" --region "$AWS_REGION" \
             --variables "name=HOLD,value=$HOLD"
       # Create the tag + GitHub Release at the pushed commit, using the metadata captured
-      # before the change files were consumed. Gated on not-frozen (same as the pipeline
-      # start): a frozen release publishes nothing, so it gets no tag/release either.
-      # NOTE: created at release-cut time, not after the NuGet publish (matches the
-      # pre-Part-2 behavior). A held (HOLD=true) release that is never approved, or a
-      # failed publish, would leave a release for an unpublished version - delete manually.
+      # before the change files were consumed. Gated on not-frozen.
       - name: Create GitHub release
         if: steps.freeze.outputs.frozen == 'false'
         env:
