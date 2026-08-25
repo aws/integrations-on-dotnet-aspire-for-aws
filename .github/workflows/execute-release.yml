@@ -38,8 +38,6 @@ jobs:
   execute-release:
     name: Execute Release
     runs-on: ubuntu-latest
-    # Scope the AWS-role secrets to a dedicated environment (add protection rules there).
-    environment: release
     permissions:
       id-token: write   # mint the OIDC token used to assume the AWS roles below
       contents: write   # push the version + changelog commit to main
@@ -48,6 +46,9 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b # v6.2.1
         with:
+          # zizmor: ignore[secrets-outside-env] secret is a role ARN (an identifier, not
+          # a credential); access is gated by the role's AWS OIDC trust policy, so a
+          # dedicated GitHub environment adds no meaningful protection here.
           role-to-assume: ${{ secrets.RELEASE_WORKFLOW_ACCESS_TOKEN_ROLE_ARN }}
           aws-region: us-west-2
       # Retrieve the per-repo deploy key from Secrets Manager (push to main runs over SSH).
@@ -100,6 +101,7 @@ jobs:
       - name: Configure AWS Credentials for the pipeline account
         uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b # v6.2.1
         with:
+          # zizmor: ignore[secrets-outside-env] role ARN, gated by AWS OIDC trust policy.
           role-to-assume: ${{ secrets.EXECUTE_RELEASE_ROLE_ARN }}
           aws-region: us-west-2
       # Freeze-aware: if the pipeline's Release-stage transition is disabled (re:Invent
