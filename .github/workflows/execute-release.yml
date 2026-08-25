@@ -64,9 +64,10 @@ jobs:
           ref: main
           fetch-depth: '0'
           ssh-key: ${{ env.DEPLOY_KEY }}
-          # The later push to main uses the SSH deploy key, not the GITHUB_TOKEN, so
-          # don't persist the token in the local git config (avoids credential leakage).
-          persist-credentials: false
+          # Keep the SSH deploy-key config in the local git config so the later
+          # "git push origin HEAD:main" can authenticate with it. (There is no
+          # GITHUB_TOKEN persisted here to worry about - auth is the deploy key.)
+          persist-credentials: true
       # .NET 9 is needed for AutoVer.
       - name: Setup .NET 9.0
         uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 #v5
