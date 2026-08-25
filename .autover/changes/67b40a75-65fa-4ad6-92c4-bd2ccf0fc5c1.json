@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Updated AWSSDK.S3 dependency from 4.0.102.2 to 4.0.102.4"
+      ]
+    }
+  ]
+}
