@@ -1,8 +1,8 @@
 # Manually triggered to cut a release. Bumps the version and changelog in place on
 # the trunk (no release PR), commits to the trunk, then starts the CodePipeline.
-# Replaces "Create Release PR" + "Sync 'dev' and 'main'". The pipeline creates the
-# git tag and GitHub Release after a successful publish, so this workflow does not
-# push a tag.
+# Replaces "Create Release PR" + "Sync 'dev' and 'main'". This workflow creates the
+# git tag + GitHub Release (computed by AutoVer while the change files still exist),
+# then starts the pipeline to publish to NuGet.
 name: Execute Release
 
 # Dispatch from the trunk (main). Check "hold" to stage the release at the pipeline
@@ -87,6 +87,18 @@ jobs:
       - name: Increment Version (override)
         run: autover version --use-version "$INPUT_OVERRIDE_VERSION"
         if: env.INPUT_OVERRIDE_VERSION != ''
+      # Capture the release tag/name/notes from AutoVer NOW, while the change files still
+      # exist - autover derives these from the pending change files. The next step consumes
+      # them, after which autover would only see the previous release. (--tag-name /
+      # --release-name / --output-to-console are read-only and do not consume.)
+      - name: Compute release metadata
+        id: relmeta
+        run: |
+          {
+            echo "tag=$(autover changelog --tag-name)"
+            echo "name=$(autover changelog --release-name)"
+          } >> "$GITHUB_OUTPUT"
+          autover changelog --output-to-console > "$RUNNER_TEMP/release_notes.md"
       # autover changelog updates CHANGELOG.md, deletes the consumed change files, and commits both.
       - name: Update Changelog
         run: autover changelog
@@ -128,3 +140,18 @@ jobs:
         run: |
           aws codepipeline start-pipeline-execution --name "$PIPELINE_NAME" --region "$AWS_REGION" \
             --variables "name=HOLD,value=$HOLD"
+      # Create the tag + GitHub Release at the pushed commit, using the metadata captured
+      # before the change files were consumed. Gated on not-frozen (same as the pipeline
+      # start): a frozen release publishes nothing, so it gets no tag/release either.
+      # NOTE: created at release-cut time, not after the NuGet publish (matches the
+      # pre-Part-2 behavior). A held (HOLD=true) release that is never approved, or a
+      # failed publish, would leave a release for an unpublished version - delete manually.
+      - name: Create GitHub release
+        if: steps.freeze.outputs.frozen == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.relmeta.outputs.tag }}" \
+            --title "${{ steps.relmeta.outputs.name }}" \
+            --notes-file "$RUNNER_TEMP/release_notes.md" \
+            --target "$(git rev-parse HEAD)"
