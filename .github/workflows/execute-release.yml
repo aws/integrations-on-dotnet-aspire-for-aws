@@ -78,23 +78,22 @@ jobs:
         run: |
           git config --global user.email "github-aws-sdk-dotnet-automation@amazon.com"
           git config --global user.name "aws-sdk-dotnet-automation"
-      # Bump the version from the change files (or an explicit override).
+      # Bump the version from the change files (or an explicit override). autover commits the
+      # version bump itself.
       - name: Increment Version
         run: autover version
         if: env.INPUT_OVERRIDE_VERSION == ''
       - name: Increment Version (override)
         run: autover version --use-version "$INPUT_OVERRIDE_VERSION"
         if: env.INPUT_OVERRIDE_VERSION != ''
+      # autover changelog updates CHANGELOG.md, deletes the consumed change files, and commits both.
       - name: Update Changelog
         run: autover changelog
-      # Commit version + changelog straight to the trunk. No release PR, and no tag
-      # push here: the pipeline tags and creates the GitHub Release after publish.
-      - name: Commit version and changelog
-        run: |
-          version=$(autover changelog --release-name)
-          git add -A
-          git commit -m "chore: release $version"
-          git push origin HEAD:main
+      # autover already committed the version bump + changelog (incl. the change-file deletions),
+      # so just push those commits straight to the trunk. No release PR, and no tag push here:
+      # the pipeline tags and creates the GitHub Release after publish.
+      - name: Push version and changelog
+        run: git push origin HEAD:main
       # Switch identities: assume the pipeline account's Execute Release role (GitHub OIDC)
       # so the pipeline calls below run same-account. The role above (release-workflow) only
       # reads the deploy key; this one only starts this pipeline.
