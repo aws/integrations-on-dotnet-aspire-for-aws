@@ -1,3 +1,9 @@
+## Release 2026-08-25
+
+### Aspire.Hosting.AWS (13.7.1)
+* Updated AWSSDK.S3 dependency from 4.0.102.2 to 4.0.102.4
+* Updated AWSSDK.Core dependency from 4.0.101.1 to 4.0.102.1
+
 ## Release 2026-08-21
 
 ### Aspire.Hosting.AWS (13.7.0)
