@@ -186,6 +186,64 @@ public class ProjectUtilitiesTests : IDisposable
     }
 
     [Fact]
+    public void ResolveCanonicalPath_ResolvesSymlinkedSegments()
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            // Creating symlinks on Windows requires elevated privileges.
+            return;
+        }
+
+        // Arrange
+        string target = Path.Combine(_tempDirectory, "target");
+        Directory.CreateDirectory(Path.Combine(target, "sub"));
+        string link = Path.Combine(_tempDirectory, "link");
+        Directory.CreateSymbolicLink(link, target);
+
+        // Act
+        string result = ProjectUtilities.ResolveCanonicalPath(Path.Combine(link, "sub"));
+
+        // Assert
+        Assert.Equal(ProjectUtilities.ResolveCanonicalPath(Path.Combine(target, "sub")), result);
+        Assert.DoesNotContain($"{Path.DirectorySeparatorChar}link{Path.DirectorySeparatorChar}", result + Path.DirectorySeparatorChar);
+    }
+
+    [Fact]
+    public void ResolveCanonicalPath_IsNoOp_ForPathWithoutSymlinks()
+    {
+        // Arrange
+        string path = Path.Combine(_tempDirectory, "does", "not", "exist");
+
+        // Act
+        string result = ProjectUtilities.ResolveCanonicalPath(path);
+
+        // Assert: non-existent segments are kept as-is; existing segments may canonicalize (e.g. /var -> /private/var on macOS).
+        Assert.EndsWith(Path.Combine("does", "not", "exist"), result);
+    }
+
+    [Fact]
+    public void CreateExecutableWrapperProject_ReturnsCanonicalPath()
+    {
+        // Arrange
+        string classLibraryProjectPath = GetTempProjectPath();
+
+        // Act
+        string wrapperProjectPath = ProjectUtilities.CreateExecutableWrapperProject(classLibraryProjectPath, "TestNamespace.Function::Handler", "net8.0");
+
+        try
+        {
+            // Assert: the generated project path must contain no symlinked segments,
+            // otherwise NuGet restore and MSBuild disagree on relative ProjectReference paths (MSB3202 on macOS).
+            Assert.True(File.Exists(wrapperProjectPath));
+            Assert.Equal(ProjectUtilities.ResolveCanonicalPath(wrapperProjectPath), wrapperProjectPath);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(wrapperProjectPath)!, true);
+        }
+    }
+
+    [Fact]
     public void UpdateLaunchSettings_ReplacesMalformedLaunchSettingsJson_WithNewObject()
     {
         // Arrange

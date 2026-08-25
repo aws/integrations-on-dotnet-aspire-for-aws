@@ -152,7 +152,11 @@ internal static class ProjectUtilities
     /// <returns>A project file path of the executable wrapper project</returns>
     public static string CreateExecutableWrapperProject(string classLibraryProjectPath, string lambdaHandler, string targetFramework)
     {
-        string tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        // The temp path must be canonicalized because on macOS Path.GetTempPath() returns a path under /var,
+        // which is a symlink to /private/var. NuGet restore records transitive ProjectReference paths in
+        // project.assets.json relative to the symlinked spelling, while MSBuild canonicalizes the project
+        // directory to /private/var, causing those relative paths to resolve to non-existent locations (MSB3202).
+        string tempPath = Path.Combine(ResolveCanonicalPath(Path.GetTempPath()), Guid.NewGuid().ToString());
         Directory.CreateDirectory(tempPath);
 
         var projectContent = $@"
@@ -183,6 +187,36 @@ await runtimeSupportInitializer.RunLambdaBootstrap();
         File.WriteAllText(programPath, programContent);
 
         return projectPath;
+    }
+
+    /// <summary>
+    /// Resolves every symlinked segment of the given path to produce its canonical form.
+    /// Segments that do not exist are kept as-is, and the method is a no-op on paths without symlinks.
+    /// </summary>
+    /// <param name="path">The path to canonicalize</param>
+    /// <returns>The canonical path with all symlinked segments resolved</returns>
+    internal static string ResolveCanonicalPath(string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var current = Path.GetPathRoot(fullPath)!;
+        foreach (var segment in fullPath.Substring(current.Length).Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
+        {
+            current = Path.Combine(current, segment);
+            try
+            {
+                var linkTarget = Directory.ResolveLinkTarget(current, returnFinalTarget: true);
+                if (linkTarget != null)
+                {
+                    // The link target may itself contain symlinked segments (e.g. a target under /var on macOS).
+                    current = ResolveCanonicalPath(linkTarget.FullName);
+                }
+            }
+            catch (IOException)
+            {
+                // The segment does not exist or cannot be inspected; keep the original spelling.
+            }
+        }
+        return current;
     }
 
     internal static string? LookupTargetFrameworkFromProjectFile(string projectFile, string msBuildParameters = "")
