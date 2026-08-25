@@ -19,9 +19,14 @@ on:
         type: string
         required: false
 
-permissions:
-  id-token: write
-  contents: write
+# Least-privilege at the workflow level; the one job below grants only what it needs.
+permissions: {}
+
+# Only one release may run at a time. Do not cancel an in-progress release: it may be
+# mid-push to main or mid-pipeline-start, and cancelling could leave things half-done.
+concurrency:
+  group: execute-release
+  cancel-in-progress: false
 
 env:
   # The CodePipeline to start. The target account is the one the assumed role lives in.
@@ -33,10 +38,15 @@ jobs:
   execute-release:
     name: Execute Release
     runs-on: ubuntu-latest
+    # Scope the AWS-role secrets to a dedicated environment (add protection rules there).
+    environment: release
+    permissions:
+      id-token: write   # mint the OIDC token used to assume the AWS roles below
+      contents: write   # push the version + changelog commit to main
     steps:
       # Assume an AWS role that can read the deploy key and start the pipeline.
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b #v4
+        uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b # v6.2.1
         with:
           role-to-assume: ${{ secrets.RELEASE_WORKFLOW_ACCESS_TOKEN_ROLE_ARN }}
           aws-region: us-west-2
@@ -53,6 +63,9 @@ jobs:
           ref: main
           fetch-depth: '0'
           ssh-key: ${{ env.DEPLOY_KEY }}
+          # The later push to main uses the SSH deploy key, not the GITHUB_TOKEN, so
+          # don't persist the token in the local git config (avoids credential leakage).
+          persist-credentials: false
       # .NET 9 is needed for AutoVer.
       - name: Setup .NET 9.0
         uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 #v5
@@ -85,7 +98,7 @@ jobs:
       # so the pipeline calls below run same-account. The role above (release-workflow) only
       # reads the deploy key; this one only starts this pipeline.
       - name: Configure AWS Credentials for the pipeline account
-        uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b #v4
+        uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b # v6.2.1
         with:
           role-to-assume: ${{ secrets.EXECUTE_RELEASE_ROLE_ARN }}
           aws-region: us-west-2
