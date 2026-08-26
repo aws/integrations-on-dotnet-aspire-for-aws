@@ -1,3 +1,8 @@
+## Release 2026-08-26
+
+### Aspire.Hosting.AWS (13.7.2)
+* Fix MSB3202 build failure on macOS for class library Lambda functions with project references by canonicalizing the temp path of the generated wrapper project
+
 ## Release 2026-08-25
 
 ### Aspire.Hosting.AWS (13.7.1)
