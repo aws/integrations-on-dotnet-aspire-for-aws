@@ -14,6 +14,9 @@ phases:
   build:
     commands:
       - dotnet test --verbosity normal integrations-on-aspire-for-aws.sln --configuration Release --logger "console;verbosity=detailed" --logger trx --results-directory ./testresults
+      # Pack with the resolved Git revision so the produced package carries commit-pinned
+      # Source Link metadata (empty <repository commit> and C:\build PDB paths otherwise).
+      - dotnet pack src/Aspire.Hosting.AWS/Aspire.Hosting.AWS.csproj --configuration Release -p:ContinuousIntegrationBuild=true -p:SourceRevisionId=$(git rev-parse HEAD) --output ./artifacts
 reports:
     integrations-on-aspire-for-aws-tests:
         file-format: VisualStudioTrx

@@ -13,8 +13,20 @@
     <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)public.snk</AssemblyOriginatorKeyFile>
     <PackageProjectUrl>https://github.com/aws/integrations-on-dotnet-aspire-for-aws</PackageProjectUrl>
     <RepositoryUrl>https://github.com/aws/integrations-on-dotnet-aspire-for-aws</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
     <PackageIcon>icon.png</PackageIcon>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+
+    <!--
+    Deterministic, commit-linked source metadata (Source Link). These enable the packed
+    assembly/PDB to carry the pinned Git commit and rewrite local (C:\build\...) document
+    paths to github.com URLs. ContinuousIntegrationBuild is enabled only on CI so local
+    developer builds keep full absolute paths for debugging.
+    -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true' or '$(TF_BUILD)' == 'true' or '$(CODEBUILD_BUILD_ID)' != ''">true</ContinuousIntegrationBuild>
 	
 	<!-- 
 	Warning ASPIRE010 is about pushing users to always run the AppHost via the aspire cli. But the AppHost in this solution are 
@@ -22,5 +34,9 @@
 	-->
 	<NoWarn>$(NoWarn);ASPIRE010</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+  </ItemGroup>
   
 </Project>
