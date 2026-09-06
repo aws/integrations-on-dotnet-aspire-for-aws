@@ -38,6 +38,8 @@ public static class KinesisResourceExtensions
     {
         configSection ??= $"{Constants.DefaultConfigSection}:{stream.Resource.Name}";
         var prefix = configSection.ToEnvironmentVariables();
-        return builder.WithEnvironment($"{prefix}__{StreamArnOutputName}", stream, s => s.StreamArn, StreamArnOutputName);
+        return builder
+            .WithEnvironment($"{prefix}__{StreamArnOutputName}", stream, s => s.StreamArn, StreamArnOutputName)
+            .WithConstructGrant(stream, static (s, grantee) => s.GrantReadWrite(grantee));
     }
 }

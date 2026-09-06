@@ -5,6 +5,7 @@
 
 using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.Lambda;
+using Amazon.CDK.AWS.Lambda.EventSources;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS.Deployment.CDKDefaults;
 using Aspire.Hosting.AWS.Lambda;
@@ -50,6 +51,19 @@ internal class LambdaFunctionPublishTarget(ILogger<LambdaFunctionPublishTarget> 
         environment.DefaultsProvider.ApplyLambdaFunctionDefaults(functionProps, lambdaFunction);
 
         var function = new Function(environment.CDKStack, $"Function-{lambdaFunction.Name}", functionProps);
+        ApplyConstructGrants(lambdaFunction, environment, function);
+        foreach (var eventSource in lambdaFunction.Annotations.OfType<LambdaSQSEventSourceAnnotation>())
+        {
+            if (!ReferenceEquals(eventSource.Stack.Stack, environment.CDKStack))
+            {
+                continue;
+            }
+
+            function.AddEventSource(new SqsEventSource(eventSource.Queue, new SqsEventSourceProps
+            {
+                BatchSize = eventSource.Options?.BatchSize
+            }));
+        }
         publishAnnotation.Config.ConstructFunctionCallback?.Invoke(CreatePublishTargetContext(environment), function);
         ApplyAWSLinkedObjectsAnnotation(environment, lambdaFunction, function, this);
 
