@@ -91,6 +91,8 @@ public static class S3ResourceExtensions
     {
         configSection ??= $"{Constants.DefaultConfigSection}:{bucket.Resource.Name}";
         var prefix = configSection.ToEnvironmentVariables();
-        return builder.WithEnvironment($"{prefix}__{BucketNameOutputName}", bucket, b => b.BucketName, BucketNameOutputName);
+        return builder
+            .WithEnvironment($"{prefix}__{BucketNameOutputName}", bucket, b => b.BucketName, BucketNameOutputName)
+            .WithConstructGrant(bucket, static (b, grantee) => b.GrantReadWrite(grantee));
     }
 }
