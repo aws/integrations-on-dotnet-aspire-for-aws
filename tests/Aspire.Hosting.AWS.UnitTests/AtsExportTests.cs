@@ -160,12 +160,16 @@ public class AtsExportTests
     [Fact]
     public void APIGatewayWithReference_IsExported_WithPinnedId()
     {
-        var method = typeof(APIGatewayExtensions)
+        var overloads = typeof(APIGatewayExtensions)
             .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Single(m => m.Name == nameof(APIGatewayExtensions.WithReference));
-        var export = GetAspireExport(method);
-        Assert.NotNull(export);
-        Assert.Equal("withAPIGatewayLambdaReference", GetExportId(export!));
+            .Where(m => m.Name == nameof(APIGatewayExtensions.WithReference))
+            .ToList();
+
+        var lambdaOverload = overloads.Single(m => m.GetParameters()[1].ParameterType.GetGenericArguments()[0] == typeof(LambdaProjectResource));
+        Assert.Equal("withAPIGatewayLambdaReference", GetExportId(GetAspireExport(lambdaOverload)!));
+
+        var httpOverload = overloads.Single(m => m.GetParameters()[1].ParameterType.GetGenericArguments()[0] == typeof(ProjectResource));
+        Assert.Equal("withAPIGatewayHttpReference", GetExportId(GetAspireExport(httpOverload)!));
     }
 
     [Fact]

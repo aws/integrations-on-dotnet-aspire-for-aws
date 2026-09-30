@@ -1,4 +1,4 @@
-﻿// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using System.Text.Json.Serialization;
 
@@ -11,12 +11,13 @@ namespace Aspire.Hosting.AWS.Lambda;
 /// </summary>
 internal class RouteConfig
 {
-    internal RouteConfig(string lambdaResourceName, string endpoint, Method httpMethod, string path)
+    internal RouteConfig(string lambdaResourceName, string endpoint, Method httpMethod, string path, ApiGatewayIntegrationType integrationType = ApiGatewayIntegrationType.Lambda)
     {
         LambdaResourceName = lambdaResourceName;
         Endpoint = endpoint;
         HttpMethod = httpMethod;
         Path = path;
+        IntegrationType = integrationType;
     }
 
     public string LambdaResourceName { get; init; }
@@ -27,4 +28,12 @@ internal class RouteConfig
     public Method HttpMethod { get; init; }
 
     public string Path { get; init; }
+
+    /// <summary>
+    /// Integration used for this route. Defaults to <see cref="ApiGatewayIntegrationType.Lambda"/>.
+    /// Serialized as a string so the Test Tool <c>JsonStringEnumConverter</c> accepts it.
+    /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public ApiGatewayIntegrationType IntegrationType { get; init; } = ApiGatewayIntegrationType.Lambda;
 }
