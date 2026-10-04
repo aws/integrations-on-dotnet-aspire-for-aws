@@ -13,8 +13,20 @@
     <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)public.snk</AssemblyOriginatorKeyFile>
     <PackageProjectUrl>https://github.com/aws/integrations-on-dotnet-aspire-for-aws</PackageProjectUrl>
     <RepositoryUrl>https://github.com/aws/integrations-on-dotnet-aspire-for-aws</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
     <PackageIcon>icon.png</PackageIcon>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+
+    <!--
+    Deterministic, commit-linked source metadata (Source Link). These enable the packed
+    assembly/PDB to carry the pinned Git commit and rewrite local (C:\build\...) document
+    paths to github.com URLs. ContinuousIntegrationBuild is enabled only on CI so local
+    developer builds keep full absolute paths for debugging.
+    -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true' or '$(TF_BUILD)' == 'true' or '$(CODEBUILD_BUILD_ID)' != ''">true</ContinuousIntegrationBuild>
 	
 	<!-- 
 	Warning ASPIRE010 is about pushing users to always run the AppHost via the aspire cli. But the AppHost in this solution are 
@@ -22,5 +34,25 @@
 	-->
 	<NoWarn>$(NoWarn);ASPIRE010</NoWarn>
   </PropertyGroup>
-  
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!--
+  Explicit SourceRoot for CI packing. The release pipeline hands the CodeBuild pack step
+  a source archive without a .git directory, so Source Link cannot derive the repository
+  root from git. Declaring SourceRoot from MSBuild properties (RepositoryUrl +
+  SourceRevisionId, supplied by the pipeline's build script) lets Source Link emit the
+  commit-pinned document -> raw.githubusercontent.com URL map and rewrite local build
+  paths to /_/... form WITHOUT requiring a full git clone. Guarded on SourceRevisionId so
+  local developer builds (which set no revision) are unaffected.
+  -->
+  <ItemGroup Condition="'$(SourceRevisionId)' != ''">
+    <SourceRoot Include="$(MSBuildThisFileDirectory)"
+                SourceControl="git"
+                RepositoryUrl="$(RepositoryUrl)"
+                RevisionId="$(SourceRevisionId)" />
+  </ItemGroup>
+
 </Project>

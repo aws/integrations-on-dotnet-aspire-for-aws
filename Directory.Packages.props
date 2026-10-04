@@ -20,6 +20,8 @@
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+    <!-- Source Link: emit commit-pinned repository metadata and rewrite local PDB paths -->
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <!-- AWS AgentCore local testing -->
     <PackageVersion Include="AWS.AgentCore.Hosting" Version="1.0.0" />
     <PackageVersion Include="AWS.AgentCore.Testing" Version="1.0.0" />

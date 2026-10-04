@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Enable commit-pinned Source Link and deterministic repository metadata so the published package links back to the exact GitHub source (fixes #244)."
+      ]
+    }
+  ]
+}
