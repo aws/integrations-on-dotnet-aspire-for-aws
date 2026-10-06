@@ -44,7 +44,7 @@ jobs:
     steps:
       # Assume an AWS role that can read the deploy key and start the pipeline.
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           # zizmor: ignore[secrets-outside-env] secret is a role ARN (an identifier, not
           # a credential); access is gated by the role's AWS OIDC trust policy, so a
@@ -53,7 +53,7 @@ jobs:
           aws-region: us-west-2
       # Retrieve the per-repo deploy key from Secrets Manager (push to main runs over SSH).
       - name: Retrieve secrets from AWS Secrets Manager
-        uses: aws-actions/aws-secretsmanager-get-secrets@2cb1a461cbd4865ac4299648312e4704c646cd53 #v3
+        uses: aws-actions/aws-secretsmanager-get-secrets@2297f9a879480a9e3af9b293ed15c70caf8e1c88 #v3
         with:
           secret-ids: |
             DEPLOY_KEY, prod/devops/integrations-on-dotnet-aspire-for-aws-deploy-key
@@ -111,7 +111,7 @@ jobs:
       # so the pipeline calls below run same-account. The role above (release-workflow) only
       # reads the deploy key; this one only starts this pipeline.
       - name: Configure AWS Credentials for the pipeline account
-        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           # zizmor: ignore[secrets-outside-env] role ARN, gated by AWS OIDC trust policy.
           role-to-assume: ${{ secrets.EXECUTE_RELEASE_ROLE_ARN }}
