@@ -7,6 +7,7 @@ using Aspire.Hosting.AWS;
 using Aspire.Hosting.AWS.CDK;
 using Aspire.Hosting.AWS.CloudFormation;
 using Aspire.Hosting.AWS.Lambda;
+using Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
 using Constructs;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
@@ -67,7 +68,9 @@ public static class SQSEventSourceExtensions
 
             return queueUrl;
         };
-        return WithSQSEventSource(lambdaFunction, resolver, options, queueName);
+        var result = WithSQSEventSource(lambdaFunction, resolver, options, queueName);
+        var stack = queue.Resource.SelectParentResource<IStackResource>();
+        return result.WithAnnotation(new LambdaSQSEventSourceAnnotation(stack, queue.Resource.Construct, options));
     }
 
     /// <summary>
