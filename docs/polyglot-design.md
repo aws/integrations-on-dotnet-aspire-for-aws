@@ -119,6 +119,7 @@ name is pinned.
 | `WithReference(IResourceBuilder<T>, IAWSSDKConfig)` | `withAWSSDKConfigReference` |
 | `WithReference(IResourceBuilder<T>, IResourceBuilder<DynamoDBLocalResource>)` | `withDynamoDBLocalReference` |
 | API Gateway `WithReference(..., lambda, Method, path)` | `withAPIGatewayLambdaReference` |
+| API Gateway `WithReference(..., project, Method, path)` | `withAPIGatewayHttpReference` |
 
 **Alternative considered and rejected.** Implementing `IResourceWithCustomWithReference<TSelf>` so the single
 core `withReference` dispatches to AWS logic. This fits DynamoDB Local (a real resource) but **not** the
@@ -228,6 +229,7 @@ internal sealed class LambdaProjectMetadata(string projectPath, bool suppressBui
 | Lambda service emulator | `addAWSLambdaServiceEmulator` | `LambdaEmulatorResource` | `LambdaEmulatorOptions` |
 | API Gateway emulator | `addAWSAPIGatewayEmulator` | `APIGatewayEmulatorResource` | `APIGatewayEmulatorOptions`, `APIGatewayType`, `Method` |
 | Route Lambda via API Gateway | `withAPIGatewayLambdaReference` | — | — |
+| Proxy a project via API Gateway | `withAPIGatewayHttpReference` | — | — |
 | SQS event source | `withSQSEventSource` (string overload only) | — | `SQSEventSourceOptions` |
 | DynamoDB Streams event source | `withDynamoDBStreamsEventSource` (string overload only) | — | `DynamoDBStreamsEventSourceOptions` |
 
