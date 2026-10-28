@@ -1,3 +1,8 @@
+## Release 2026-10-28
+
+### Aspire.Hosting.AWS (13.7.3)
+* Update AWS.AgentCore.Testing dependency to 1.0.2, which no longer exports a public Program type that caused CS0433 in consumer test projects using WebApplicationFactory<Program>
+
 ## Release 2026-08-26
 
 ### Aspire.Hosting.AWS (13.7.2)
