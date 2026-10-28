@@ -22,7 +22,7 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
     <!-- AWS AgentCore local testing -->
     <PackageVersion Include="AWS.AgentCore.Hosting" Version="1.0.0" />
-    <PackageVersion Include="AWS.AgentCore.Testing" Version="1.0.0" />
+    <PackageVersion Include="AWS.AgentCore.Testing" Version="1.0.2" />
     <!-- AWS SDK for .NET dependencies -->
     <PackageVersion Include="AWSSDK.BedrockAgentCore" Version="4.0.105.1" />
     <PackageVersion Include="AWSSDK.CloudFormation" Version="4.0.102.2" />
