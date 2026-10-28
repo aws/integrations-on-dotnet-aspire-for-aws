@@ -145,11 +145,10 @@ public static class LambdaExtensions
                 return;
             }
 
-            // Add the Lambda function resource on the path so the emulator can distinguish request
-            // for each Lambda function.
-            var apiPath = $"{serviceRuntimeAPIEndpoint.Host}:{serviceRuntimeAPIEndpoint.Port}/{name}";
+            // Host and Port are not allocated yet while the environment callback is registered.
             context.EnvironmentVariables["AWS_EXECUTION_ENV"] = $"aspire.hosting.aws#{SdkUtilities.GetAssemblyVersion()}";
-            context.EnvironmentVariables["AWS_LAMBDA_RUNTIME_API"] = apiPath;
+            context.EnvironmentVariables["AWS_LAMBDA_RUNTIME_API"] = ReferenceExpression.Create(
+                $"{serviceRuntimeAPIEndpoint.Property(EndpointProperty.Host)}:{serviceRuntimeAPIEndpoint.Property(EndpointProperty.Port)}/{name}");
             context.EnvironmentVariables["AWS_LAMBDA_FUNCTION_NAME"] = name;
             context.EnvironmentVariables["_HANDLER"] = lambdaHandler;
 
@@ -158,11 +157,7 @@ public static class LambdaExtensions
 
             var serviceEmulatorEndpoint = serviceEmulator.GetEndpoint("https");
             if (!serviceEmulatorEndpoint.Exists)
-            {
                 serviceEmulatorEndpoint = serviceEmulator.GetEndpoint("http");
-            }
-
-            var lambdaEmulatorEndpoint = $"{serviceEmulatorEndpoint.Scheme}://{serviceEmulatorEndpoint.Host}:{serviceEmulatorEndpoint.Port}/?function={Uri.EscapeDataString(name)}";
             
             resource.WithAnnotation(new ResourceCommandAnnotation(
                 name: "LambdaEmulator",
@@ -177,10 +172,11 @@ public static class LambdaExtensions
                 },
                 executeCommand: context =>
                 {
+                    var ui = serviceEmulatorEndpoint.Url;
                     var startInfo = new ProcessStartInfo
                     {
                         UseShellExecute = true,
-                        FileName = lambdaEmulatorEndpoint
+                        FileName = $"{ui}/?function={Uri.EscapeDataString(name)}"
                     };
                     Process.Start(startInfo);
 
