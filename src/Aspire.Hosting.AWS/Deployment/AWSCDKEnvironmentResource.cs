@@ -43,6 +43,20 @@ public abstract class AWSCDKEnvironmentResource : Resource, IComputeEnvironmentR
 
     protected bool IsPublishMode { get; }
 
+    protected string? RunStackName { get; private set; }
+
+    internal void ConfigureRunStackName(string stackName)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(stackName);
+
+        if (!IsPublishMode && _cdkApp != null && !string.Equals(RunStackName, stackName, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("The run-mode stack name cannot be changed after the CDK app has been initialized.");
+        }
+
+        RunStackName = stackName;
+    }
+
     /// <summary>
     /// Gets the <see cref="CDKDefaultsProvider"/> for the <see cref="AWSCDKEnvironmentResource"/>. The default provider is used to provide 
     /// default values like memory sizes, cpu limits, expected ports, etc. for various AWS CDK constructs created as part of the Aspire deployment.
@@ -88,6 +102,11 @@ public abstract class AWSCDKEnvironmentResource : Resource, IComputeEnvironmentR
 
     internal void InitializeCDKApp(ILogger? logger, string outputDir)
     {
+        if (_cdkApp != null)
+        {
+            return;
+        }
+
         SystemCapabilityEvaluator.CheckNodeInstallationAsync().GetAwaiter().GetResult();
 
         var appProps = new AppProps();
@@ -290,8 +309,11 @@ public class AWSCDKEnvironmentResource<T> : AWSCDKEnvironmentResource
     private T? _stack;
     private void LoadEnvironmentStack()
     {
-        var props = new StackProps();
-        props.Env = GetCDKEnvironment();
+        var props = new StackProps
+        {
+            Env = GetCDKEnvironment(),
+            StackName = IsPublishMode ? null : RunStackName
+        };
         try
         {
             _stack = _stackFactory(CDKApp, props);

@@ -3,6 +3,7 @@
 using Amazon.CDK;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS;
+using Aspire.Hosting.AWS.CDK;
 using Aspire.Hosting.AWS.Deployment;
 using Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
 using Aspire.Hosting.AWS.Deployment.Services;
@@ -21,6 +22,60 @@ namespace Aspire.Hosting;
 
 public static class AWSCDKEnvironmentExtensions
 {
+    /// <summary>
+    /// Adds a stack resource backed by the environment's deployment stack so constructs can be
+    /// modeled once and used during both local run and deployment.
+    /// </summary>
+    /// <param name="builder">The AWS CDK environment builder.</param>
+    /// <param name="runStackName">
+    /// The physical CloudFormation stack name used during run mode. Defaults to the environment
+    /// resource name followed by <c>-local</c>. This value does not affect publish or deploy.
+    /// </param>
+    /// <returns>The companion stack resource builder.</returns>
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+    public static IResourceBuilder<IStackResource<T>> UseDeploymentStack<T>(
+        this IResourceBuilder<AWSCDKEnvironmentResource<T>> builder,
+        string? runStackName = null)
+        where T : Stack
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        var environment = builder.Resource;
+        environment.ConfigureRunStackName(runStackName ?? $"{environment.Name}-local");
+        var stackResourceName = $"{environment.Name}-stack";
+        var existing = builder.ApplicationBuilder.Resources
+            .OfType<AWSCDKEnvironmentStackResource<T>>()
+            .FirstOrDefault(resource =>
+                string.Equals(resource.Name, stackResourceName, StringComparison.OrdinalIgnoreCase));
+        if (existing != null)
+        {
+            return builder.ApplicationBuilder.CreateResourceBuilder<IStackResource<T>>(existing);
+        }
+
+        environment.InitializeCDKApp(null, CDKOutputDirectory.Determine(System.Environment.GetCommandLineArgs()));
+        var stackResource = new AWSCDKEnvironmentStackResource<T>(
+            stackResourceName,
+            (T)environment.CDKStack,
+            environment)
+        {
+            AWSSDKConfig = environment.Config.AWSSDKConfig
+        };
+
+        if (builder.ApplicationBuilder.ExecutionContext.IsRunMode)
+        {
+            builder.ApplicationBuilder.AddAWSProvisioning();
+        }
+
+        return builder.ApplicationBuilder
+            .AddResource<IStackResource<T>>(stackResource)
+            .WithInitialState(new()
+            {
+                Properties = [],
+                ResourceType = environment.CDKStack.GetType().Name,
+            })
+            .WithManifestPublishingCallback(stackResource.WriteToManifest);
+    }
+
     [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
     private static void AddEnvironmentServices(this IDistributedApplicationBuilder builder)
     {
