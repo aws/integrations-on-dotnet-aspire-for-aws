@@ -66,7 +66,7 @@ public class CDKAssetUploaderTests
         try
         {
             var mockS3 = new Mock<IAmazonS3>();
-            mockS3.Setup(s => s.GetObjectMetadataAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            mockS3.Setup(s => s.GetObjectMetadataAsync(It.IsAny<GetObjectMetadataRequest>(), It.IsAny<CancellationToken>()))
                   .ReturnsAsync(new GetObjectMetadataResponse());
 
             var mockSts = BuildMockSts("123456789012", "us-east-1");
@@ -95,7 +95,7 @@ public class CDKAssetUploaderTests
         try
         {
             var mockS3 = new Mock<IAmazonS3>();
-            mockS3.Setup(s => s.GetObjectMetadataAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            mockS3.Setup(s => s.GetObjectMetadataAsync(It.IsAny<GetObjectMetadataRequest>(), It.IsAny<CancellationToken>()))
                   .ThrowsAsync(new AmazonS3Exception("Not Found") { StatusCode = System.Net.HttpStatusCode.NotFound });
             mockS3.Setup(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
                   .ReturnsAsync(new PutObjectResponse());
@@ -137,7 +137,7 @@ public class CDKAssetUploaderTests
             byte[]? capturedZipBytes = null;
 
             var mockS3 = new Mock<IAmazonS3>();
-            mockS3.Setup(s => s.GetObjectMetadataAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            mockS3.Setup(s => s.GetObjectMetadataAsync(It.IsAny<GetObjectMetadataRequest>(), It.IsAny<CancellationToken>()))
                   .ThrowsAsync(new AmazonS3Exception("Not Found") { StatusCode = System.Net.HttpStatusCode.NotFound });
             mockS3.Setup(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
                   .Callback<PutObjectRequest, CancellationToken>((req, _) =>
@@ -184,7 +184,7 @@ public class CDKAssetUploaderTests
 
         await uploader.UploadFileAssetsAsync(assets, Path.GetTempPath(), CancellationToken.None);
 
-        mockS3.Verify(s => s.GetObjectMetadataAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        mockS3.Verify(s => s.GetObjectMetadataAsync(It.IsAny<GetObjectMetadataRequest>(), It.IsAny<CancellationToken>()), Times.Never);
         mockS3.Verify(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -199,7 +199,7 @@ public class CDKAssetUploaderTests
         {
             var mockS3 = new Mock<IAmazonS3>();
             // Bootstrap bucket policy may return 403 when caller lacks s3:ListBucket
-            mockS3.Setup(s => s.GetObjectMetadataAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            mockS3.Setup(s => s.GetObjectMetadataAsync(It.IsAny<GetObjectMetadataRequest>(), It.IsAny<CancellationToken>()))
                   .ThrowsAsync(new AmazonS3Exception("Forbidden") { StatusCode = System.Net.HttpStatusCode.Forbidden });
             mockS3.Setup(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
                   .ReturnsAsync(new PutObjectResponse());
@@ -213,6 +213,110 @@ public class CDKAssetUploaderTests
             await uploader.UploadFileAssetsAsync(assets, tempDir, CancellationToken.None);
 
             mockS3.Verify(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task UploadFileAssetsAsync_SetsExpectedBucketOwnerOnAllS3Calls()
+    {
+        var tempFile = Path.GetTempFileName();
+        File.WriteAllText(tempFile, "lambda code");
+        var tempDir = Path.GetDirectoryName(tempFile)!;
+
+        try
+        {
+            var mockS3 = new Mock<IAmazonS3>();
+            mockS3.Setup(s => s.GetObjectMetadataAsync(It.IsAny<GetObjectMetadataRequest>(), It.IsAny<CancellationToken>()))
+                  .ThrowsAsync(new AmazonS3Exception("Not Found") { StatusCode = System.Net.HttpStatusCode.NotFound });
+            mockS3.Setup(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
+                  .ReturnsAsync(new PutObjectResponse());
+
+            var mockSts = BuildMockSts("123456789012", "us-east-1");
+            var uploader = new CDKAssetUploader(NullLogger.Instance, () => mockS3.Object, () => mockSts.Object);
+
+            var assets = BuildFileAssets(Path.GetFileName(tempFile), FileAssetPackaging.FILE,
+                "cdk-assets-${AWS::AccountId}-${AWS::Region}", "abc123.bin");
+
+            await uploader.UploadFileAssetsAsync(assets, tempDir, CancellationToken.None);
+
+            mockS3.Verify(s => s.GetObjectMetadataAsync(
+                It.Is<GetObjectMetadataRequest>(r => r.ExpectedBucketOwner == "123456789012"),
+                It.IsAny<CancellationToken>()), Times.Once);
+            mockS3.Verify(s => s.PutObjectAsync(
+                It.Is<PutObjectRequest>(r => r.ExpectedBucketOwner == "123456789012"),
+                It.IsAny<CancellationToken>()), Times.Once);
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task UploadFileAssetsAsync_SetsExpectedBucketOwnerOnZippedDirectoryUpload()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        var assetDir = Path.Combine(tempDir, "function");
+        Directory.CreateDirectory(assetDir);
+        File.WriteAllText(Path.Combine(assetDir, "index.py"), "def handler(event, context): return 'hi'");
+
+        try
+        {
+            var mockS3 = new Mock<IAmazonS3>();
+            mockS3.Setup(s => s.GetObjectMetadataAsync(It.IsAny<GetObjectMetadataRequest>(), It.IsAny<CancellationToken>()))
+                  .ThrowsAsync(new AmazonS3Exception("Not Found") { StatusCode = System.Net.HttpStatusCode.NotFound });
+            mockS3.Setup(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
+                  .ReturnsAsync(new PutObjectResponse());
+
+            var mockSts = BuildMockSts("123456789012", "us-west-2");
+            var uploader = new CDKAssetUploader(NullLogger.Instance, () => mockS3.Object, () => mockSts.Object);
+
+            var assets = BuildFileAssets("function", FileAssetPackaging.ZIP_DIRECTORY,
+                "cdk-assets-${AWS::AccountId}-${AWS::Region}", "deadbeef.zip");
+
+            await uploader.UploadFileAssetsAsync(assets, tempDir, CancellationToken.None);
+
+            mockS3.Verify(s => s.PutObjectAsync(
+                It.Is<PutObjectRequest>(r => r.ExpectedBucketOwner == "123456789012"),
+                It.IsAny<CancellationToken>()), Times.Once);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task UploadFileAssetsAsync_ThrowsWhenBucketOwnedByAnotherAccount()
+    {
+        var tempFile = Path.GetTempFileName();
+        File.WriteAllText(tempFile, "lambda code");
+        var tempDir = Path.GetDirectoryName(tempFile)!;
+
+        try
+        {
+            // S3 returns 403 for both calls when the bucket is not owned by ExpectedBucketOwner.
+            var mockS3 = new Mock<IAmazonS3>();
+            mockS3.Setup(s => s.GetObjectMetadataAsync(It.IsAny<GetObjectMetadataRequest>(), It.IsAny<CancellationToken>()))
+                  .ThrowsAsync(new AmazonS3Exception("Forbidden") { StatusCode = System.Net.HttpStatusCode.Forbidden });
+            mockS3.Setup(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
+                  .ThrowsAsync(new AmazonS3Exception("Access Denied") { StatusCode = System.Net.HttpStatusCode.Forbidden });
+
+            var mockSts = BuildMockSts("123456789012", "us-east-1");
+            var uploader = new CDKAssetUploader(NullLogger.Instance, () => mockS3.Object, () => mockSts.Object);
+
+            var assets = BuildFileAssets(Path.GetFileName(tempFile), FileAssetPackaging.FILE,
+                "cdk-assets-${AWS::AccountId}-${AWS::Region}", "abc123.bin");
+
+            var ex = await Assert.ThrowsAsync<AWSProvisioningException>(
+                () => uploader.UploadFileAssetsAsync(assets, tempDir, CancellationToken.None));
+
+            Assert.Contains("123456789012", ex.Message);
+            Assert.IsType<AmazonS3Exception>(ex.InnerException);
         }
         finally
         {
