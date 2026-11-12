@@ -1,0 +1,11 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Patch",
+      "ChangelogMessages": [
+        "Verify the CDK assets bucket is owned by the current account when uploading CDK file assets during provisioning"
+      ]
+    }
+  ]
+}

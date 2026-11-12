@@ -80,7 +80,10 @@ internal sealed class CDKAssetUploader
             var bucketName = ResolveTokens(destination.BucketName, accountId, region);
             var objectKey = destination.ObjectKey;
 
-            if (await AssetExistsInS3Async(s3Client, bucketName, objectKey, cancellationToken).ConfigureAwait(false))
+            // Every S3 call passes ExpectedBucketOwner set to the caller's account. The bucket name is
+            // predictable, so this makes S3 reject the call if a bucket with that name exists in a
+            // different account, rather than reading from or uploading assets to it.
+            if (await AssetExistsInS3Async(s3Client, bucketName, objectKey, accountId, cancellationToken).ConfigureAwait(false))
             {
                 _logger.LogDebug("CDK asset {ObjectKey} already exists in {Bucket}, skipping upload", objectKey, bucketName);
                 continue;
@@ -88,24 +91,39 @@ internal sealed class CDKAssetUploader
 
             _logger.LogInformation("Uploading CDK asset {ObjectKey} to s3://{Bucket}", objectKey, bucketName);
 
-            if (packaging == FileAssetPackaging.ZIP_DIRECTORY)
+            try
             {
-                await UploadZippedDirectoryAsync(s3Client, sourcePath, bucketName, objectKey, cancellationToken).ConfigureAwait(false);
+                if (packaging == FileAssetPackaging.ZIP_DIRECTORY)
+                {
+                    await UploadZippedDirectoryAsync(s3Client, sourcePath, bucketName, objectKey, accountId, cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    await UploadFileAsync(s3Client, sourcePath, bucketName, objectKey, accountId, cancellationToken).ConfigureAwait(false);
+                }
             }
-            else
+            catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
             {
-                await UploadFileAsync(s3Client, sourcePath, bucketName, objectKey, cancellationToken).ConfigureAwait(false);
+                throw new AWSProvisioningException(
+                    $"Access denied uploading CDK asset {objectKey} to bucket {bucketName}. Verify the bucket exists and is owned by account {accountId}, " +
+                    "and that the current credentials have permission to write to it. Use 'cdk bootstrap' to create the CDK assets bucket.", ex);
             }
 
             _logger.LogInformation("Successfully uploaded CDK asset {ObjectKey} to s3://{Bucket}", objectKey, bucketName);
         }
     }
 
-    private static async Task<bool> AssetExistsInS3Async(IAmazonS3 s3Client, string bucketName, string objectKey, CancellationToken cancellationToken)
+    private static async Task<bool> AssetExistsInS3Async(IAmazonS3 s3Client, string bucketName, string objectKey, string expectedBucketOwner, CancellationToken cancellationToken)
     {
         try
         {
-            await s3Client.GetObjectMetadataAsync(bucketName, objectKey, cancellationToken).ConfigureAwait(false);
+            var request = new GetObjectMetadataRequest
+            {
+                BucketName = bucketName,
+                Key = objectKey,
+                ExpectedBucketOwner = expectedBucketOwner,
+            };
+            await s3Client.GetObjectMetadataAsync(request, cancellationToken).ConfigureAwait(false);
             return true;
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -115,12 +133,15 @@ internal sealed class CDKAssetUploader
         catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
         {
             // The CDK bootstrap bucket policy may return 403 for a missing object when the caller
-            // lacks s3:ListBucket. Treat this as not-found and attempt the upload.
+            // lacks s3:ListBucket. A 403 is also returned when the bucket is owned by an account
+            // other than ExpectedBucketOwner. Either way treat this as not-found and attempt the
+            // upload; the upload also passes ExpectedBucketOwner, so it fails for a bucket owned by
+            // another account.
             return false;
         }
     }
 
-    private static async Task UploadFileAsync(IAmazonS3 s3Client, string filePath, string bucketName, string objectKey, CancellationToken cancellationToken)
+    private static async Task UploadFileAsync(IAmazonS3 s3Client, string filePath, string bucketName, string objectKey, string expectedBucketOwner, CancellationToken cancellationToken)
     {
         using var fileStream = File.OpenRead(filePath);
         var request = new PutObjectRequest
@@ -128,11 +149,12 @@ internal sealed class CDKAssetUploader
             BucketName = bucketName,
             Key = objectKey,
             InputStream = fileStream,
+            ExpectedBucketOwner = expectedBucketOwner,
         };
         await s3Client.PutObjectAsync(request, cancellationToken).ConfigureAwait(false);
     }
 
-    private static async Task UploadZippedDirectoryAsync(IAmazonS3 s3Client, string directoryPath, string bucketName, string objectKey, CancellationToken cancellationToken)
+    private static async Task UploadZippedDirectoryAsync(IAmazonS3 s3Client, string directoryPath, string bucketName, string objectKey, string expectedBucketOwner, CancellationToken cancellationToken)
     {
         using var memoryStream = new MemoryStream();
         ZipDirectory(directoryPath, memoryStream);
@@ -143,6 +165,7 @@ internal sealed class CDKAssetUploader
             BucketName = bucketName,
             Key = objectKey,
             InputStream = memoryStream,
+            ExpectedBucketOwner = expectedBucketOwner,
         };
         await s3Client.PutObjectAsync(request, cancellationToken).ConfigureAwait(false);
     }
