@@ -1,3 +1,9 @@
+## Release 2026-11-17
+
+### Aspire.Hosting.AWS (13.7.4)
+* Verify the CDK assets bucket is owned by the current account when uploading CDK file assets during provisioning
+* Update Aspire dependencies to 13.6.5 to address CVE-2026-120006 (GHSA-f7vh-h5g3-7jrh), including the transitive Microsoft.Extensions, OpenTelemetry, and MessagePack version floors it requires
+
 ## Release 2026-10-28
 
 ### Aspire.Hosting.AWS (13.7.3)
