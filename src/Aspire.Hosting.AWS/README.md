@@ -265,6 +265,15 @@ Use the `WithReference` method to connect Lambda functions to HTTP routes, speci
 - The HTTP method
 - The route pattern
 
+The same method can reverse-proxy a non-Lambda project. Pass a project resource instead of a Lambda resource. The emulator sends the HTTP request to the project's `http` endpoint (`IntegrationType` `Http`) instead of wrapping it as a Lambda event. Requires Amazon.Lambda.TestTool 0.16.0 or later, which this package installs by default.
+
+```csharp
+var api = builder.AddProject<Projects.Api>("api");
+
+builder.AddAWSAPIGatewayEmulator("APIGatewayEmulator", APIGatewayType.HttpV2)
+    .WithReference(api, Method.Any, "/{proxy+}");
+```
+
 #### Wildcard Paths
 The API Gateway emulator supports the use of wildcard path. To define a wildcard path, you can use the `{proxy+}` syntax in the route pattern.
 
@@ -599,6 +608,7 @@ the AWS reference methods are given distinct, stable names instead).
 | Lambda service emulator | `AddAWSLambdaServiceEmulator` | `addAWSLambdaServiceEmulator` | Same name. |
 | API Gateway emulator | `AddAWSAPIGatewayEmulator` | `addAWSAPIGatewayEmulator` | Same name. |
 | Route a Lambda via API Gateway | `WithReference(lambda, Method, path)` | **`withAPIGatewayLambdaReference`** | Renamed to avoid colliding with the core `withReference`. |
+| Proxy a project via API Gateway | `WithReference(project, Method, path)` | **`withAPIGatewayHttpReference`** | Reverse-proxies the project's `http` endpoint (`IntegrationType` `Http`). |
 | SQS event source | `WithSQSEventSource(queueUrl, options?)` | `withSQSEventSource(queueUrl, options?)` | Only the **queue URL string** overload is exported; the CDK-construct and CloudFormation overloads are C#-only. |
 | DynamoDB Streams event source | `WithDynamoDBStreamsEventSource(tableName, options?)` | `withDynamoDBStreamsEventSource(tableName, options?)` | Only the **table name string** overload is exported; the CDK-construct and CloudFormation overloads are C#-only. |
 

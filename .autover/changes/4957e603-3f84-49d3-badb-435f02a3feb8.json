@@ -1,0 +1,12 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Minor",
+      "ChangelogMessages": [
+        "API Gateway emulator can reverse-proxy a non-Lambda project on the same origin via IntegrationType Http",
+        "Defer the Lambda runtime API host and port until the emulator endpoint is allocated"
+      ]
+    }
+  ]
+}

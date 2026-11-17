@@ -62,6 +62,7 @@ The AWS reference methods are intentionally pinned to distinct names so they do 
 | Reference the AWS SDK config | `withAWSSDKConfigReference(sdkConfig)` |
 | Reference DynamoDB Local | `withDynamoDBLocalReference(dynamoDBLocal)` |
 | Route a Lambda through API Gateway | `withAPIGatewayLambdaReference(lambda, Method, path)` |
+| Proxy a project through API Gateway | `withAPIGatewayHttpReference(project, Method, path)` |
 
 ## Exercising the routes
 
