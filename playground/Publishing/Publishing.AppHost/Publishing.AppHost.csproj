@@ -11,16 +11,14 @@
 
 	<ItemGroup>
 		<PackageReference Include="Aspire.Hosting.AppHost" />
+		<PackageReference Include="Aspire.Hosting.Dotnet" />
 		<PackageReference Include="Aspire.Hosting.Redis" />
 		<PackageReference Include="Aspire.Hosting.SqlServer" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <ProjectReference Include="..\..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" IsAspireProjectResource="false" />
-	  <ProjectReference Include="..\Backend\Backend.csproj" />
-	  <ProjectReference Include="..\Frontend\Frontend.csproj" />
 	  <ProjectReference Include="..\SQSProcessorFunction\SQSProcessorFunction.csproj" />
-	  <ProjectReference Include="..\Publishing.HoroscopeAgent\Publishing.HoroscopeAgent.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

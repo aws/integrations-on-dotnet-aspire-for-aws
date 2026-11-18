@@ -11,8 +11,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" IsAspireProjectResource="false" />
     <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.Dotnet" />
 
-    <ProjectReference Include="..\Frontend\Frontend.csproj" />
   </ItemGroup>
 
   <ItemGroup>
