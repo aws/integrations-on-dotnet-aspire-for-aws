@@ -40,9 +40,7 @@ public static class AWSCDKEnvironmentExtensions
         builder.Services.AddTransient<IAWSPublishTarget, ElastiCacheServerlessClusterPublishTarget>();
         builder.Services.AddTransient<IAWSPublishTarget, LambdaFunctionPublishTarget>();
 
-#if NET10_0_OR_GREATER
         builder.Services.AddTransient<IAWSPublishTarget, AgentCoreRuntimePublishTarget>();
-#endif
     }
 
     /// <summary>
@@ -363,7 +361,6 @@ public static class AWSCDKEnvironmentExtensions
         return builder;
     }
 
-#if NET10_0_OR_GREATER
     /// <summary>
     /// Deploy project to AWS Bedrock AgentCore as a container runtime.
     /// The CDK <see href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-bedrockagentcore-runtime.html">AWS::BedrockAgentCore::Runtime</see>
@@ -388,5 +385,4 @@ public static class AWSCDKEnvironmentExtensions
         builder.Resource.Annotations.Add(new PublishAgentCoreRuntimeAnnotation { Config = config ?? new PublishAgentCoreRuntimeConfig() });
         return builder;
     }
-#endif
 }

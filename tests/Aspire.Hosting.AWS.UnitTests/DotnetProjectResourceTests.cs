@@ -1,4 +1,3 @@
-#if NET10_0_OR_GREATER
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Aspire.Hosting.ApplicationModel;
@@ -84,4 +83,3 @@ public class DotnetProjectResourceTests
         public Task<string> CreateTarballImageAsync(ProjectResource resource, CancellationToken cancellationToken = default) => Task.FromResult("x");
     }
 }
-#endif

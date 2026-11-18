@@ -1,6 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-#if NET10_0_OR_GREATER
 
 using Amazon.CDK;
 using Amazon.CDK.AWS.BedrockAgentCore;
@@ -206,4 +205,3 @@ public partial class CDKDefaultsProvider
     }
 }
 
-#endif

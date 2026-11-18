@@ -1,6 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-#if NET10_0_OR_GREATER
 
 #pragma warning disable ASPIREPUBLISHERS001
 #pragma warning disable ASPIREAWSPUBLISHERS001
@@ -314,4 +313,3 @@ internal class AgentCoreRuntimeConnectionPoints(
     }
 }
 
-#endif

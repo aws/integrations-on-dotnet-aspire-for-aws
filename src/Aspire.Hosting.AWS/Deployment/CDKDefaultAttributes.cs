@@ -85,7 +85,6 @@ public class DefaultElastiCacheServerlessSecurityGroupAttribute : Attribute
 
 }
 
-#if NET10_0_OR_GREATER
 /// <summary>
 /// Attribute applied on a property or field in the CDK deployment stack of type <see cref="Amazon.CDK.AWS.IAM.IRole"/>.
 /// This will be used for the Bedrock AgentCore runtime execution role.
@@ -95,4 +94,3 @@ public class DefaultAgentCoreRuntimeRoleAttribute : Attribute
 {
 
 }
-#endif
