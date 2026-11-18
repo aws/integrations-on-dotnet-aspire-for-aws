@@ -2,7 +2,6 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <AspireSdkVersion>17.0.0</AspireSdkVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Aspire.Hosting" Version="17.0.0" />

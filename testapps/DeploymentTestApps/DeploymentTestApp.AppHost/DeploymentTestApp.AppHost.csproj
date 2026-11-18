@@ -1,14 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <Sdk Name="Aspire.AppHost.Sdk" Version="$(AspireSdkVersion)" />
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <IsAspireHost>true</IsAspireHost>
     <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UserSecretsId>1a94c190-7e97-43a8-ac8c-d548fce21593</UserSecretsId>
 	<NoWarn>$(NoWarn);CS8002</NoWarn> <!-- AWS CDK packages are not signed -->
+	<!-- ASPIRE004: class library Lambda functions are referenced as resources on purpose; AddAWSLambdaFunction runs them. -->
+	<NoWarn>$(NoWarn);ASPIRE004</NoWarn>
   </PropertyGroup>
 	
 	<ItemGroup>
@@ -19,7 +20,9 @@
 	
 	<ItemGroup>
 	  <ProjectReference Include="..\..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" IsAspireProjectResource="false" />
-	  <ProjectReference Include="..\DeploymentTestApp.LambdaFunction1\DeploymentTestApp.LambdaFunction1.csproj" />
+	  <!-- Lambda projects added with AddAWSLambdaFunction<T> need the generated Projects.* type. Without Aspire.AppHost.Sdk
+	       these references must opt in explicitly, using the same metadata the SDK used to apply by default. -->
+	  <ProjectReference Include="..\DeploymentTestApp.LambdaFunction1\DeploymentTestApp.LambdaFunction1.csproj" IsAspireProjectResource="true" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" ExcludeAssets="all" Private="false" />
 	</ItemGroup>
 
 </Project>

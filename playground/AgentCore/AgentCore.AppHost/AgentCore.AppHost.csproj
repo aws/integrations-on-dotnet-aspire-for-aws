@@ -1,7 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <Sdk Name="Aspire.AppHost.Sdk" Version="$(AspireSdkVersion)"/>
-
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <TargetFramework>$(DefaultTargetFramework)</TargetFramework>

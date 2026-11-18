@@ -23,13 +23,6 @@
 	-->
 	<NoWarn>$(NoWarn);ASPIRE010</NoWarn>
 
-	<!--
-	TEMPORARY (Aspire 17 migration): Aspire 17 obsoletes AddProject and Aspire.AppHost.Sdk.
-	ASPIRE012 = Aspire.AppHost.Sdk obsolete, CS0618 = AddProject obsolete,
-	ASPIRE004 = Lambda projects referenced from an AppHost are not executables.
-	Remove these once the AddDotnetProject / Microsoft.NET.Sdk migration is done (tracked in the Aspire 17 PR).
-	-->
-	<NoWarn>$(NoWarn);ASPIRE012;ASPIRE004;CS0618</NoWarn>
   </PropertyGroup>
   
 </Project>
