@@ -2,6 +2,7 @@
 
 using Amazon.CDK;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
@@ -99,6 +100,12 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
 
         return links;
     }
+
+    /// <summary>
+    /// True for the resource types that are .NET projects built into a container image: the legacy
+    /// <see cref="ProjectResource"/> and the Aspire 17 <see cref="DotnetProjectResource"/>.
+    /// </summary>
+    protected static bool IsDotnetProjectResource(IResource resource) => resource is ProjectResource or DotnetProjectResource;
 
     /// <summary>
     /// After the CDK construct is created for the Aspire resource, apply an <see cref="AWSLinkedObjectsAnnotation"/> to track the relationship.

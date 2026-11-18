@@ -2133,6 +2133,20 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
         await ExecutePublishAsync(nameof(Scenarios.PublishAgentCoreRuntimeWithCustomization), cloudFormationValidation);
     }
 
+    [Fact]
+    public async Task TestPublishDotnetV2WebApp()
+    {
+        // Same publish target as the ProjectResource scenarios, but the project is added with AddDotnetProject.
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            Assert.Single(GetResourcesOfType(cfTemplateDoc, "AWS::ECS::Service"));
+            Assert.Single(GetResourcesOfType(cfTemplateDoc, "AWS::ElasticLoadBalancingV2::LoadBalancer"));
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishDotnetV2WebApp), cloudFormationValidation);
+    }
+
     private async Task ExecutePublishAsync(string scenario, Func<JsonDocument, Task> cfTemplateValidation)
     {
         var outputPath = GetTempOutputPath();
@@ -2203,6 +2217,9 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
     internal class MockTarballContainerImageBuilder : ITarballContainerImageBuilder
     {
         public Task<string> CreateTarballImageAsync(ProjectResource resource, CancellationToken cancellationToken = default)
+            => CreateTarballImageAsync((IResource)resource, cancellationToken);
+
+        public Task<string> CreateTarballImageAsync(IResource resource, CancellationToken cancellationToken = default)
         {
             // Return a dummy tarball path
             var filePath = Path.Combine(Path.GetTempPath(), $"{resource.Name}_image.tar");

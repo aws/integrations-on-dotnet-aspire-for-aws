@@ -2,6 +2,7 @@
 
 using Amazon.CDK;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 using Aspire.Hosting.AWS;
 using Aspire.Hosting.AWS.Deployment;
 using Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
@@ -236,6 +237,30 @@ public static class AWSCDKEnvironmentExtensions
         return builder;
     }
 
+    /// <inheritdoc cref="PublishAsECSFargateExpressService(IResourceBuilder{ProjectResource}, PublishECSFargateExpressServiceConfig?)"/>
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+    public static IResourceBuilder<DotnetProjectResource> PublishAsECSFargateExpressService(this IResourceBuilder<DotnetProjectResource> builder, PublishECSFargateExpressServiceConfig? config = null)
+    {
+        builder.Resource.Annotations.Add(new PublishECSFargateServiceExpressAnnotation { Config = config ?? new PublishECSFargateExpressServiceConfig() });
+        return builder;
+    }
+
+    /// <inheritdoc cref="PublishAsECSFargateService(IResourceBuilder{ProjectResource}, PublishECSFargateServiceConfig?)"/>
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+    public static IResourceBuilder<DotnetProjectResource> PublishAsECSFargateService(this IResourceBuilder<DotnetProjectResource> builder, PublishECSFargateServiceConfig? config = null)
+    {
+        builder.Resource.Annotations.Add(new PublishECSFargateServiceAnnotation { Config = config ?? new PublishECSFargateServiceConfig() });
+        return builder;
+    }
+
+    /// <inheritdoc cref="PublishAsECSFargateServiceWithALB(IResourceBuilder{ProjectResource}, PublishECSFargateServiceWithALBConfig?)"/>
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+    public static IResourceBuilder<DotnetProjectResource> PublishAsECSFargateServiceWithALB(this IResourceBuilder<DotnetProjectResource> builder, PublishECSFargateServiceWithALBConfig? config = null)
+    {
+        builder.Resource.Annotations.Add(new PublishECSFargateServiceWithALBAnnotation { Config = config ?? new PublishECSFargateServiceWithALBConfig() });
+        return builder;
+    }
+
     /// <summary>
     /// Configures the <see cref="RedisResource"/> to be published as an Amazon ElastiCache provisioned node cluster during deployment.
     /// </summary>
@@ -353,6 +378,14 @@ public static class AWSCDKEnvironmentExtensions
         var annotation = new PublishAgentCoreRuntimeAnnotation { Config = config ?? new PublishAgentCoreRuntimeConfig() };
         builder.Resource.Annotations.Add(annotation);
 
+        return builder;
+    }
+
+    /// <inheritdoc cref="PublishAsAgentCoreRuntime(IResourceBuilder{ProjectResource}, PublishAgentCoreRuntimeConfig?)"/>
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+    public static IResourceBuilder<DotnetProjectResource> PublishAsAgentCoreRuntime(this IResourceBuilder<DotnetProjectResource> builder, PublishAgentCoreRuntimeConfig? config = null)
+    {
+        builder.Resource.Annotations.Add(new PublishAgentCoreRuntimeAnnotation { Config = config ?? new PublishAgentCoreRuntimeConfig() });
         return builder;
     }
 #endif

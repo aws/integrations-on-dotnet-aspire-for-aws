@@ -22,13 +22,14 @@ internal class ECSFargateServicePublishTarget(ITarballContainerImageBuilder imag
 
     public override async Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
     {
-        var projectResource = resource as ProjectResource
-                              ?? throw new InvalidOperationException($"Resource {resource.Name} is not a valid IProjectResource.");
+        var projectResource = IsDotnetProjectResource(resource)
+            ? resource
+            : throw new InvalidOperationException($"Resource {resource.Name} is not a valid ProjectResource or DotnetProjectResource.");
 
         var publishAnnotation = annotation as PublishECSFargateServiceAnnotation
                                 ?? throw new InvalidOperationException($"Annotation for resource {resource.Name} is not a valid {nameof(PublishECSFargateServiceAnnotation)}.");
 
-        var imageTarballPath = await imageBuilder.CreateTarballImageAsync(projectResource, cancellationToken);
+        var imageTarballPath = await imageBuilder.CreateTarballImageForResourceAsync(projectResource, cancellationToken);
 
         // Create Task Definition
         var fargateTaskDefinitionProps = new FargateTaskDefinitionProps();
@@ -81,7 +82,7 @@ internal class ECSFargateServicePublishTarget(ITarballContainerImageBuilder imag
 
     public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
     {
-        if (resource is ProjectResource &&
+        if (IsDotnetProjectResource(resource) &&
             cdkDefaultsProvider.DefaultConsoleProjectResourcePublishTarget == CDKDefaultsProvider.ConsoleProjectResourcePublishTarget.ECSFargateService
            )
         {

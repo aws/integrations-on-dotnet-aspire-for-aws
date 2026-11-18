@@ -18,6 +18,18 @@ namespace DeploymentTestApp.AppHost
             OverrideAppHostAssemblyName = "DeploymentTestApp.AppHost.dll"
         };
 
+        public static async Task PublishDotnetV2WebApp()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishDotnetV2WebApp));
+
+            builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1/DeploymentTestApps.WebApp1.csproj")
+                .PublishAsECSFargateServiceWithALB()
+                .WithExternalHttpEndpoints();
+
+            await ExecuteApp(builder);
+        }
+
         public static async Task PublishWebApp2ReferenceOnWebApp1()
         {
             var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
