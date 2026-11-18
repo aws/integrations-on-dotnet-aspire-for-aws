@@ -14,13 +14,11 @@
 
     <ItemGroup>
         <PackageReference Include="Aspire.Hosting.AppHost" />
+        <PackageReference Include="Aspire.Hosting.Dotnet" />
     </ItemGroup>
     
     <ItemGroup>
         <ProjectReference Include="..\..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" IsAspireProjectResource="false" />
-        <ProjectReference Include="..\AgentCoreTestApp.Agent\AgentCoreTestApp.Agent.csproj" />
-        <ProjectReference Include="..\AgentCoreTestApp.StreamingAgent\AgentCoreTestApp.StreamingAgent.csproj" />
-        <ProjectReference Include="..\AgentCoreTestApp.ChatUI\AgentCoreTestApp.ChatUI.csproj" />
     </ItemGroup>
 
 </Project>

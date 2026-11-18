@@ -2133,20 +2133,6 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
         await ExecutePublishAsync(nameof(Scenarios.PublishAgentCoreRuntimeWithCustomization), cloudFormationValidation);
     }
 
-    [Fact]
-    public async Task TestPublishDotnetV2WebApp()
-    {
-        // Same publish target as the ProjectResource scenarios, but the project is added with AddDotnetProject.
-        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
-        {
-            Assert.Single(GetResourcesOfType(cfTemplateDoc, "AWS::ECS::Service"));
-            Assert.Single(GetResourcesOfType(cfTemplateDoc, "AWS::ElasticLoadBalancingV2::LoadBalancer"));
-            return Task.CompletedTask;
-        };
-
-        await ExecutePublishAsync(nameof(Scenarios.PublishDotnetV2WebApp), cloudFormationValidation);
-    }
-
     private async Task ExecutePublishAsync(string scenario, Func<JsonDocument, Task> cfTemplateValidation)
     {
         var outputPath = GetTempOutputPath();
