@@ -15,6 +15,7 @@ Provides extension methods and resources definition for an Aspire AppHost to con
 
 ## Prerequisites
 
+- Aspire 17 and .NET 10
 - [Configure AWS credentials](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html)
 - [Node.js](https://nodejs.org) _(AWS CDK only)_
 
@@ -25,6 +26,8 @@ In your AppHost project, install the `Aspire.Hosting.AWS` library with [NuGet](h
 ```dotnetcli
 dotnet add package Aspire.Hosting.AWS
 ```
+
+The examples add .NET projects with Aspire's `AddDotnetProject`, which takes the path to the project folder or `.csproj` file. The AWS extension methods also still accept projects added with the obsolete `AddProject<T>`.
 
 ## Configuring the AWS SDK for .NET
 
@@ -44,7 +47,7 @@ project without explicitly setting the credentials and region will pick up these
 to configure the service client.
 
 ```csharp
-builder.AddProject<Projects.Frontend>("Frontend")
+builder.AddDotnetProject("Frontend", "../Frontend")
         .WithReference(awsConfig)
 ```
 
@@ -120,7 +123,7 @@ var awsResources = builder.AddAWSCloudFormationTemplate("AspireSampleDevResource
 The outputs of a CloudFormation stack can be associated to a project using the `WithReference` method.
 
 ```csharp
-builder.AddProject<Projects.Frontend>("Frontend")
+builder.AddDotnetProject("Frontend", "../Frontend")
        .WithReference(awsResources);
 ```
 
@@ -134,7 +137,7 @@ var chatTopicArn = builder.Configuration["AWS:Resources:ChatTopicArn"];
 Alternatively a single CloudFormation stack output parameter can be assigned to an environment variable using the `GetOutput` method.
 
 ```csharp
-builder.AddProject<Projects.Frontend>("Frontend")
+builder.AddDotnetProject("Frontend", "../Frontend")
        .WithEnvironment("ChatTopicArnEnv", awsResources.GetOutput("ChatTopicArn"))
 ```
 
@@ -147,7 +150,7 @@ It will associate the outputs of the CloudFormation stack the same as the provis
 var awsResources = builder.AddAWSCloudFormationStack("ExistingStackName")
                           .WithReference(awsConfig);
 
-builder.AddProject<Projects.Frontend>("Frontend")
+builder.AddDotnetProject("Frontend", "../Frontend")
        .WithReference(awsResources);
 ```
 
@@ -163,7 +166,7 @@ A number of methods are available to add common resources to the AppHost like S3
 var stack = builder.AddAWSCDKStack("Stack");
 var bucket = stack.AddS3Bucket("Bucket");
 
-builder.AddProject<Projects.Frontend>("Frontend")
+builder.AddDotnetProject("Frontend", "../Frontend")
        .WithReference(bucket);
 ```
 
@@ -175,7 +178,7 @@ Alternative constructs can be created in free form using the `AddConstruct` meth
 var stack = builder.AddAWSCDKStack("Stack");
 var constuct = stack.AddConstruct("Construct", scope => new CustomConstruct(scope, "Construct"));
 
-builder.AddProject<Projects.Frontend>("Frontend")
+builder.AddDotnetProject("Frontend", "../Frontend")
        .WithReference(construct, c => c.Url, "Url");
 ```
 
@@ -205,6 +208,14 @@ builder.AddAWSLambdaFunction<Projects.ClassLibraryLambdaFunction>(
     .WithReference(awsConfig);
 
 ```
+
+`AddAWSLambdaFunction` uses the generated `Projects.*` type for the Lambda project. If your AppHost uses `Microsoft.NET.Sdk` rather than the obsolete `Aspire.AppHost.Sdk`, the Lambda project reference must opt in to generating that type:
+
+```xml
+<ProjectReference Include="..\MyFunction\MyFunction.csproj" IsAspireProjectResource="true" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" ExcludeAssets="all" Private="false" />
+```
+
+Class library Lambda projects referenced this way report warning `ASPIRE004`, which can be suppressed.
 
 The lambdaHandler parameter specifies the Lambda handler in different formats depending on the project type:
 
@@ -322,7 +333,7 @@ builder.AddAWSCDKEnvironment(
 );
 
 // Add your resources
-var webApp = builder.AddProject<Projects.WebApp>("webapp");
+var webApp = builder.AddDotnetProject("webapp", "../WebApp");
 
 builder.Build().Run();
 ```
@@ -356,7 +367,7 @@ builder.AddAWSCDKEnvironment(
 );
 
 // Web projects automatically deploy to ECS Fargate Express
-var webApp = builder.AddProject<Projects.WebApp>("webapp");
+var webApp = builder.AddDotnetProject("webapp", "../WebApp");
 
 // Lambda functions automatically deploy to AWS Lambda
 var function = builder.AddAWSLambdaFunction<Projects.MyFunction>("function", "<lambda-function-handler>");
@@ -385,7 +396,7 @@ builder.AddAWSCDKEnvironment(
 );
 
 // Deploy web app with Application Load Balancer instead of default Express service
-var webApp = builder.AddProject<Projects.WebApp>("webapp")
+var webApp = builder.AddDotnetProject("webapp", "../WebApp")
     .PublishAsECSFargateServiceWithALB();
 
 builder.Build().Run();
@@ -408,7 +419,7 @@ builder.AddAWSCDKEnvironment(
 var cache = builder.AddRedis("cache");
 
 // Connect the web app to the cache
-var webApp = builder.AddProject<Projects.WebApp>("webapp")
+var webApp = builder.AddDotnetProject("webapp", "../WebApp")
     .WithReference(cache);
 
 builder.Build().Run();
@@ -449,7 +460,7 @@ For each .NET project in the Aspire application using DynamoDB, add a reference 
 
 ```csharp
 // Reference DynamoDB local in project
-builder.AddProject<Projects.Frontend>("Frontend")
+builder.AddDotnetProject("Frontend", "../Frontend")
    .WithReference(localDynamoDB);
 ```
 
@@ -468,7 +479,7 @@ If you want the tables and data to persist between Aspire debug sessions, set th
 
 ## Local Development with AgentCore (Experimental)
 
-> **Note**: This feature requires `net10.0` and is behind the `ASPIREAWSAGENTCORE001` experimental flag.
+> **Note**: This feature is behind the `ASPIREAWSAGENTCORE001` experimental flag.
 
 The AgentCore integration provides a local development experience for agents built with the `AWS.AgentCore.Hosting` package. All emulators run as embedded in-process Kestrel servers &mdash; no Docker or separate processes required.
 
@@ -488,16 +499,16 @@ Use the annotations or extension methods to define your agent. Then in your Aspi
 var builder = DistributedApplication.CreateBuilder(args);
 
 // Register a non-streaming agent with short-term memory
-var agent = builder.AddAgentCoreRuntime<Projects.MyAgent>("my-agent")
+var agent = builder.AddAgentCoreRuntime("my-agent", "../MyAgent")
     .WithAgentCoreMemory();
 
 // Register a streaming agent
-builder.AddAgentCoreRuntime<Projects.MyStreamingAgent>("my-streaming-agent")
+builder.AddAgentCoreRuntime("my-streaming-agent", "../MyStreamingAgent")
     .WithAgentCoreStreaming()
     .WithAgentCoreMemory();
 
 // Wire a consumer project — AWS_ENDPOINT_URL_BEDROCK_AGENTCORE is injected automatically
-builder.AddProject<Projects.MyChatUI>("ChatUI")
+builder.AddDotnetProject("ChatUI", "../MyChatUI")
     .WithReference(agent);
 
 builder.Build().Run();
@@ -507,7 +518,7 @@ builder.Build().Run();
 
 | Method | Description |
 |--------|-------------|
-| `AddAgentCoreRuntime<TProject>()` | Registers an agent with embedded runtime and chat emulators |
+| `AddAgentCoreRuntime(name, projectPath)` | Registers an agent with embedded runtime and chat emulators. `AddAgentCoreRuntime<TProject>(name)` is also available for projects referenced from the AppHost. |
 | `.WithAgentCoreStreaming()` | Enables SSE streaming mode for the chat app |
 | `.WithAgentCoreMemory()` | Enables AgentCore memory: a short-term memory emulator locally, and a provisioned AgentCore Memory resource on deployment |
 | `.WithReference(agent)` | Injects the runtime emulator endpoint into a consumer project via `AWS_ENDPOINT_URL_BEDROCK_AGENTCORE` |
@@ -515,7 +526,7 @@ builder.Build().Run();
 ### Options
 
 ```csharp
-builder.AddAgentCoreRuntime<Projects.MyAgent>("my-agent",
+builder.AddAgentCoreRuntime("my-agent", "../MyAgent",
     new AgentCoreLocalOptions
     {
         IncludeEmulatorLogs = true,    // Route emulator logs to the Aspire dashboard
