@@ -25,7 +25,7 @@ namespace DeploymentTestApp.AppHost
             Console.WriteLine("Running in publish mode: " + builder.ExecutionContext.IsPublishMode);
             builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishWebApp2ReferenceOnWebApp1));
 
-            var webApp1 = builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1/DeploymentTestApps.WebApp1.csproj")
+            var webApp1 = builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1")
                 .PublishAsECSFargateExpressService(new PublishECSFargateExpressServiceConfig
                 {
                     PropsFargateTaskDefinitionCallback = (context, props) =>
@@ -35,7 +35,7 @@ namespace DeploymentTestApp.AppHost
                 })
                 .WithExternalHttpEndpoints();
 
-            builder.AddDotnetProject("WebApp2", "../DeploymentTestApps.WebApp2/DeploymentTestApps.WebApp2.csproj")
+            builder.AddDotnetProject("WebApp2", "../DeploymentTestApps.WebApp2")
                 .WithReference(webApp1)
                 .WithExternalHttpEndpoints();
 
@@ -48,7 +48,7 @@ namespace DeploymentTestApp.AppHost
 
             builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishWebApp2ReferenceOnWebApp1WithAlb));
 
-            var webApp1 = builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1/DeploymentTestApps.WebApp1.csproj")
+            var webApp1 = builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1")
                 .PublishAsECSFargateServiceWithALB(new PublishECSFargateServiceWithALBConfig
                 {
                     PropsApplicationLoadBalancedFargateServiceCallback = (context, props) =>
@@ -58,7 +58,7 @@ namespace DeploymentTestApp.AppHost
                 })
                 .WithExternalHttpEndpoints();
 
-            builder.AddDotnetProject("WebApp2", "../DeploymentTestApps.WebApp2/DeploymentTestApps.WebApp2.csproj")
+            builder.AddDotnetProject("WebApp2", "../DeploymentTestApps.WebApp2")
                 .PublishAsECSFargateServiceWithALB()
                 .WithReference(webApp1)
                 .WithExternalHttpEndpoints();
@@ -72,10 +72,10 @@ namespace DeploymentTestApp.AppHost
 
             builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishService1ReferenceOnWebApp1));
 
-            var webApp1 = builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1/DeploymentTestApps.WebApp1.csproj")
+            var webApp1 = builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1")
                 .WithExternalHttpEndpoints();
 
-            builder.AddDotnetProject("Service1", "../DeploymentTestApp.Service1/DeploymentTestApp.Service1.csproj")
+            builder.AddDotnetProject("Service1", "../DeploymentTestApp.Service1")
                 .WithReference(webApp1);
 
             await ExecuteApp(builder);
@@ -87,7 +87,7 @@ namespace DeploymentTestApp.AppHost
 
             builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new DefaultVpcStack(app, nameof(PublishWebApp1UsingDefaultVpc), props), _defaultEnvironentResourceConfig);
 
-            builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1/DeploymentTestApps.WebApp1.csproj")
+            builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1")
                 .WithExternalHttpEndpoints();
 
             await ExecuteApp(builder);
@@ -137,7 +137,7 @@ namespace DeploymentTestApp.AppHost
 
             builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, (app, props) => new DefaultVpcStack(app, nameof(PublishLambdaWithReferences), props), _defaultEnvironentResourceConfig);
 
-            var webApp1 = builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1/DeploymentTestApps.WebApp1.csproj")
+            var webApp1 = builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1")
                 .WithExternalHttpEndpoints();
 
             builder.AddAWSLambdaFunction<Projects.DeploymentTestApp_LambdaFunction1>("LambdaFunction1", "DeploymentTestApp.LambdaFunction1::DeploymentTestApp.LambdaFunction1.Function::FunctionHandler")
@@ -154,11 +154,11 @@ namespace DeploymentTestApp.AppHost
 
             var cache = builder.AddRedis("Cache");
 
-            builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1/DeploymentTestApps.WebApp1.csproj")
+            builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1")
                 .WithReference(cache)
                 .WithExternalHttpEndpoints();
 
-            builder.AddDotnetProject("Service1", "../DeploymentTestApp.Service1/DeploymentTestApp.Service1.csproj")
+            builder.AddDotnetProject("Service1", "../DeploymentTestApp.Service1")
                 .WithReference(cache);
 
             builder.AddAWSLambdaFunction<Projects.DeploymentTestApp_LambdaFunction1>("LambdaFunction1", "DeploymentTestApp.LambdaFunction1::DeploymentTestApp.LambdaFunction1.Function::FunctionHandler")
@@ -176,11 +176,11 @@ namespace DeploymentTestApp.AppHost
             var cache = builder.AddRedis("Cache")
                                .PublishAsElasticCacheProvisionCluster();
 
-            builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1/DeploymentTestApps.WebApp1.csproj")
+            builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1")
                 .WithReference(cache)
                 .WithExternalHttpEndpoints();
 
-            builder.AddDotnetProject("Service1", "../DeploymentTestApp.Service1/DeploymentTestApp.Service1.csproj")
+            builder.AddDotnetProject("Service1", "../DeploymentTestApp.Service1")
                 .WithReference(cache);
 
             builder.AddAWSLambdaFunction<Projects.DeploymentTestApp_LambdaFunction1>("LambdaFunction1", "DeploymentTestApp.LambdaFunction1::DeploymentTestApp.LambdaFunction1.Function::FunctionHandler")
@@ -197,11 +197,11 @@ namespace DeploymentTestApp.AppHost
 
             var cache = builder.AddValkey("Cache");
 
-            builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1/DeploymentTestApps.WebApp1.csproj")
+            builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1")
                 .WithReference(cache)
                 .WithExternalHttpEndpoints();
 
-            builder.AddDotnetProject("Service1", "../DeploymentTestApp.Service1/DeploymentTestApp.Service1.csproj")
+            builder.AddDotnetProject("Service1", "../DeploymentTestApp.Service1")
                 .WithReference(cache);
 
             builder.AddAWSLambdaFunction<Projects.DeploymentTestApp_LambdaFunction1>("LambdaFunction1", "DeploymentTestApp.LambdaFunction1::DeploymentTestApp.LambdaFunction1.Function::FunctionHandler")
@@ -219,11 +219,11 @@ namespace DeploymentTestApp.AppHost
             var cache = builder.AddValkey("Cache")
                                .PublishAsElasticCacheProvisionCluster();
 
-            builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1/DeploymentTestApps.WebApp1.csproj")
+            builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1")
                 .WithReference(cache)
                 .WithExternalHttpEndpoints();
 
-            builder.AddDotnetProject("Service1", "../DeploymentTestApp.Service1/DeploymentTestApp.Service1.csproj")
+            builder.AddDotnetProject("Service1", "../DeploymentTestApp.Service1")
                 .WithReference(cache);
 
             builder.AddAWSLambdaFunction<Projects.DeploymentTestApp_LambdaFunction1>("LambdaFunction1", "DeploymentTestApp.LambdaFunction1::DeploymentTestApp.LambdaFunction1.Function::FunctionHandler")
@@ -238,7 +238,7 @@ namespace DeploymentTestApp.AppHost
 
             builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishWithEnvironment));
 
-            builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1/DeploymentTestApps.WebApp1.csproj")
+            builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1")
                 .WithEnvironment("MY_STATIC_VAR", "static-value")
                 .WithEnvironment("ANOTHER_VAR", "another-value")
                 .WithExternalHttpEndpoints();
@@ -267,10 +267,10 @@ namespace DeploymentTestApp.AppHost
 
             builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishWithEnvironmentAndReference));
 
-            var webApp1 = builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1/DeploymentTestApps.WebApp1.csproj")
+            var webApp1 = builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1")
                 .WithExternalHttpEndpoints();
 
-            builder.AddDotnetProject("WebApp2", "../DeploymentTestApps.WebApp2/DeploymentTestApps.WebApp2.csproj")
+            builder.AddDotnetProject("WebApp2", "../DeploymentTestApps.WebApp2")
                 .WithEnvironment("MY_CUSTOM_VAR", "custom-value")
                 .WithReference(webApp1)
                 .WithExternalHttpEndpoints();
@@ -284,7 +284,7 @@ namespace DeploymentTestApp.AppHost
 
             builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntime));
 
-            builder.AddAgentCoreRuntime("AgentCoreAgent", "../DeploymentTestApp.AgentCoreAgent/DeploymentTestApp.AgentCoreAgent.csproj");
+            builder.AddAgentCoreRuntime("AgentCoreAgent", "../DeploymentTestApp.AgentCoreAgent");
 
             await ExecuteApp(builder);
         }
@@ -297,7 +297,7 @@ namespace DeploymentTestApp.AppHost
 
             // WithAgentCoreMemory() requests AgentCore memory, which should provision an AgentCore Memory resource,
             // point the agent's AWS_AGENTCORE_MEMORY_ID at it, and grant the runtime role memory access.
-            builder.AddAgentCoreRuntime("AgentCoreAgent", "../DeploymentTestApp.AgentCoreAgent/DeploymentTestApp.AgentCoreAgent.csproj")
+            builder.AddAgentCoreRuntime("AgentCoreAgent", "../DeploymentTestApp.AgentCoreAgent")
                 .WithAgentCoreMemory();
 
             await ExecuteApp(builder);
@@ -312,10 +312,10 @@ namespace DeploymentTestApp.AppHost
             // Two agents each provision their own memory but share the default runtime role. The role
             // should receive a single bedrock-agentcore memory statement listing both memory ARNs, rather
             // than one statement per memory.
-            builder.AddAgentCoreRuntime("AgentCoreAgent1", "../DeploymentTestApp.AgentCoreAgent/DeploymentTestApp.AgentCoreAgent.csproj")
+            builder.AddAgentCoreRuntime("AgentCoreAgent1", "../DeploymentTestApp.AgentCoreAgent")
                 .WithAgentCoreMemory();
 
-            builder.AddAgentCoreRuntime("AgentCoreAgent2", "../DeploymentTestApp.AgentCoreAgent/DeploymentTestApp.AgentCoreAgent.csproj")
+            builder.AddAgentCoreRuntime("AgentCoreAgent2", "../DeploymentTestApp.AgentCoreAgent")
                 .WithAgentCoreMemory();
 
             await ExecuteApp(builder);
@@ -329,7 +329,7 @@ namespace DeploymentTestApp.AppHost
 
             // WithAgentCoreMemory() is used for local testing, but CreateMemory = false suppresses provisioning the
             // memory resource during deployment.
-            builder.AddAgentCoreRuntime("AgentCoreAgent", "../DeploymentTestApp.AgentCoreAgent/DeploymentTestApp.AgentCoreAgent.csproj")
+            builder.AddAgentCoreRuntime("AgentCoreAgent", "../DeploymentTestApp.AgentCoreAgent")
                 .WithAgentCoreMemory()
                 .PublishAsAgentCoreRuntime(new PublishAgentCoreRuntimeConfig
                 {
@@ -345,7 +345,7 @@ namespace DeploymentTestApp.AppHost
 
             builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntimeWithCustomization));
 
-            builder.AddAgentCoreRuntime("AgentCoreAgent", "../DeploymentTestApp.AgentCoreAgent/DeploymentTestApp.AgentCoreAgent.csproj")
+            builder.AddAgentCoreRuntime("AgentCoreAgent", "../DeploymentTestApp.AgentCoreAgent")
                 .PublishAsAgentCoreRuntime(new PublishAgentCoreRuntimeConfig
                 {
                     PropsCfnRuntimeCallback = (ctx, props) =>
@@ -363,11 +363,11 @@ namespace DeploymentTestApp.AppHost
 
             builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishAgentCoreRuntimeWithReference));
 
-            var agent = builder.AddAgentCoreRuntime("AgentCoreAgent", "../DeploymentTestApp.AgentCoreAgent/DeploymentTestApp.AgentCoreAgent.csproj");
+            var agent = builder.AddAgentCoreRuntime("AgentCoreAgent", "../DeploymentTestApp.AgentCoreAgent");
 
             // A consumer that references the agent should receive its runtime ARN as an environment
             // variable derived from the standard reference convention.
-            builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1/DeploymentTestApps.WebApp1.csproj")
+            builder.AddDotnetProject("WebApp1", "../DeploymentTestApps.WebApp1")
                 .WithReference(agent)
                 .WithExternalHttpEndpoints();
 
@@ -384,7 +384,7 @@ namespace DeploymentTestApp.AppHost
 
             // Referencing a VPC-requiring resource (ElastiCache) should switch the agent runtime's
             // network configuration to VPC mode.
-            builder.AddAgentCoreRuntime("AgentCoreAgent", "../DeploymentTestApp.AgentCoreAgent/DeploymentTestApp.AgentCoreAgent.csproj")
+            builder.AddAgentCoreRuntime("AgentCoreAgent", "../DeploymentTestApp.AgentCoreAgent")
                 .WithReference(cache);
 
             await ExecuteApp(builder);
@@ -400,7 +400,7 @@ namespace DeploymentTestApp.AppHost
 
             // The user pins explicit subnet IDs (e.g. to avoid AgentCore-unsupported availability zones).
             // These should take precedence over the default VPC's subnets.
-            builder.AddAgentCoreRuntime("AgentCoreAgent", "../DeploymentTestApp.AgentCoreAgent/DeploymentTestApp.AgentCoreAgent.csproj")
+            builder.AddAgentCoreRuntime("AgentCoreAgent", "../DeploymentTestApp.AgentCoreAgent")
                 .WithReference(cache)
                 .PublishAsAgentCoreRuntime(new PublishAgentCoreRuntimeConfig
                 {

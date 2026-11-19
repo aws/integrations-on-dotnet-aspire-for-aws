@@ -56,7 +56,7 @@ public static class AgentCoreResourceBuilderExtensions
     /// </summary>
     /// <param name="builder">The distributed application builder.</param>
     /// <param name="name">The name of the resource.</param>
-    /// <param name="projectPath">The path to the agent's project file, relative to the AppHost project.</param>
+    /// <param name="projectPath">The path to the agent's project file, or to a directory containing a single project file, relative to the AppHost project.</param>
     /// <param name="options">Optional configuration for the local development experience.</param>
     /// <returns>The agent's resource builder for further configuration.</returns>
     [Experimental(Constants.ASPIREAWSAGENTCORE001)]

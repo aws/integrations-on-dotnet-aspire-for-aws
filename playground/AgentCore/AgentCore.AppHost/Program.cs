@@ -7,19 +7,19 @@ var builder = DistributedApplication.CreateBuilder(args);
 // Register a non-streaming agent with in-memory short-term memory.
 // AddAgentCoreRuntime starts embedded runtime + chat emulators — no Docker needed.
 var agent = builder.AddAgentCoreRuntime(
-    "AgentCore-Agent", "../AgentCore.Agent/AgentCore.Agent.csproj", new() { IncludeEmulatorLogs = true })
+    "AgentCore-Agent", "../AgentCore.Agent", new() { IncludeEmulatorLogs = true })
     .WithAgentCoreMemory();
 
 // Register a streaming agent.
 // WithAgentCoreStreaming tells the chat app to use SSE streaming mode.
 builder.AddAgentCoreRuntime(
-    "AgentCore-StreamingAgent", "../AgentCore.StreamingAgent/AgentCore.StreamingAgent.csproj", new() { IncludeEmulatorLogs = true })
+    "AgentCore-StreamingAgent", "../AgentCore.StreamingAgent", new() { IncludeEmulatorLogs = true })
     .WithAgentCoreStreaming()
     .WithAgentCoreMemory();
 
 // WithReference injects AWS_ENDPOINT_URL_BEDROCK_AGENTCORE into the ChatUI project
 // so the AWS SDK routes requests to the local runtime emulator automatically.
-builder.AddDotnetProject("ChatUI", "../AgentCore.ChatUI/AgentCore.ChatUI.csproj")
+builder.AddDotnetProject("ChatUI", "../AgentCore.ChatUI")
     .WithHttpEndpoint(name: "http")
     .WithReference(agent);
 

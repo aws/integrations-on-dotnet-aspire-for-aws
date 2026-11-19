@@ -17,7 +17,7 @@ var topic = stack.AddSNSTopic("topic");
 var queue = stack.AddSQSQueue("queue");
 topic.AddSubscription(queue);
 
-builder.AddDotnetProject("frontend", "../Frontend/Frontend.csproj")
+builder.AddDotnetProject("frontend", "../Frontend")
     //.WithReference(stack) // Reference all outputs of a construct
     .WithEnvironment("AWS__Resources__BucketName", customStack.GetOutput("BucketName")) // Reference a construct/stack output
     .WithEnvironment("AWS__Resources__ChatTopicArn", topic, t => t.TopicArn)

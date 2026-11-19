@@ -16,13 +16,12 @@ namespace Aspire.Hosting.AWS.UnitTests;
 /// </summary>
 public class DotnetProjectResourceTests
 {
-    // AddDotnetProject needs a real project file.
-    private static string CreateProjectFile()
+    // AddDotnetProject needs a real project file. Returns the directory containing it, which AddDotnetProject resolves to the project file.
+    private static string CreateProjectDirectory()
     {
         var dir = Directory.CreateTempSubdirectory().FullName;
-        var path = Path.Combine(dir, "Agent.csproj");
-        File.WriteAllText(path, "<Project Sdk=\"Microsoft.NET.Sdk.Web\"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>");
-        return path;
+        File.WriteAllText(Path.Combine(dir, "Agent.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>");
+        return dir;
     }
 
     [Fact]
@@ -30,7 +29,7 @@ public class DotnetProjectResourceTests
     {
         var builder = DistributedApplication.CreateBuilder();
 
-        var agent = builder.AddAgentCoreRuntime("my-agent", CreateProjectFile())
+        var agent = builder.AddAgentCoreRuntime("my-agent", CreateProjectDirectory())
             .WithAgentCoreStreaming()
             .WithAgentCoreMemory();
 
@@ -44,7 +43,7 @@ public class DotnetProjectResourceTests
     {
         var builder = DistributedApplication.CreateBuilder();
 
-        var project = builder.AddDotnetProject("plain", CreateProjectFile());
+        var project = builder.AddDotnetProject("plain", CreateProjectDirectory());
 
         Assert.Throws<InvalidOperationException>(() => project.WithAgentCoreStreaming());
     }
@@ -53,7 +52,7 @@ public class DotnetProjectResourceTests
     public void PublishAs_AddsPublishAnnotations()
     {
         var builder = DistributedApplication.CreateBuilder();
-        var project = builder.AddDotnetProject("svc", CreateProjectFile())
+        var project = builder.AddDotnetProject("svc", CreateProjectDirectory())
             .PublishAsECSFargateService()
             .PublishAsECSFargateServiceWithALB()
             .PublishAsECSFargateExpressService()
@@ -71,7 +70,7 @@ public class DotnetProjectResourceTests
     public async Task LegacyImageBuilder_ThrowsNotSupportedForDotnetProjectResource()
     {
         var builder = DistributedApplication.CreateBuilder();
-        var project = builder.AddDotnetProject("svc", CreateProjectFile());
+        var project = builder.AddDotnetProject("svc", CreateProjectDirectory());
 
         ITarballContainerImageBuilder legacy = new LegacyImageBuilder();
 

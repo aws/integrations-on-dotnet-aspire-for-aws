@@ -27,7 +27,7 @@ var localDynamoDB = builder.AddAWSDynamoDBLocal("DynamoDBLocal");
 // The AWS SDK Config reference is inferred from the CloudFormation resource associated to the project. If the
 // project doesn't have a CloudFormation resource the AWS SDK Config reference can be assigned using the
 // WithReference method.
-builder.AddDotnetProject("Frontend", "../Frontend/Frontend.csproj")
+builder.AddDotnetProject("Frontend", "../Frontend")
        .WithExternalHttpEndpoints()
         // Demonstrating binding all of the output variables to a section in IConfiguration. By default they are bound to the AWS::Resources prefix.
         // The prefix is configurable by the optional configSection parameter.
