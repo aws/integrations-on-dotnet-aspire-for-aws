@@ -59,6 +59,8 @@ public static class DynamoDBResourceExtensions
     {
         configSection ??= $"{Constants.DefaultConfigSection}:{table.Resource.Name}";
         var prefix = configSection.ToEnvironmentVariables();
-        return builder.WithEnvironment($"{prefix}__{TableNameOutputName}", table, t => t.TableName, TableNameOutputName);
+        return builder
+            .WithEnvironment($"{prefix}__{TableNameOutputName}", table, t => t.TableName, TableNameOutputName)
+            .WithConstructGrant(table, static (t, grantee) => t.GrantReadWriteData(grantee));
     }
 }

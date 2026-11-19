@@ -1,0 +1,12 @@
+{
+  "Projects": [
+    {
+      "Name": "Aspire.Hosting.AWS",
+      "Type": "Minor",
+      "ChangelogMessages": [
+        "Added support for defining CDK constructs directly in an AWS CDK environment stack for consistent run and deployment behavior.",
+        "Added deployment-time construct values, IAM grants, and SQS Lambda event source wiring for supported CDK resource references."
+      ]
+    }
+  ]
+}

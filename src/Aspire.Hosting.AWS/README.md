@@ -167,6 +167,21 @@ builder.AddProject<Projects.Frontend>("Frontend")
        .WithReference(bucket);
 ```
 
+Constructs that must be part of the same stack as the resources produced by an AWS CDK deployment environment can be added through the environment's stack view:
+
+```csharp
+var aws = builder.AddAWSCDKEnvironment(
+    "MyApp",
+    CDKDefaultsProviderFactory.Preview_V1);
+
+var queue = aws.UseDeploymentStack().AddSQSQueue("Queue");
+
+builder.AddProject<Projects.Worker>("Worker")
+    .WithReference(queue);
+```
+
+The environment and the added constructs synthesize as one deployment stack. During local run, that stack is provisioned independently using the physical name `MyApp-local`; pass a different name to `UseDeploymentStack(runStackName)` when needed. A queue reference grants the deployed workload permission to send and consume messages in addition to providing the queue URL. Other supported construct references apply their corresponding CDK grants.
+
 Resources created with these methods can be directly referenced by project resources and common properties like resource names, ARNs or URLs will be made available as configuration environment variables. The default config section will be `AWS:Resources`
 
 Alternative constructs can be created in free form using the `AddConstruct` methods. These constructs can be references with the `WithReference` method and need to be provided with a property selector and an output name. This will make this property available as configuration environment variable

@@ -8,6 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.IAM;
 using Aspire.Hosting.AWS.Deployment.CDKDefaults;
+using Aspire.Hosting.AWS.CDK;
 using IResource = Aspire.Hosting.ApplicationModel.IResource;
 
 namespace Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
@@ -230,6 +231,22 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
         {
             referencePoints.EnvironmentVariables = environmentVariables;
         }
+
+        if (referencePoints.ReferenceTaskRole != null && environment != null)
+        {
+            ApplyConstructGrants(resource, environment, referencePoints.ReferenceTaskRole);
+        }
+    }
+
+    protected static void ApplyConstructGrants(IResource resource, AWSCDKEnvironmentResource environment, IGrantable grantee)
+    {
+        foreach (var annotation in resource.Annotations.OfType<ConstructGrantAnnotation>())
+        {
+            if (ReferenceEquals(annotation.Stack.Stack, environment.CDKStack))
+            {
+                annotation.Apply(grantee);
+            }
+        }
     }
 
     private void ApplyEnvironmentCallbackAnnotations(IDictionary<string, string> environmentVariables, IResource resource, AWSCDKEnvironmentResource? environment)
@@ -274,6 +291,11 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
         if (value is ParameterResource parameterResource && environment != null)
         {
             return GetOrCreateCfnParameter(parameterResource, environment).ValueAsString;
+        }
+
+        if (value is ICDKConstructOutputReference constructOutputReference && environment != null)
+        {
+            return constructOutputReference.GetValue(environment);
         }
 
         return value switch

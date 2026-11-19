@@ -5,6 +5,8 @@ using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS;
 using Aspire.Hosting.AWS.CDK;
 using Aspire.Hosting.AWS.CloudFormation;
+using Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
+using Amazon.CDK.AWS.IAM;
 using Constructs;
 using Environment = System.Environment;
 
@@ -213,7 +215,26 @@ public static class CDKExtensions
             construct.WithAnnotation(new ConstructOutputAnnotation<TConstruct>(outputName, outputDelegate));
         }
         construct.WithAnnotation(new ConstructReferenceAnnotation(builder.Resource.Name, outputName));
-        return builder.WithEnvironment(name, new StackOutputReference(construct.Resource.Construct.GetStackUniqueId() + outputName, construct.Resource.SelectParentResource<IStackResource>()));
+        var stack = construct.Resource.SelectParentResource<IStackResource>();
+        if (!stack.Annotations.Any(annotation =>
+                annotation is CloudFormationReferenceAnnotation reference &&
+                string.Equals(reference.TargetResource, builder.Resource.Name, StringComparison.Ordinal)))
+        {
+            stack.Annotations.Add(new CloudFormationReferenceAnnotation(builder.Resource.Name));
+        }
+        var runtimeReference = new StackOutputReference(construct.Resource.Construct.GetStackUniqueId() + outputName, stack);
+        return builder.WithEnvironment(name, new ConstructOutputReference<TConstruct>(construct.Resource, stack, outputDelegate, runtimeReference));
+    }
+
+    internal static IResourceBuilder<TDestination> WithConstructGrant<TDestination, TConstruct>(
+        this IResourceBuilder<TDestination> builder,
+        IResourceBuilder<IConstructResource<TConstruct>> construct,
+        Action<TConstruct, IGrantable> grant)
+        where TConstruct : IConstruct
+        where TDestination : Aspire.Hosting.ApplicationModel.IResource
+    {
+        var stack = construct.Resource.SelectParentResource<IStackResource>();
+        return builder.WithAnnotation(new ConstructGrantAnnotation(stack, grantee => grant(construct.Resource.Construct, grantee)));
     }
 
     private static string GetResourceType<T>(IResourceWithConstruct constructResource)

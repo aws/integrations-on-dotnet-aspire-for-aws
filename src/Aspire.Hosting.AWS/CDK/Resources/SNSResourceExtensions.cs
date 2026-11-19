@@ -49,6 +49,8 @@ public static class SNSResourceExtensions
     {
         configSection ??= $"{Constants.DefaultConfigSection}:{topic.Resource.Name}";
         var prefix = configSection.ToEnvironmentVariables();
-        return builder.WithEnvironment($"{prefix}__{TopicArnOutputName}", topic, t => t.TopicArn, TopicArnOutputName);
+        return builder
+            .WithEnvironment($"{prefix}__{TopicArnOutputName}", topic, t => t.TopicArn, TopicArnOutputName)
+            .WithConstructGrant(topic, static (t, grantee) => t.GrantPublish(grantee));
     }
 }

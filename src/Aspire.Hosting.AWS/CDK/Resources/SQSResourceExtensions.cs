@@ -37,6 +37,12 @@ public static class SQSResourceExtensions
     {
         configSection ??= $"{Constants.DefaultConfigSection}:{queue.Resource.Name}";
         var prefix = configSection.ToEnvironmentVariables();
-        return builder.WithEnvironment($"{prefix}__{QueueUrlOutputName}", queue, q => q.QueueUrl, QueueUrlOutputName);
+        return builder
+            .WithEnvironment($"{prefix}__{QueueUrlOutputName}", queue, q => q.QueueUrl, QueueUrlOutputName)
+            .WithConstructGrant(queue, static (q, grantee) =>
+            {
+                q.GrantSendMessages(grantee);
+                q.GrantConsumeMessages(grantee);
+            });
     }
 }
