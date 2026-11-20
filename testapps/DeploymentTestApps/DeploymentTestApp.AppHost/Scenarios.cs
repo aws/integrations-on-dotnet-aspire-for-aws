@@ -261,6 +261,24 @@ namespace DeploymentTestApp.AppHost
             await ExecuteApp(builder);
         }
 
+        public static async Task PublishWithOptionalEnvironmentParameter()
+        {
+            var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());
+            builder.Configuration["Parameters:required-key"] = "required-value";
+
+            builder.AddAWSCDKEnvironment("aws", CDKDefaultsProviderFactory.Preview_V1, _defaultEnvironentResourceConfig, nameof(PublishWithOptionalEnvironmentParameter));
+
+            // optional-key has no configured value, which is valid because it is optional.
+            var requiredKey = builder.AddParameter("required-key");
+            var optionalKey = builder.AddParameter("optional-key").AsOptional();
+
+            builder.AddAWSLambdaFunction<Projects.DeploymentTestApp_LambdaFunction1>("LambdaFunction1", "DeploymentTestApp.LambdaFunction1::DeploymentTestApp.LambdaFunction1.Function::FunctionHandler")
+                .WithEnvironment("REQUIRED_KEY", requiredKey)
+                .WithEnvironment("OPTIONAL_KEY", optionalKey);
+
+            await ExecuteApp(builder);
+        }
+
         public static async Task PublishWithEnvironmentAndReference()
         {
             var builder = DistributedApplication.CreateBuilder(Environment.GetCommandLineArgs());

@@ -309,12 +309,22 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
             return existingOnStack;
         }
 
-        var cfnParam = new CfnParameter(environment.CDKStack, paramId, new CfnParameterProps
+        var cfnParamProps = new CfnParameterProps
         {
             Type = "String",
             Description = $"Parameter for Aspire resource '{parameterResource.Name}'",
             NoEcho = parameterResource.Secret
-        });
+        };
+
+        // An optional Aspire parameter (AsOptional) may legitimately have no value. CloudFormation can't express
+        // "no value", so give it an empty default. That keeps the deploy step from failing on a missing value,
+        // and a value configured under Parameters:<name> still takes precedence.
+        if (!parameterResource.Required)
+        {
+            cfnParamProps.Default = "";
+        }
+
+        var cfnParam = new CfnParameter(environment.CDKStack, paramId, cfnParamProps);
 
         _cfnParameters[parameterResource.Name] = cfnParam;
         return cfnParam;

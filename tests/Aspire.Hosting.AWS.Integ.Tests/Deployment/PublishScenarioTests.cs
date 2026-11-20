@@ -1678,6 +1678,27 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
     }
 
     [Fact]
+    public async Task TestPublishWithOptionalEnvironmentParameter()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            var parameters = cfTemplateDoc.RootElement.GetProperty("Parameters");
+
+            // A required Aspire parameter has no default, so the deploy step demands a value for it.
+            var required = parameters.GetProperty("Paramrequiredkey");
+            Assert.False(required.TryGetProperty("Default", out _));
+
+            // An optional Aspire parameter gets an empty default, so the deploy step doesn't fail when it has no value.
+            var optional = parameters.GetProperty("Paramoptionalkey");
+            Assert.Equal("", optional.GetProperty("Default").GetString());
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishWithOptionalEnvironmentParameter), cloudFormationValidation);
+    }
+
+    [Fact]
     public async Task TestPublishWithEnvironmentAndReference()
     {
         var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>

@@ -5,7 +5,8 @@
       "Type": "Major",
       "ChangelogMessages": [
         "Update to Aspire 17. Aspire.Hosting.AWS now targets net10.0 only, matching the .NET 10 minimum of Aspire 17, and depends on Aspire 17 packages",
-        "Add DotnetProjectResource (AddDotnetProject) support alongside the existing ProjectResource APIs: an AddAgentCoreRuntime overload that takes a project path, DotnetProjectResource overloads of WithAgentCoreStreaming, WithAgentCoreMemory, PublishAsECSFargateService, PublishAsECSFargateServiceWithALB, PublishAsECSFargateExpressService and PublishAsAgentCoreRuntime, and an IResource overload on ITarballContainerImageBuilder"
+        "Add DotnetProjectResource (AddDotnetProject) support alongside the existing ProjectResource APIs: an AddAgentCoreRuntime overload that takes a project path, DotnetProjectResource overloads of WithAgentCoreStreaming, WithAgentCoreMemory, PublishAsECSFargateService, PublishAsECSFargateServiceWithALB, PublishAsECSFargateExpressService and PublishAsAgentCoreRuntime, and an IResource overload on ITarballContainerImageBuilder",
+        "Fix publish and deploy failing for Aspire parameters marked optional with AsOptional: the generated CloudFormation parameter now has an empty default, so the deploy step no longer requires a value for it"
       ]
     }
   ]
