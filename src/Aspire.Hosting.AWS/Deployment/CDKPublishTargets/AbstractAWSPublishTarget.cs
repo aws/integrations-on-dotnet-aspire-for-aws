@@ -316,10 +316,18 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
             NoEcho = parameterResource.Secret
         };
 
-        // An optional Aspire parameter (AsOptional) may legitimately have no value. CloudFormation can't express
-        // "no value", so give it an empty default. That keeps the deploy step from failing on a missing value,
-        // and a value configured under Parameters:<name> still takes precedence.
-        if (!parameterResource.Required)
+        // A default defined by the AppHost becomes the CloudFormation default, so deploying without configuring
+        // the parameter uses it. Generated defaults (random per call) and secrets are never written to the template.
+        // A value configured under Parameters:<name> still takes precedence.
+        if (parameterResource.Default is { } appHostDefault &&
+            !parameterResource.Secret &&
+            appHostDefault is not GenerateParameterDefault)
+        {
+            cfnParamProps.Default = appHostDefault.GetDefaultValue();
+        }
+        // An optional parameter (AsOptional) may legitimately have no value. CloudFormation can't express "no value",
+        // so give it an empty default. That keeps the deploy step from failing on a missing value.
+        else if (!parameterResource.Required)
         {
             cfnParamProps.Default = "";
         }

@@ -271,10 +271,17 @@ namespace DeploymentTestApp.AppHost
             // optional-key has no configured value, which is valid because it is optional.
             var requiredKey = builder.AddParameter("required-key");
             var optionalKey = builder.AddParameter("optional-key").AsOptional();
+            // Defaults defined by the AppHost. A secret's default must never be written to the template.
+            var defaultedKey = builder.AddParameter("defaulted-key", "default-value", publishValueAsDefault: true);
+            var optionalDefaultedKey = builder.AddParameter("optional-defaulted-key", "optional-default", publishValueAsDefault: true).AsOptional();
+            var secretKey = builder.AddParameter("secret-key", "secret-value", secret: true);
 
             builder.AddAWSLambdaFunction<Projects.DeploymentTestApp_LambdaFunction1>("LambdaFunction1", "DeploymentTestApp.LambdaFunction1::DeploymentTestApp.LambdaFunction1.Function::FunctionHandler")
                 .WithEnvironment("REQUIRED_KEY", requiredKey)
-                .WithEnvironment("OPTIONAL_KEY", optionalKey);
+                .WithEnvironment("OPTIONAL_KEY", optionalKey)
+                .WithEnvironment("DEFAULTED_KEY", defaultedKey)
+                .WithEnvironment("OPTIONAL_DEFAULTED_KEY", optionalDefaultedKey)
+                .WithEnvironment("SECRET_KEY", secretKey);
 
             await ExecuteApp(builder);
         }

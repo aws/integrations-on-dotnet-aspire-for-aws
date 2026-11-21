@@ -1692,6 +1692,14 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             var optional = parameters.GetProperty("Paramoptionalkey");
             Assert.Equal("", optional.GetProperty("Default").GetString());
 
+            // A default defined by the AppHost is used as the CloudFormation default, whether or not the parameter is optional.
+            Assert.Equal("default-value", parameters.GetProperty("Paramdefaultedkey").GetProperty("Default").GetString());
+            Assert.Equal("optional-default", parameters.GetProperty("Paramoptionaldefaultedkey").GetProperty("Default").GetString());
+
+            // A secret's default is never written to the template.
+            Assert.False(parameters.GetProperty("Paramsecretkey").TryGetProperty("Default", out _));
+            Assert.DoesNotContain("secret-value", cfTemplateDoc.RootElement.GetRawText());
+
             return Task.CompletedTask;
         };
 
