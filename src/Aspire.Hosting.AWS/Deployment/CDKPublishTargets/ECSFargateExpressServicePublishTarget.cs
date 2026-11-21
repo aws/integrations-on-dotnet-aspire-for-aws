@@ -24,13 +24,14 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
 
     public override async Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
     {
-        var projectResource = resource as ProjectResource
-                              ?? throw new InvalidOperationException($"Resource {resource.Name} is not a valid IProjectResource.");
+        var projectResource = IsDotnetProjectResource(resource)
+            ? resource
+            : throw new InvalidOperationException($"Resource {resource.Name} is not a valid ProjectResource or DotnetProjectResource.");
 
         var publishAnnotation = annotation as PublishECSFargateServiceExpressAnnotation
                                 ?? throw new InvalidOperationException($"Annotation for resource {resource.Name} is not a valid {nameof(PublishECSFargateServiceExpressAnnotation)}.");
 
-        var imageTarballPath = await imageBuilder.CreateTarballImageAsync(projectResource, cancellationToken);
+        var imageTarballPath = await imageBuilder.CreateTarballImageForResourceAsync(projectResource, cancellationToken);
 
         // Create the task definition that describes the container(s) run by the Express service. The
         // Express service points at this task definition via its TaskDefinitionArn property (rather than
@@ -129,7 +130,8 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
 
     public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
     {
-        if (resource is ProjectResource projectResource &&
+        if (IsDotnetProjectResource(resource) &&
+            resource is IResourceWithEndpoints projectResource &&
             projectResource.GetEndpoints().Any() &&
             cdkDefaultsProvider.DefaultWebProjectResourcePublishTarget == CDKDefaultsProvider.WebProjectResourcePublishTarget.ECSFargateExpressService
            )

@@ -1678,6 +1678,35 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
     }
 
     [Fact]
+    public async Task TestPublishWithOptionalEnvironmentParameter()
+    {
+        var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
+        {
+            var parameters = cfTemplateDoc.RootElement.GetProperty("Parameters");
+
+            // A required Aspire parameter has no default, so the deploy step demands a value for it.
+            var required = parameters.GetProperty("Paramrequiredkey");
+            Assert.False(required.TryGetProperty("Default", out _));
+
+            // An optional Aspire parameter gets an empty default, so the deploy step doesn't fail when it has no value.
+            var optional = parameters.GetProperty("Paramoptionalkey");
+            Assert.Equal("", optional.GetProperty("Default").GetString());
+
+            // A default defined by the AppHost is used as the CloudFormation default, whether or not the parameter is optional.
+            Assert.Equal("default-value", parameters.GetProperty("Paramdefaultedkey").GetProperty("Default").GetString());
+            Assert.Equal("optional-default", parameters.GetProperty("Paramoptionaldefaultedkey").GetProperty("Default").GetString());
+
+            // A secret's default is never written to the template.
+            Assert.False(parameters.GetProperty("Paramsecretkey").TryGetProperty("Default", out _));
+            Assert.DoesNotContain("secret-value", cfTemplateDoc.RootElement.GetRawText());
+
+            return Task.CompletedTask;
+        };
+
+        await ExecutePublishAsync(nameof(Scenarios.PublishWithOptionalEnvironmentParameter), cloudFormationValidation);
+    }
+
+    [Fact]
     public async Task TestPublishWithEnvironmentAndReference()
     {
         var cloudFormationValidation = (JsonDocument cfTemplateDoc) =>
@@ -2203,6 +2232,9 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
     internal class MockTarballContainerImageBuilder : ITarballContainerImageBuilder
     {
         public Task<string> CreateTarballImageAsync(ProjectResource resource, CancellationToken cancellationToken = default)
+            => CreateTarballImageAsync((IResource)resource, cancellationToken);
+
+        public Task<string> CreateTarballImageAsync(IResource resource, CancellationToken cancellationToken = default)
         {
             // Return a dummy tarball path
             var filePath = Path.Combine(Path.GetTempPath(), $"{resource.Name}_image.tar");

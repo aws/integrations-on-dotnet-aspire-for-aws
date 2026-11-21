@@ -5,7 +5,6 @@
 #pragma warning disable ASPIREAWSPUBLISHERS001
 #pragma warning disable ASPIRECOMPUTE001
 #pragma warning disable ASPIREINTERACTION001
-#pragma warning disable ASPIREPIPELINES001
 
 using Amazon.CDK;
 using Aspire.Hosting.AWS.Deployment;

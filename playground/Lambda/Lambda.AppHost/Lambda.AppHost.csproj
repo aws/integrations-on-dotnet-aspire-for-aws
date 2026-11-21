@@ -1,24 +1,26 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<Sdk Name="Aspire.AppHost.Sdk" Version="$(AspireSdkVersion)" />
-
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
 		<TargetFramework>$(DefaultTargetFramework)</TargetFramework>
 		<IsAspireHost>true</IsAspireHost>
 		<NoWarn>$(NoWarn);CS8002</NoWarn> <!-- AWS CDK packages are not signed -->
+		<!-- ASPIRE004: class library Lambda functions are referenced as resources on purpose; AddAWSLambdaFunction runs them. -->
+		<NoWarn>$(NoWarn);ASPIRE004</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="AWSSDK.SQS" />
 		<ProjectReference Include="..\..\..\src\Aspire.Hosting.AWS\Aspire.Hosting.AWS.csproj" IsAspireProjectResource="false" />
 		<PackageReference Include="Aspire.Hosting.AppHost" />
-		<ProjectReference Include="..\DynamoDBProcessorFunction\DynamoDBProcessorFunction.csproj" />
-		<ProjectReference Include="..\SQSProcessorFunction\SQSProcessorFunction.csproj" />
-		<ProjectReference Include="..\ToUpperLambdaFunctionExecutable\ToUpperLambdaFunctionExecutable.csproj" />
-		<ProjectReference Include="..\WebAWSCallsLambdaFunction\WebAWSCallsLambdaFunction.csproj" />
-		<ProjectReference Include="..\WebCalculatorFunctions\WebCalculatorFunctions.csproj" />
-		<ProjectReference Include="..\WebDefaultLambdaFunction\WebDefaultLambdaFunction.csproj" />
+		<!-- Lambda projects added with AddAWSLambdaFunction<T> need the generated Projects.* type. Without Aspire.AppHost.Sdk
+		     these references must opt in explicitly, using the same metadata the SDK used to apply by default. -->
+		<ProjectReference Include="..\DynamoDBProcessorFunction\DynamoDBProcessorFunction.csproj" IsAspireProjectResource="true" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" ExcludeAssets="all" Private="false" />
+		<ProjectReference Include="..\SQSProcessorFunction\SQSProcessorFunction.csproj" IsAspireProjectResource="true" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" ExcludeAssets="all" Private="false" />
+		<ProjectReference Include="..\ToUpperLambdaFunctionExecutable\ToUpperLambdaFunctionExecutable.csproj" IsAspireProjectResource="true" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" ExcludeAssets="all" Private="false" />
+		<ProjectReference Include="..\WebAWSCallsLambdaFunction\WebAWSCallsLambdaFunction.csproj" IsAspireProjectResource="true" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" ExcludeAssets="all" Private="false" />
+		<ProjectReference Include="..\WebCalculatorFunctions\WebCalculatorFunctions.csproj" IsAspireProjectResource="true" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" ExcludeAssets="all" Private="false" />
+		<ProjectReference Include="..\WebDefaultLambdaFunction\WebDefaultLambdaFunction.csproj" IsAspireProjectResource="true" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" ExcludeAssets="all" Private="false" />
 	</ItemGroup>
 
 </Project>

@@ -37,10 +37,10 @@ builder.Configuration["Parameters:db-connection"] = "Server=localhost;Database=m
 var apiKey = builder.AddParameter("api-key");
 var dbConnection = builder.AddParameter("db-connection", secret: true);
 
-var horoscopeAgent = builder.AddAgentCoreRuntime<Projects.Publishing_HoroscopeAgent>("HoroscopeAgent")
+var horoscopeAgent = builder.AddAgentCoreRuntime("HoroscopeAgent", "../Publishing.HoroscopeAgent")
             .WithAgentCoreMemory();
 
-var frontend = builder.AddProject<Projects.Frontend>("Frontend")
+var frontend = builder.AddDotnetProject("Frontend", "../Frontend")
         .WithEnvironment("ENV_LAMBDA_1", "LambdaValue1")
         .WithEnvironment("API_KEY", apiKey)
         .WithEnvironment(callback: (env) =>
@@ -52,7 +52,7 @@ var frontend = builder.AddProject<Projects.Frontend>("Frontend")
         .WaitFor(cache);
 
 
-builder.AddProject<Projects.Backend>("backend")
+builder.AddDotnetProject("backend", "../Backend")
         .WithEnvironment("ENV_LAMBDA_1", "LambdaValue1")
         .WithEnvironment("DB_CONNECTION", dbConnection)
         .WithEnvironment(callback: (env) =>

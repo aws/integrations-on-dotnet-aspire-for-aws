@@ -1,6 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-#if NET10_0_OR_GREATER
 
 #pragma warning disable ASPIREPUBLISHERS001
 #pragma warning disable ASPIREAWSPUBLISHERS001
@@ -29,13 +28,14 @@ internal class AgentCoreRuntimePublishTarget(ITarballContainerImageBuilder image
 
     public override async Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
     {
-        var projectResource = resource as ProjectResource
-                              ?? throw new InvalidOperationException($"Resource {resource.Name} is not a valid ProjectResource.");
+        var projectResource = IsDotnetProjectResource(resource)
+            ? resource
+            : throw new InvalidOperationException($"Resource {resource.Name} is not a valid ProjectResource or DotnetProjectResource.");
 
         var publishAnnotation = annotation as PublishAgentCoreRuntimeAnnotation
                                 ?? throw new InvalidOperationException($"Annotation for resource {resource.Name} is not a valid {nameof(PublishAgentCoreRuntimeAnnotation)}.");
 
-        var imageTarballPath = await imageBuilder.CreateTarballImageAsync(projectResource, cancellationToken);
+        var imageTarballPath = await imageBuilder.CreateTarballImageForResourceAsync(projectResource, cancellationToken);
 
         var asset = new TarballImageAsset(environment.CDKStack, $"ContainerTarBall-{projectResource.Name}", new TarballImageAssetProps
         {
@@ -144,7 +144,7 @@ internal class AgentCoreRuntimePublishTarget(ITarballContainerImageBuilder image
 
     public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
     {
-        if (resource is ProjectResource &&
+        if (IsDotnetProjectResource(resource) &&
             resource.Annotations.OfType<AgentCoreRuntimeAnnotation>().Any() &&
              cdkDefaultsProvider.DefaultAgentCoreProjectResourcePublishTarget == CDKDefaultsProvider.AgentCoreProjectResourcePublishTarget.AgentCoreRuntime)
         {
@@ -313,4 +313,3 @@ internal class AgentCoreRuntimeConnectionPoints(
     }
 }
 
-#endif

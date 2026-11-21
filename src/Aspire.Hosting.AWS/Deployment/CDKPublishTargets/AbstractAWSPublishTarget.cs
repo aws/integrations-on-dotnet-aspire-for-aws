@@ -2,6 +2,7 @@
 
 using Amazon.CDK;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 using Constructs;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
@@ -99,6 +100,12 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
 
         return links;
     }
+
+    /// <summary>
+    /// True for the resource types that are .NET projects built into a container image: the legacy
+    /// <see cref="ProjectResource"/> and the Aspire 17 <see cref="DotnetProjectResource"/>.
+    /// </summary>
+    protected static bool IsDotnetProjectResource(IResource resource) => resource is ProjectResource or DotnetProjectResource;
 
     /// <summary>
     /// After the CDK construct is created for the Aspire resource, apply an <see cref="AWSLinkedObjectsAnnotation"/> to track the relationship.
@@ -302,12 +309,30 @@ public abstract class AbstractAWSPublishTarget(ILogger logger) : IAWSPublishTarg
             return existingOnStack;
         }
 
-        var cfnParam = new CfnParameter(environment.CDKStack, paramId, new CfnParameterProps
+        var cfnParamProps = new CfnParameterProps
         {
             Type = "String",
             Description = $"Parameter for Aspire resource '{parameterResource.Name}'",
             NoEcho = parameterResource.Secret
-        });
+        };
+
+        // A default defined by the AppHost becomes the CloudFormation default, so deploying without configuring
+        // the parameter uses it. Generated defaults (random per call) and secrets are never written to the template.
+        // A value configured under Parameters:<name> still takes precedence.
+        if (parameterResource.Default is { } appHostDefault &&
+            !parameterResource.Secret &&
+            appHostDefault is not GenerateParameterDefault)
+        {
+            cfnParamProps.Default = appHostDefault.GetDefaultValue();
+        }
+        // An optional parameter (AsOptional) may legitimately have no value. CloudFormation can't express "no value",
+        // so give it an empty default. That keeps the deploy step from failing on a missing value.
+        else if (!parameterResource.Required)
+        {
+            cfnParamProps.Default = "";
+        }
+
+        var cfnParam = new CfnParameter(environment.CDKStack, paramId, cfnParamProps);
 
         _cfnParameters[parameterResource.Name] = cfnParam;
         return cfnParam;

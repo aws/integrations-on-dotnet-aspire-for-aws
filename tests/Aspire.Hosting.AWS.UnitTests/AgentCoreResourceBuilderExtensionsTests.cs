@@ -1,4 +1,3 @@
-#if NET10_0_OR_GREATER
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using Aspire.Hosting.ApplicationModel;
@@ -287,4 +286,3 @@ public class AgentCoreResourceBuilderExtensionsTests
     }
 
 }
-#endif

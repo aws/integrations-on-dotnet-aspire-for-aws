@@ -8,7 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Aspire.Hosting.AWS.Lambda;
-#pragma warning disable ASPIREPIPELINES001
 /// <summary>
 /// Aspire resource representing a Lambda function.
 /// </summary>
