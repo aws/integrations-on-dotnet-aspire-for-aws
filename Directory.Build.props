@@ -22,6 +22,7 @@
 	often meant for debugging and unit/integ testing. The aspire cli is generally not used for these.
 	-->
 	<NoWarn>$(NoWarn);ASPIRE010</NoWarn>
+
   </PropertyGroup>
   
 </Project>

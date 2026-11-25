@@ -2,6 +2,7 @@
 
 using Amazon.CDK;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 using Aspire.Hosting.AWS;
 using Aspire.Hosting.AWS.Deployment;
 using Aspire.Hosting.AWS.Deployment.CDKPublishTargets;
@@ -39,9 +40,7 @@ public static class AWSCDKEnvironmentExtensions
         builder.Services.AddTransient<IAWSPublishTarget, ElastiCacheServerlessClusterPublishTarget>();
         builder.Services.AddTransient<IAWSPublishTarget, LambdaFunctionPublishTarget>();
 
-#if NET10_0_OR_GREATER
         builder.Services.AddTransient<IAWSPublishTarget, AgentCoreRuntimePublishTarget>();
-#endif
     }
 
     /// <summary>
@@ -236,6 +235,30 @@ public static class AWSCDKEnvironmentExtensions
         return builder;
     }
 
+    /// <inheritdoc cref="PublishAsECSFargateExpressService(IResourceBuilder{ProjectResource}, PublishECSFargateExpressServiceConfig?)"/>
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+    public static IResourceBuilder<DotnetProjectResource> PublishAsECSFargateExpressService(this IResourceBuilder<DotnetProjectResource> builder, PublishECSFargateExpressServiceConfig? config = null)
+    {
+        builder.Resource.Annotations.Add(new PublishECSFargateServiceExpressAnnotation { Config = config ?? new PublishECSFargateExpressServiceConfig() });
+        return builder;
+    }
+
+    /// <inheritdoc cref="PublishAsECSFargateService(IResourceBuilder{ProjectResource}, PublishECSFargateServiceConfig?)"/>
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+    public static IResourceBuilder<DotnetProjectResource> PublishAsECSFargateService(this IResourceBuilder<DotnetProjectResource> builder, PublishECSFargateServiceConfig? config = null)
+    {
+        builder.Resource.Annotations.Add(new PublishECSFargateServiceAnnotation { Config = config ?? new PublishECSFargateServiceConfig() });
+        return builder;
+    }
+
+    /// <inheritdoc cref="PublishAsECSFargateServiceWithALB(IResourceBuilder{ProjectResource}, PublishECSFargateServiceWithALBConfig?)"/>
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+    public static IResourceBuilder<DotnetProjectResource> PublishAsECSFargateServiceWithALB(this IResourceBuilder<DotnetProjectResource> builder, PublishECSFargateServiceWithALBConfig? config = null)
+    {
+        builder.Resource.Annotations.Add(new PublishECSFargateServiceWithALBAnnotation { Config = config ?? new PublishECSFargateServiceWithALBConfig() });
+        return builder;
+    }
+
     /// <summary>
     /// Configures the <see cref="RedisResource"/> to be published as an Amazon ElastiCache provisioned node cluster during deployment.
     /// </summary>
@@ -338,7 +361,6 @@ public static class AWSCDKEnvironmentExtensions
         return builder;
     }
 
-#if NET10_0_OR_GREATER
     /// <summary>
     /// Deploy project to AWS Bedrock AgentCore as a container runtime.
     /// The CDK <see href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-bedrockagentcore-runtime.html">AWS::BedrockAgentCore::Runtime</see>
@@ -355,5 +377,12 @@ public static class AWSCDKEnvironmentExtensions
 
         return builder;
     }
-#endif
+
+    /// <inheritdoc cref="PublishAsAgentCoreRuntime(IResourceBuilder{ProjectResource}, PublishAgentCoreRuntimeConfig?)"/>
+    [Experimental(Constants.ASPIREAWSPUBLISHERS001)]
+    public static IResourceBuilder<DotnetProjectResource> PublishAsAgentCoreRuntime(this IResourceBuilder<DotnetProjectResource> builder, PublishAgentCoreRuntimeConfig? config = null)
+    {
+        builder.Resource.Annotations.Add(new PublishAgentCoreRuntimeAnnotation { Config = config ?? new PublishAgentCoreRuntimeConfig() });
+        return builder;
+    }
 }

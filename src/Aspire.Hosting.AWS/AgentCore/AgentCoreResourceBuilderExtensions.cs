@@ -1,10 +1,10 @@
-#if NET10_0_OR_GREATER
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 using System.Diagnostics.CodeAnalysis;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AWS;
 using Aspire.Hosting.AWS.AgentCore;
+using Aspire.Hosting.Dotnet;
 using Aspire.Hosting.Publishing;
 using AWS.AgentCore.Testing;
 using AWS.AgentCore.Testing.Services;
@@ -40,11 +40,53 @@ public static class AgentCoreResourceBuilderExtensions
         ArgumentNullException.ThrowIfNull(builder);
         ArgumentNullException.ThrowIfNull(name);
 
-        options ??= new AgentCoreLocalOptions();
+#pragma warning disable CS0618 // AddProject is obsolete in Aspire 17; kept so existing AppHosts that use project references continue to work.
+        var agentApp = builder.AddProject<TProject>(name, o => o.ExcludeLaunchProfile = true);
+#pragma warning restore CS0618
 
+        return ConfigureAgentCoreRuntime(builder, name, options ?? new AgentCoreLocalOptions(), agentApp);
+    }
+
+    /// <summary>
+    /// Registers an AgentCore agent with a dedicated runtime emulator and chat app, adding the agent
+    /// as a <see cref="Aspire.Hosting.Dotnet.DotnetProjectResource"/> (Aspire's .NET project model that
+    /// takes a project path instead of a project reference).
+    /// Use Aspire's <c>.WithReference(agent)</c> from another project to inject the runtime
+    /// emulator endpoint as the <c>AWS_ENDPOINT_URL_BEDROCK_AGENTCORE</c> environment variable.
+    /// </summary>
+    /// <param name="builder">The distributed application builder.</param>
+    /// <param name="name">The name of the resource.</param>
+    /// <param name="projectPath">The path to the agent's project file, or to a directory containing a single project file, relative to the AppHost project.</param>
+    /// <param name="options">Optional configuration for the local development experience.</param>
+    /// <returns>The agent's resource builder for further configuration.</returns>
+    [Experimental(Constants.ASPIREAWSAGENTCORE001)]
+    public static IResourceBuilder<DotnetProjectResource> AddAgentCoreRuntime(
+        this IDistributedApplicationBuilder builder,
+        [ResourceName] string name,
+        string projectPath,
+        AgentCoreLocalOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(name);
+        ArgumentNullException.ThrowIfNull(projectPath);
+
+        var agentApp = builder.AddDotnetProject(name, projectPath, o => o.ExcludeLaunchProfile = true);
+
+        return ConfigureAgentCoreRuntime(builder, name, options ?? new AgentCoreLocalOptions(), agentApp);
+    }
+
+    // Shared by the ProjectResource and DotnetProjectResource entry points.
+    [Experimental(Constants.ASPIREAWSAGENTCORE001)]
+    private static IResourceBuilder<TResource> ConfigureAgentCoreRuntime<TResource>(
+        IDistributedApplicationBuilder builder,
+        string name,
+        AgentCoreLocalOptions options,
+        IResourceBuilder<TResource> agentApp)
+        where TResource : IResourceWithEndpoints, IResourceWithEnvironment, IComputeResource
+    {
         var projectName = name;
 
-        var agentApp = builder.AddProject<TProject>(projectName, o => o.ExcludeLaunchProfile = true)
+        agentApp
             .WithHttpEndpoint(name: "http")
             .WithEnvironment("AWS_AGENTCORE_ASPIRE_MANAGED", "true")
             // Bedrock AgentCore only runs arm64 container images, so the published image must be
@@ -169,13 +211,23 @@ public static class AgentCoreResourceBuilderExtensions
     [Experimental(Constants.ASPIREAWSAGENTCORE001)]
     public static IResourceBuilder<ProjectResource> WithAgentCoreStreaming(
         this IResourceBuilder<ProjectResource> agentApp)
+        => ConfigureStreaming(agentApp);
+
+    /// <inheritdoc cref="WithAgentCoreStreaming(IResourceBuilder{ProjectResource})"/>
+    [Experimental(Constants.ASPIREAWSAGENTCORE001)]
+    public static IResourceBuilder<DotnetProjectResource> WithAgentCoreStreaming(
+        this IResourceBuilder<DotnetProjectResource> agentApp)
+        => ConfigureStreaming(agentApp);
+
+    private static IResourceBuilder<TResource> ConfigureStreaming<TResource>(IResourceBuilder<TResource> agentApp)
+        where TResource : IResource
     {
         var annotation = agentApp.Resource.Annotations
             .OfType<AgentCoreRuntimeAnnotation>()
             .FirstOrDefault()
             ?? throw new InvalidOperationException(
                 "WithAgentCoreStreaming can only be called on an AgentCore runtime resource. " +
-                "Use AddAgentCoreRuntime<T>() to create it.");
+                "Use AddAgentCoreRuntime to create it.");
 
         annotation.IsStreaming = true;
 
@@ -196,13 +248,23 @@ public static class AgentCoreResourceBuilderExtensions
     [Experimental(Constants.ASPIREAWSAGENTCORE001)]
     public static IResourceBuilder<ProjectResource> WithAgentCoreMemory(
         this IResourceBuilder<ProjectResource> agentApp)
+        => ConfigureMemory(agentApp);
+
+    /// <inheritdoc cref="WithAgentCoreMemory(IResourceBuilder{ProjectResource})"/>
+    [Experimental(Constants.ASPIREAWSAGENTCORE001)]
+    public static IResourceBuilder<DotnetProjectResource> WithAgentCoreMemory(
+        this IResourceBuilder<DotnetProjectResource> agentApp)
+        => ConfigureMemory(agentApp);
+
+    private static IResourceBuilder<TResource> ConfigureMemory<TResource>(IResourceBuilder<TResource> agentApp)
+        where TResource : IResourceWithEnvironment
     {
         var annotation = agentApp.Resource.Annotations
             .OfType<AgentCoreRuntimeAnnotation>()
             .FirstOrDefault()
             ?? throw new InvalidOperationException(
                 "WithAgentCoreMemory can only be called on an AgentCore runtime resource. " +
-                "Use AddAgentCoreRuntime<T>() to create it.");
+                "Use AddAgentCoreRuntime to create it.");
 
         annotation.HasMemory = true;
 
@@ -360,4 +422,3 @@ public static class AgentCoreResourceBuilderExtensions
         });
     }
 }
-#endif

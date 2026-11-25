@@ -24,13 +24,14 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
 
     public override async Task GenerateConstructAsync(AWSCDKEnvironmentResource environment, IResource resource, IAWSPublishTargetAnnotation annotation, CancellationToken cancellationToken)
     {
-        var projectResource = resource as ProjectResource
-                              ?? throw new InvalidOperationException($"Resource {resource.Name} is not a valid IProjectResource.");
+        var projectResource = IsDotnetProjectResource(resource)
+            ? resource
+            : throw new InvalidOperationException($"Resource {resource.Name} is not a valid ProjectResource or DotnetProjectResource.");
 
         var publishAnnotation = annotation as PublishECSFargateServiceExpressAnnotation
                                 ?? throw new InvalidOperationException($"Annotation for resource {resource.Name} is not a valid {nameof(PublishECSFargateServiceExpressAnnotation)}.");
 
-        var imageTarballPath = await imageBuilder.CreateTarballImageAsync(projectResource, cancellationToken);
+        var imageTarballPath = await imageBuilder.CreateTarballImageForResourceAsync(projectResource, cancellationToken);
 
         // Create the task definition that describes the container(s) run by the Express service. The
         // Express service points at this task definition via its TaskDefinitionArn property (rather than
@@ -79,6 +80,9 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
 
         environment.DefaultsProvider.ApplyCfnExpressGatewayServiceContainerDefinitionDefaults(projectResource.Name, containerDefinitionProps);
 
+        // CDK validates that ContainerDefinitionProps has a TaskDefinition, because that type is also used to construct a
+        // ContainerDefinition directly. AddContainer fills it in with this same task definition, so set it here.
+        containerDefinitionProps.TaskDefinition = taskDef;
         var containerDefinition = taskDef.AddContainer($"Container-{projectResource.Name}", containerDefinitionProps);
         publishAnnotation.Config.ConstructContainerDefinitionCallback?.Invoke(CreatePublishTargetContext(environment), containerDefinition);
 
@@ -98,9 +102,16 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
         _ = new CfnOutput(environment.CDKStack, $"{resource.Name}-ExpressGatewayEndpoint", new CfnOutputProps
         {
             Description = "Endpoint for the ECS Express Gateway Service",
-            Value = Fn.Join("", ["https://", Fn.GetAtt(fargateService.LogicalId, "Endpoint").ToString(), "/"])
+            Value = GetEndpointUrl(fargateService)
         });
     }
+
+    /// <summary>
+    /// The service's URL with a trailing slash. The Endpoint attribute is already a full URL including the
+    /// https:// scheme, for example https://fr-0123.ecs.us-west-2.on.aws.
+    /// </summary>
+    private static string GetEndpointUrl(CfnExpressGatewayService service)
+        => Fn.Join("", [Fn.GetAtt(service.LogicalId, "Endpoint").ToString(), "/"]);
 
     /// <summary>
     /// Validates that a user-supplied set of port mappings satisfies the ECS Fargate Express requirement that
@@ -129,7 +140,8 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
 
     public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(CDKDefaultsProvider cdkDefaultsProvider, IResource resource)
     {
-        if (resource is ProjectResource projectResource &&
+        if (IsDotnetProjectResource(resource) &&
+            resource is IResourceWithEndpoints projectResource &&
             projectResource.GetEndpoints().Any() &&
             cdkDefaultsProvider.DefaultWebProjectResourcePublishTarget == CDKDefaultsProvider.WebProjectResourcePublishTarget.ECSFargateExpressService
            )
@@ -154,7 +166,7 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
         result.EnvironmentVariables = new Dictionary<string, string>();
 
         var key = $"services__{linkedAnnotation.Resource.Name}__https__0";
-        var endpoint = Fn.Join("", ["https://", Fn.GetAtt(fargateExpressConstruct.LogicalId, "Endpoint").ToString(), "/"]);
+        var endpoint = GetEndpointUrl(fargateExpressConstruct);
         result.EnvironmentVariables[key] = endpoint;
 
         return result;

@@ -93,7 +93,6 @@ public partial class CDKDefaultsProvider
     /// </summary>
     public virtual RedisResourcePublishTarget DefaultRedisResourcePublishTarget { get; set; } = RedisResourcePublishTarget.ElastiCacheServerlessCluster;
 
-#if NET10_0_OR_GREATER
     /// <summary>
     /// Specifies the available publishing targets for AgentCore project resources registered via
     /// <see cref="Aspire.Hosting.AWS.AgentCore.AgentCoreResourceBuilderExtensions.AddAgentCoreRuntime{TProject}"/>.
@@ -112,5 +111,4 @@ public partial class CDKDefaultsProvider
     /// The default publishing target to use when publishing AgentCore project resources. The default value is <see cref="AgentCoreProjectResourcePublishTarget.AgentCoreRuntime"/>.
     /// </summary>
     public virtual AgentCoreProjectResourcePublishTarget DefaultAgentCoreProjectResourcePublishTarget { get; set; } = AgentCoreProjectResourcePublishTarget.AgentCoreRuntime;
-#endif
 }

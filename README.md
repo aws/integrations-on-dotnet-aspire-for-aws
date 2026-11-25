@@ -22,6 +22,8 @@ The hosting package to include in Aspire AppHost projects for provisioning and c
 * Local development with AWS.AgentCore.Hosting and AWS.AgentCore.Testing (Experimental)
 * Aspire publish and deploy to AWS with CDK (Preview)
 
+The package requires Aspire 17 and .NET 10.
+
 Check out the package's [README](./src/Aspire.Hosting.AWS/README.md) for a deeper explanation of these features.
 
 [![nuget](https://img.shields.io/nuget/v/Aspire.Hosting.AWS.svg) ![downloads](https://img.shields.io/nuget/dt/Aspire.Hosting.AWS.svg)](https://www.nuget.org/packages/Aspire.Hosting.AWS/)
@@ -39,7 +41,7 @@ For comprehensive documentation including advanced scenarios, implementation det
 Before deploying to AWS, ensure you have:
 
 * **Node.js 22.x** - Required for AWS CDK, which the deployment system uses to generate CloudFormation templates
-* **AWS CDK** installed globally: `npm install -g aws-cdk`
+* **AWS CDK** installed globally: `npm install -g aws-cdk` (version 2.1148.2 or later; older CLIs cannot read the output of the CDK library this package uses)
 * **AWS CDK Bootstrap** - Must be run on your target AWS account and region before first deployment: `cdk bootstrap aws://ACCOUNT-NUMBER/REGION`
 
 The deployment system leverages AWS CDK to transform your Aspire resources into cloud infrastructure, which requires Node.js and the CDK CLI to be available in your environment.
@@ -61,7 +63,7 @@ builder.AddAWSCDKEnvironment(
 );
 
 // Add your resources
-var webApp = builder.AddProject<Projects.WebApp>("webapp");
+var webApp = builder.AddDotnetProject("webapp", "../WebApp");
 
 builder.Build().Run();
 ```
@@ -95,7 +97,7 @@ builder.AddAWSCDKEnvironment(
 );
 
 // Web projects automatically deploy to ECS Fargate Express
-var webApp = builder.AddProject<Projects.WebApp>("webapp");
+var webApp = builder.AddDotnetProject("webapp", "../WebApp");
 
 // Lambda functions automatically deploy to AWS Lambda
 var function = builder.AddAWSLambdaFunction<Projects.MyFunction>("function", "<lambda-function-handler>");
@@ -124,7 +126,7 @@ builder.AddAWSCDKEnvironment(
 );
 
 // Deploy web app with Application Load Balancer instead of default Express service
-var webApp = builder.AddProject<Projects.WebApp>("webapp")
+var webApp = builder.AddDotnetProject("webapp", "../WebApp")
     .PublishAsECSFargateServiceWithALB();
 
 builder.Build().Run();
@@ -147,7 +149,7 @@ builder.AddAWSCDKEnvironment(
 var cache = builder.AddRedis("cache");
 
 // Connect the web app to the cache
-var webApp = builder.AddProject<Projects.WebApp>("webapp")
+var webApp = builder.AddDotnetProject("webapp", "../WebApp")
     .WithReference(cache);
 
 builder.Build().Run();
@@ -173,7 +175,7 @@ The design document provides detailed examples and implementation guidance for t
 
 ## Local Development with AgentCore (Experimental)
 
-Local development experience for agents built with `AWS.AgentCore.Hosting`. Embedded runtime, chat, and memory emulators run in-process — no Docker required. Requires `net10.0` and the `ASPIREAWSAGENTCORE001` experimental flag.
+Local development experience for agents built with `AWS.AgentCore.Hosting`. Embedded runtime, chat, and memory emulators run in-process — no Docker required. Requires the `ASPIREAWSAGENTCORE001` experimental flag.
 
 See the package [README](./src/Aspire.Hosting.AWS/README.md) for full documentation and the [playground/AgentCore](./playground/AgentCore) folder for a working example.
 

@@ -9,7 +9,10 @@ namespace Aspire.Hosting.AWS.Deployment.Services;
 
 internal class DefaultTarballContainerImageBuilder(ILogger<DefaultTarballContainerImageBuilder> logger, IProcessCommandService processCommandService) : ITarballContainerImageBuilder
 {
-    public async Task<string> CreateTarballImageAsync(ProjectResource resource, CancellationToken cancellationToken)
+    public Task<string> CreateTarballImageAsync(ProjectResource resource, CancellationToken cancellationToken)
+        => CreateTarballImageAsync((IResource)resource, cancellationToken);
+
+    public async Task<string> CreateTarballImageAsync(IResource resource, CancellationToken cancellationToken)
     {
         var tarballFilePath = Path.GetTempFileName() + ".tar";
 

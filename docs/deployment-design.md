@@ -44,7 +44,7 @@ builder.AddAWSCDKEnvironment(
 
 
 - Node.js 22.x must be installed
-- AWS CDK must be installed globally (`npm install -g aws-cdk`)
+- AWS CDK must be installed globally (`npm install -g aws-cdk`), version 2.1148.2 or later
 - AWS CDK bootstrap must be run on the target account and region
 
 ### How It Works
@@ -126,13 +126,13 @@ By default, Aspire resources are mapped to AWS services based on their type. You
 
 | Method | Resource Type | Deploys To |
 |--------|--------------|------------|
-| `PublishAsECSFargateExpressService()` | `ProjectResource` (web) | ECS Fargate Express Service with shared ALB |
-| `PublishAsECSFargateService()` | `ProjectResource` (console) | ECS Fargate Service (no HTTP endpoint) |
-| `PublishAsECSFargateServiceWithALB()` | `ProjectResource` (web) | ECS Fargate Service with dedicated ALB |
+| `PublishAsECSFargateExpressService()` | `DotnetProjectResource` / `ProjectResource` (web) | ECS Fargate Express Service with shared ALB |
+| `PublishAsECSFargateService()` | `DotnetProjectResource` / `ProjectResource` (console) | ECS Fargate Service (no HTTP endpoint) |
+| `PublishAsECSFargateServiceWithALB()` | `DotnetProjectResource` / `ProjectResource` (web) | ECS Fargate Service with dedicated ALB |
 | `PublishAsLambdaFunction()` | `LambdaProjectResource` | AWS Lambda Function |
 | `PublishAsElasticCacheProvisionCluster()` | `RedisResource` / `ValkeyResource` | ElastiCache Provisioned Cluster |
 | `PublishAsElasticCacheServerlessCluster()` | `RedisResource` / `ValkeyResource` | ElastiCache Serverless Cluster |
-| `PublishAsAgentCoreRuntime()` | `ProjectResource` (AgentCore) | Bedrock AgentCore Container Runtime |
+| `PublishAsAgentCoreRuntime()` | `DotnetProjectResource` / `ProjectResource` (AgentCore) | Bedrock AgentCore Container Runtime |
 
 ### Overriding Defaults
 
@@ -140,7 +140,7 @@ By default, Aspire resources are mapped to AWS services based on their type. You
 var builder = DistributedApplication.CreateBuilder(args);
 
 // Override the default ECS Fargate Express Service to use ECS Fargate with an Application Loadbalancer.
-builder.AddProject<Projects.WebApp>("webapp")
+builder.AddDotnetProject("webapp", "../WebApp")
         .PublishAsECSFargateServiceWithALB();
 ```
 
@@ -153,7 +153,7 @@ Each Publish method accepts a configuration object that provides callbacks to cu
 Modify the properties before the CDK construct is created:
 
 ```csharp
-builder.AddProject<Projects.WebApp>("webapp")
+builder.AddDotnetProject("webapp", "../WebApp")
         .PublishAsECSFargateServiceWithALB(new PublishECSFargateServiceWithALBConfig
         {
             PropsApplicationLoadBalancedTaskImageOptionsCallback = (ctx, props) =>
@@ -203,7 +203,7 @@ lambdaFunction.PublishAsLambdaFunction(new PublishLambdaFunctionConfig
 AgentCore publish targets expose callbacks for the `CfnRuntime` construct:
 
 ```csharp
-builder.AddAgentCoreRuntime<Projects.MyAgent>("my-agent")
+builder.AddAgentCoreRuntime("my-agent", "../MyAgent")
     .PublishAsAgentCoreRuntime(new PublishAgentCoreRuntimeConfig
     {
         PropsCfnRuntimeCallback = (ctx, props) =>
@@ -222,7 +222,7 @@ Bedrock AgentCore automatically provisions a `DEFAULT` endpoint for every runtim
 invoke the agent using the runtime ARN (see below). A dedicated named endpoint may be added as an
 opt-in capability in a future version.
 
-Note that projects registered with `AddAgentCoreRuntime<T>()` are automatically deployed to Bedrock AgentCore without needing to call `PublishAsAgentCoreRuntime()`. The explicit method is only needed when you want to customize the CDK props or constructs via callbacks.
+Note that projects registered with `AddAgentCoreRuntime` are automatically deployed to Bedrock AgentCore without needing to call `PublishAsAgentCoreRuntime()`. The explicit method is only needed when you want to customize the CDK props or constructs via callbacks.
 
 ### AgentCore Platform and IAM Requirements
 
@@ -236,10 +236,10 @@ Bedrock AgentCore only runs **`arm64`** container images. A runtime created with
 Invalid request provided: Architecture incompatible for uri '...'. Supported platforms: [arm64]
 ```
 
-To guarantee the published image is always built for the correct architecture, `AddAgentCoreRuntime<T>()` pins the agent project's container build platform to `linux/arm64` using Aspire's `WithContainerBuildOptions`:
+To guarantee the published image is always built for the correct architecture, `AddAgentCoreRuntime` pins the agent project's container build platform to `linux/arm64` using Aspire's `WithContainerBuildOptions`:
 
 ```csharp
-builder.AddProject<TProject>(projectName, o => o.ExcludeLaunchProfile = true)
+agentApp
     .WithHttpEndpoint(name: "http")
     .WithEnvironment("AWS_AGENTCORE_ASPIRE_MANAGED", "true")
     // Bedrock AgentCore only runs arm64 images; force linux/arm64 regardless of host architecture.
@@ -330,9 +330,9 @@ The inline policy uses the `bedrock:InvokeModel*` wildcard (covering `InvokeMode
 A consuming resource references an agent with the standard Aspire idiom:
 
 ```csharp
-var agent = builder.AddAgentCoreRuntime<Projects.MyAgent>("my-agent");
+var agent = builder.AddAgentCoreRuntime("my-agent", "../MyAgent");
 
-builder.AddProject<Projects.Backend>("backend")
+builder.AddDotnetProject("backend", "../Backend")
     .WithReference(agent);
 ```
 
@@ -724,7 +724,7 @@ The system determines which AWS service to use for each Aspire resource through 
 When you call a Publish extension method, it adds an `IAWSPublishTargetAnnotation` to the resource:
 
 ```csharp
-builder.AddProject<Projects.WebApp>("webapp")
+builder.AddDotnetProject("webapp", "../WebApp")
     .PublishAsECSFargateServiceWithALB();  // Adds PublishECSFargateServiceWithALBAnnotation
 ```
 
@@ -777,7 +777,9 @@ public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(
     CDKDefaultsProvider cdkDefaultsProvider, 
     IResource resource)
 {
-    if (resource is ProjectResource projectResource &&
+    // IsDotnetProjectResource matches both DotnetProjectResource and the legacy ProjectResource.
+    if (IsDotnetProjectResource(resource) &&
+        resource is IResourceWithEndpoints projectResource &&
         projectResource.GetEndpoints().Any() &&  // Has HTTP endpoints
         cdkDefaultsProvider.DefaultWebProjectResourcePublishTarget == 
             CDKDefaultsProvider.WebProjectResourcePublishTarget.ECSFargateExpressService)
@@ -819,15 +821,15 @@ public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(
 
 **Example: Bedrock AgentCore Runtime (annotation-based detection)**
 
-AgentCore uses a different detection strategy from Lambda and ECS. While Lambda checks the resource type (`LambdaProjectResource`) and ECS checks for endpoints, AgentCore detects the `AgentCoreRuntimeAnnotation` that `AddAgentCoreRuntime<T>()` attaches to the `ProjectResource`. This is necessary because AgentCore agents are standard `ProjectResource` instances, distinguished only by their annotation.
+AgentCore uses a different detection strategy from Lambda and ECS. While Lambda checks the resource type (`LambdaProjectResource`) and ECS checks for endpoints, AgentCore detects the `AgentCoreRuntimeAnnotation` that `AddAgentCoreRuntime` attaches to the agent's project resource. This is necessary because AgentCore agents are standard .NET project resources (`DotnetProjectResource` or `ProjectResource`), distinguished only by their annotation.
 
 ```csharp
 public override IsDefaultPublishTargetMatchResult IsDefaultPublishTargetMatch(
     CDKDefaultsProvider cdkDefaultsProvider, 
     IResource resource)
 {
-    // Match any ProjectResource that was registered via AddAgentCoreRuntime<T>()
-    if (resource is ProjectResource &&
+    // Match any .NET project resource that was registered via AddAgentCoreRuntime
+    if (IsDotnetProjectResource(resource) &&
         resource.Annotations.OfType<AgentCoreRuntimeAnnotation>().Any())
     {
         return new IsDefaultPublishTargetMatchResult
@@ -846,10 +848,10 @@ The rank of `DEFAULT_MATCH_RANK + 200` ensures AgentCore wins over both the web 
 
 ### Ranking System
 
-The rank determines priority when multiple targets match. An example of a scenario where there can be multiple matches is an Aspire `ProjectResource` that has endpoints (i.e. Web Project). The publishing target for web a web project match as well as the generic .NET project. The rank allows the system to prefer the web project match over the generic .NET project.
+The rank determines priority when multiple targets match. An example of a scenario where there can be multiple matches is an Aspire .NET project resource that has endpoints (i.e. Web Project). The publishing target for web a web project match as well as the generic .NET project. The rank allows the system to prefer the web project match over the generic .NET project.
 
 
-Higher ranks win. This ensures that more specific resource types (like LambdaProjectResource) take precedence over generic types (like ProjectResource).
+Higher ranks win. This ensures that more specific resource types (like LambdaProjectResource) take precedence over generic types (like DotnetProjectResource or ProjectResource).
 
 ### Default Target Properties
 
@@ -862,7 +864,7 @@ public virtual WebProjectResourcePublishTarget DefaultWebProjectResourcePublishT
 
 Publish targets check these properties in their `IsDefaultPublishTargetMatch()` implementation, allowing users to change defaults by customizing the provider.
 
-Note that some publish targets use annotation-based detection instead of (or in addition to) the defaults provider enum. For example, the AgentCore publish target matches any `ProjectResource` that has an `AgentCoreRuntimeAnnotation`, which is added by `AddAgentCoreRuntime<T>()`. This pattern is useful when a specialized deployment target applies to a standard resource type distinguished by an annotation rather than a dedicated subclass.
+Note that some publish targets use annotation-based detection instead of (or in addition to) the defaults provider enum. For example, the AgentCore publish target matches any .NET project resource that has an `AgentCoreRuntimeAnnotation`, which is added by `AddAgentCoreRuntime`. This pattern is useful when a specialized deployment target applies to a standard resource type distinguished by an annotation rather than a dedicated subclass.
 
 ---
 
@@ -875,7 +877,7 @@ When Aspire resources reference each other, the deployment system automatically 
 ```csharp
 var cache = builder.AddRedis("cache");
 
-var webApp = builder.AddProject<Projects.WebApp>("webapp")
+var webApp = builder.AddDotnetProject("webapp", "../WebApp")
     .WithReference(cache);  // Creates a reference
 
 var lambdaFunction = builder.AddAWSLambdaFunction<Projects.MyFunction>("function", "handler")
@@ -1438,7 +1440,7 @@ var postgres = builder.AddPostgres("mydb")
         }
     });
 
-var webApp = builder.AddProject<Projects.WebApp>("webapp")
+var webApp = builder.AddDotnetProject("webapp", "../WebApp")
     .WithReference(postgres);  // Will get connection string via environment variable
 ```
 
@@ -1473,10 +1475,10 @@ The AWS deployment system for Aspire provides a flexible, extensible architectur
 
 | Aspire Resource | Default AWS Target | CDK Construct |
 |----------------|-------------------|---------------|
-| Web `ProjectResource` (with endpoints) | ECS Fargate Express Service | `CfnExpressGatewayService` |
-| Console `ProjectResource` (no endpoints) | ECS Fargate Service | `FargateService` |
+| Web `DotnetProjectResource` / `ProjectResource` (with endpoints) | ECS Fargate Express Service | `CfnExpressGatewayService` |
+| Console `DotnetProjectResource` / `ProjectResource` (no endpoints) | ECS Fargate Service | `FargateService` |
 | `LambdaProjectResource` | AWS Lambda Function | `Function` |
 | `RedisResource` / `ValkeyResource` | ElastiCache Serverless Cluster | `CfnServerlessCache` |
-| `ProjectResource` with `AgentCoreRuntimeAnnotation` | Bedrock AgentCore Runtime | `CfnRuntime` |
+| `DotnetProjectResource` / `ProjectResource` with `AgentCoreRuntimeAnnotation` | Bedrock AgentCore Runtime | `CfnRuntime` |
 
 This design enables both simple deployments with sensible defaults and complex customizations for production workloads.

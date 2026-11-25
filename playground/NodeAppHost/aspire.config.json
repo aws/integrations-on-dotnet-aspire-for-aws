@@ -4,7 +4,7 @@
     "language": "typescript/nodejs"
   },
   "sdk": {
-    "version": "13.4.6"
+    "version": "17.0.0"
   },
   "packages": {
     "Aspire.Hosting.AWS": "100.0.0"

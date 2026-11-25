@@ -5,12 +5,18 @@ phases:
     runtime-versions:
       nodejs: 22
     commands:
-      - npm install -g aws-cdk@2.1133.0
+      - npm install -g aws-cdk@2.1149.0
       - cdk --version   
       - find / -type f -name 'global.json' -delete
-      - curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 8.0
       - curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 10.0
       - dotnet dev-certs https --trust || dotnet dev-certs https
+      # Aspire 17 AppHosts need the Aspire CLI bundle (dashboard and DCP). Install it once up front: when the
+      # parallel build sets it up on demand, the AppHost projects race on the same package and fail with ASPIRE009.
+      # Keep the version in sync with the Aspire packages in Directory.Packages.props.
+      - dotnet tool install --global Aspire.Cli --version 17.0.0
+      - export PATH="$PATH:$HOME/.dotnet/tools"
+      - aspire setup
+      - aspire --version
   build:
     commands:
       - dotnet test --verbosity normal integrations-on-aspire-for-aws.sln --configuration Release --logger "console;verbosity=detailed" --logger trx --results-directory ./testresults
