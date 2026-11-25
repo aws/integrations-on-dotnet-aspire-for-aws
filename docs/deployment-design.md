@@ -44,7 +44,7 @@ builder.AddAWSCDKEnvironment(
 
 
 - Node.js 22.x must be installed
-- AWS CDK must be installed globally (`npm install -g aws-cdk`)
+- AWS CDK must be installed globally (`npm install -g aws-cdk`), version 2.1148.2 or later
 - AWS CDK bootstrap must be run on the target account and region
 
 ### How It Works

@@ -5,6 +5,10 @@ using Amazon.CDK;
 using Amazon.CDK.AWS.BedrockAgentCore;
 using Amazon.CDK.AWS.IAM;
 
+// The BedrockAgentCore namespace also defines PolicyStatement and PolicyStatementProps types. This file means the IAM ones.
+using PolicyStatement = Amazon.CDK.AWS.IAM.PolicyStatement;
+using PolicyStatementProps = Amazon.CDK.AWS.IAM.PolicyStatementProps;
+
 namespace Aspire.Hosting.AWS.Deployment.CDKDefaults;
 
 public partial class CDKDefaultsProvider

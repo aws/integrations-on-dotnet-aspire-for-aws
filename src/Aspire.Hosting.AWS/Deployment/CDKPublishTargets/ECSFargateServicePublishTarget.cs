@@ -60,6 +60,9 @@ internal class ECSFargateServicePublishTarget(ITarballContainerImageBuilder imag
         publishAnnotation.Config.PropsContainerDefinitionCallback?.Invoke(CreatePublishTargetContext(environment), containerDefinitionProps);
         environment.DefaultsProvider.ApplyECSFargateServiceDefaults(projectResource.Name, containerDefinitionProps);
 
+        // CDK validates that ContainerDefinitionProps has a TaskDefinition, because that type is also used to construct a
+        // ContainerDefinition directly. AddContainer fills it in with this same task definition, so set it here.
+        containerDefinitionProps.TaskDefinition = taskDef;
         var containerDefinition = taskDef.AddContainer($"Container-{projectResource.Name}", containerDefinitionProps);
         publishAnnotation.Config.ConstructContainerDefinitionCallback?.Invoke(CreatePublishTargetContext(environment), containerDefinition);
 

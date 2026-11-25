@@ -41,7 +41,7 @@ For comprehensive documentation including advanced scenarios, implementation det
 Before deploying to AWS, ensure you have:
 
 * **Node.js 22.x** - Required for AWS CDK, which the deployment system uses to generate CloudFormation templates
-* **AWS CDK** installed globally: `npm install -g aws-cdk`
+* **AWS CDK** installed globally: `npm install -g aws-cdk` (version 2.1148.2 or later; older CLIs cannot read the output of the CDK library this package uses)
 * **AWS CDK Bootstrap** - Must be run on your target AWS account and region before first deployment: `cdk bootstrap aws://ACCOUNT-NUMBER/REGION`
 
 The deployment system leverages AWS CDK to transform your Aspire resources into cloud infrastructure, which requires Node.js and the CDK CLI to be available in your environment.
