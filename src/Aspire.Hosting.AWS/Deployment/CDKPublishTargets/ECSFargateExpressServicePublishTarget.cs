@@ -102,9 +102,16 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
         _ = new CfnOutput(environment.CDKStack, $"{resource.Name}-ExpressGatewayEndpoint", new CfnOutputProps
         {
             Description = "Endpoint for the ECS Express Gateway Service",
-            Value = Fn.Join("", ["https://", Fn.GetAtt(fargateService.LogicalId, "Endpoint").ToString(), "/"])
+            Value = GetEndpointUrl(fargateService)
         });
     }
+
+    /// <summary>
+    /// The service's URL with a trailing slash. The Endpoint attribute is already a full URL including the
+    /// https:// scheme, for example https://fr-0123.ecs.us-west-2.on.aws.
+    /// </summary>
+    private static string GetEndpointUrl(CfnExpressGatewayService service)
+        => Fn.Join("", [Fn.GetAtt(service.LogicalId, "Endpoint").ToString(), "/"]);
 
     /// <summary>
     /// Validates that a user-supplied set of port mappings satisfies the ECS Fargate Express requirement that
@@ -159,7 +166,7 @@ internal class ECSFargateExpressServicePublishTarget(ITarballContainerImageBuild
         result.EnvironmentVariables = new Dictionary<string, string>();
 
         var key = $"services__{linkedAnnotation.Resource.Name}__https__0";
-        var endpoint = Fn.Join("", ["https://", Fn.GetAtt(fargateExpressConstruct.LogicalId, "Endpoint").ToString(), "/"]);
+        var endpoint = GetEndpointUrl(fargateExpressConstruct);
         result.EnvironmentVariables[key] = endpoint;
 
         return result;

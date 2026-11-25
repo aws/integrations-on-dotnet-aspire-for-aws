@@ -28,7 +28,6 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             [
              "",
              [
-              "https://",
               {
                "Fn::GetAtt": [
                 "ProjectWebApp1",
@@ -55,7 +54,6 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             [
              "",
              [
-              "https://",
               {
                "Fn::GetAtt": [
                 "ProjectWebApp1",
@@ -408,7 +406,6 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             [
              "",
              [
-              "https://",
               {
                "Fn::GetAtt": [
                 "ProjectWebApp1",
@@ -463,7 +460,6 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             [
              "",
              [
-              "https://",
               {
                "Fn::GetAtt": [
                 "ProjectWebApp1",
@@ -838,7 +834,6 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             [
              "",
              [
-              "https://",
               {
                "Fn::GetAtt": [
                 "ProjectWebApp1",
@@ -1726,7 +1721,6 @@ public class PublishScenarioTests(ITestOutputHelper testOutputHelper)
             [
              "",
              [
-              "https://",
               {
                "Fn::GetAtt": [
                 "ProjectWebApp1",
